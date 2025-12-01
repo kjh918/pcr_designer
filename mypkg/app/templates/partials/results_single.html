@@ -1,0 +1,93 @@
+<div class="results-section">
+    <h2>Primer candidates</h2>
+    <p class="results-desc">
+        아래 표는 선택된 영역에 대해 설계된 primer 후보들을 보여줍니다.
+    </p>
+
+    <table class="results-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Product size (bp)</th>
+
+                <th>Forward seq</th>
+                <th>F Tm (°C)</th>
+                <th>F GC (%)</th>
+
+                <th>Reverse seq</th>
+                <th>R Tm (°C)</th>
+                <th>R GC (%)</th>
+
+                <th>Probe seq</th>
+                <th>P Tm (°C)</th>
+                <th>P GC (%)</th>
+
+                <!-- 선택 기준들 컬럼 (예: CpG 개수, 점수 등) -->
+                <th>Probe CpG</th>
+                <th>F CpG</th>
+                <th>R CpG</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in single_primers %}
+            <tr>
+                <td>{{ p.rank }}</td>
+                <td>{{ p.product_size }}</td>
+
+                <td class="seq-cell">{{ p.forward_seq }}</td>
+                <td>{{ "%.2f"|format(p.forward_tm) if p.forward_tm is not none }}</td>
+                <td>{{ "%.1f"|format(p.forward_gc) if p.forward_gc is not none }}</td>
+
+                <td class="seq-cell">{{ p.reverse_seq }}</td>
+                <td>{{ "%.2f"|format(p.reverse_tm) if p.reverse_tm is not none }}</td>
+                <td>{{ "%.1f"|format(p.reverse_gc) if p.reverse_gc is not none }}</td>
+
+                <td class="seq-cell">
+                    {% if p.probe_seq %}
+                        {{ p.probe_seq }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.probe_tm is not none %}
+                        {{ "%.2f"|format(p.probe_tm) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.probe_gc is not none %}
+                        {{ "%.1f"|format(p.probe_gc) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if p.probe_cpg_count is not none %}
+                        {{ p.probe_cpg_count }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.forward_cpg_count is not none %}
+                        {{ p.forward_cpg_count }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.reverse_cpg_count is not none %}
+                        {{ p.reverse_cpg_count }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}

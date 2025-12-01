@@ -1,0 +1,5 @@
+references:
+  hg19: 
+    fasta: /storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa
+  hg38: 
+    fasta: /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa

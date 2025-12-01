@@ -1,0 +1,50 @@
+<div id="single-section" class="mode-section">
+    <div class="section-title">단일 영역 입력</div>
+    <label>
+        Chrom:
+        <input type="text" name="chrom" placeholder="chr1">
+    </label>
+    <label>
+        Start:
+        <input type="number" name="start" placeholder="Number (1-based)">
+    </label>
+    <label>
+        End:
+        <input type="number" name="end">
+    </label>
+    <label>
+        Name (optional):
+        <input type="text" name="name">
+    </label>
+</div>
+<div class="section-title">Primer Design Options</div>
+
+<label>
+    Min amplicon length:
+    <input type="number" name="min_amplicon_length" value="80">
+</label>
+
+<label>
+    Max amplicon length:
+    <input type="number" name="max_amplicon_length" value="120">
+</label>
+
+<label>
+    # of primer candidates (n_primers):
+    <input type="number" name="n_primers" value="10">
+</label>
+
+<label>
+    Optimal Tm (°C):
+    <input type="number" step="0.1" name="opt_tm" value="60.0">
+</label>
+
+<label>
+    Optimal GC (%):
+    <input type="number" step="0.1" name="opt_gc" value="45.0">
+</label>
+
+<div class="help-text">
+    기본값은 PrimerDesigner 내부 기본 설정과 동일하지만,
+    필요하면 여기서 바꿔서 설계할 수 있습니다.
+</div>

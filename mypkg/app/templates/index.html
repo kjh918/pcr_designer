@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>GCX - Primer Design Web</h1>
+<p>영역 정보 또는 Excel 파일을 이용해 프라이머를 자동으로 디자인합니다.</p>
+
+{% if error %}
+    <div class="card error">에러: {{ error }}</div>
+{% endif %}
+
+<div class="card">
+
+    {# 상단 배너들 #}
+    {% include "partials/mode_toggle.html" %}
+    {% include "partials/primer_type.html" %}
+    {% include "partials/reference.html" %}
+    {% include "partials/probe.html" %}
+
+    <form action="/design/form" method="post" enctype="multipart/form-data">
+        {# 숨겨서 서버로 넘길 값들 #}
+        <input type="hidden" name="mode" id="mode-input" value="single">
+        <input type="hidden" name="primer_type" id="primer-type-input" value="default">
+        <input type="hidden" name="reference" id="reference-input" value="hg19">
+        <input type="hidden" name="probe" id="probe-input" value="yes">
+
+        {# 단일 / 다중 입력 폼 #}
+        {% include "partials/form_single.html" %}
+        {% include "partials/form_multi.html" %}
+
+        <button type="submit">디자인 실행</button>
+    </form>
+</div>
+
+{# 결과 영역 #}
+{% if single_result %}
+    {% include "partials/results_single.html" %}
+{% endif %}
+
+{% if multi_results %}
+    {% include "partials/results_multi.html" %}
+{% endif %}
+
+{% endblock %}

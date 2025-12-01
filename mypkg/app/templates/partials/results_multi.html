@@ -1,0 +1,21 @@
+<div class="card result-block">
+    <h2>Excel 다중 영역 결과</h2>
+    <table>
+        <tr>
+            <th>Region</th>
+            <th>Location</th>
+            <th>Forward</th>
+            <th>Reverse</th>
+            <th>Product size</th>
+        </tr>
+        {% for item in multi_results %}
+            <tr>
+                <td>{{ item.region.name or "-" }}</td>
+                <td>{{ item.region.chrom }}:{{ item.region.start }}-{{ item.region.end }}</td>
+                <td>{{ item.primer_pair.forward.seq }}</td>
+                <td>{{ item.primer_pair.reverse.seq }}</td>
+                <td>{{ item.primer_pair.product_size }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</div>
