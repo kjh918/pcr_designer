@@ -173,3 +173,26 @@ class MultiRegionDesignRequest(BaseModel):
         None,
         description="Probe 설계 옵션 (없으면 config 기본값/Probe 미사용)",
     )
+
+class PrimerThermoResult(BaseModel):
+    """단일 primer에 대한 Thermo 계산 결과."""
+    tm: float
+    gc: float
+    hairpin_dg: float
+    hairpin_tm: float
+    homodimer_dg: float
+    homodimer_tm: float
+
+
+class PrimerBlastHit(BaseModel):
+    """blastn-short 결과 한 줄(qseqid 기준)"""
+    qseqid: str
+    sseqid: str
+    pident: float
+    length: int
+    qstart: int
+    qend: int
+    sstart: int
+    send: int
+    evalue: float
+    bitscore: float
