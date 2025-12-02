@@ -1,21 +1,12 @@
 # primer/core.py
 
-from typing import Optional
-
-import pysam
-
+from typing import Optional, Tuple
 from app.schemas import RegionInput, PrimerPair, Primer
 from primer.qpcr_designer import qPCRdesigner
-from primer.qpcr_designer import qPCRdesigner
+from primer._get_cfg import get_fasta_handle, get_pcr_params_with_override
+from config.settings import settings
 
-from primer.reference import get_fasta_handle   # 혹은 _get_fasta_handle
-
-# 만약 config.settings 에 reference path가 들어있다면:
-#   settings.references["hg19"].fasta 이런 식으로 접근한다고 가정
-try:
-    from config.settings import settings
-except ImportError:
-    settings = None  # 필요하면 나중에 직접 경로 넘겨도 됨
+import pysam
 
 
 def _primer_obj_to_schema(primer_obj) -> Optional[Primer]:
@@ -48,24 +39,83 @@ def _primer_obj_to_schema(primer_obj) -> Optional[Primer]:
         strand=strand,
     )
 
-
-
-# ============================================================
-#   qPCR 전용 wrapper : qPCRdesigner 사용
-# ============================================================
-
 def design_qpcr_for_region(
-    region: RegionInput,
-    reference_name: str,
-    min_amplicon_length: int = 80,
-    max_amplicon_length: int = 120,
-    n_probes: int = 100,
-    n_primers: int = 100,
-    bisulfite: bool = False,
-    n_best: int = 10,           # ★ 화면에 보여줄 후보 개수
-):
-    fasta = get_fasta_handle(reference_name)
+        region: RegionInput,
+        reference_name: str,
+        min_amplicon_length: int | None = None,
+        max_amplicon_length: int | None = None,
+        n_probes: int | None = None,
+        n_primers: int | None = None,
+        bisulfite: bool | None = None,
 
+        # --- Primer 상세 ---
+        primer_opt_length: int | None = None,
+        primer_min_length: int | None = None,
+        primer_max_length: int | None = None,
+        primer_opt_gc: float | None = None,
+        primer_min_gc: float | None = None,
+        primer_max_gc: float | None = None,
+
+        # --- Probe 상세 ---
+        probe_opt_length: int | None = None,
+        probe_min_length: int | None = None,
+        probe_max_length: int | None = None,
+        probe_opt_tm: float | None = None,
+        probe_min_tm: float | None = None,
+        probe_max_tm: float | None = None,
+        probe_opt_gc: float | None = None,
+        probe_min_gc: float | None = None,
+        probe_max_gc: float | None = None,
+
+        n_best: int = 10,
+    ):
+    # 1) high-level (min/max amplicon, n_* , bisulfite) 는 기존처럼 get_pcr_params_with_override 사용
+    (
+        min_amplicon_length,
+        max_amplicon_length,
+        n_probes,
+        n_primers,
+        bisulfite,
+    ) = get_pcr_params_with_override(
+        min_amplicon_length=min_amplicon_length,
+        max_amplicon_length=max_amplicon_length,
+        n_probes=n_probes,
+        n_primers=n_primers,
+        bisulfite=bisulfite,
+    )
+
+    # 2) settings.pcr_params.primer_kwargs / probe_kwargs 를 가져와서
+    #    웹에서 넘어온 값이 None이 아니면 그 값으로 override
+    pcr_cfg = settings.pcr_params 
+    
+    pk = pcr_cfg.primer_kwargs
+    primer_kwargs = {
+        "opt_length": primer_opt_length if primer_opt_length is not None else pk.opt_length,
+        "min_length": primer_min_length if primer_min_length is not None else pk.min_length,
+        "max_length": primer_max_length if primer_max_length is not None else pk.max_length,
+        "opt_gc": primer_opt_gc if primer_opt_gc is not None else pk.opt_gc,
+        "min_gc": primer_min_gc if primer_min_gc is not None else pk.min_gc,
+        "max_gc": primer_max_gc if primer_max_gc is not None else pk.max_gc,
+        "primer3_global_args": pk.primer3_global_args,
+    }
+
+    prk = pcr_cfg.probe_kwargs
+    probe_kwargs = {
+        "n_probes": n_probes,
+        "opt_length": probe_opt_length if probe_opt_length is not None else prk.opt_length,
+        "min_length": probe_min_length if probe_min_length is not None else prk.min_length,
+        "max_length": probe_max_length if probe_max_length is not None else prk.max_length,
+        "opt_tm": probe_opt_tm if probe_opt_tm is not None else prk.opt_tm,
+        "min_tm": probe_min_tm if probe_min_tm is not None else prk.min_tm,
+        "max_tm": probe_max_tm if probe_max_tm is not None else prk.max_tm,
+        "opt_gc": probe_opt_gc if probe_opt_gc is not None else prk.opt_gc,
+        "min_gc": probe_min_gc if probe_min_gc is not None else prk.min_gc,
+        "max_gc": probe_max_gc if probe_max_gc is not None else prk.max_gc,
+        "primer3_global_args": prk.primer3_global_args,
+    }
+
+    fasta = pysam.FastaFile(get_fasta_handle(reference_name))
+    
     qp = qPCRdesigner(
         f_reference_fasta=fasta,
         chrom=region.chrom,
@@ -76,60 +126,6 @@ def design_qpcr_for_region(
         n_probes=n_probes,
         n_primers=n_primers,
         bisulfite=bisulfite,
+        primer_kwargs=primer_kwargs,
+        probe_kwargs=probe_kwargs,
     )
-
-    qp.design_primer()
-    
-    if not qp.amplicon_list:
-        raise ValueError("qPCRdesigner가 어떤 amplicon도 생성하지 못했습니다.")
-
-    # 1) 최상위 1개 → 기존처럼 PrimerPair 로
-    best_amp = qp.amplicon_list[0]
-
-    forward = _primer_obj_to_schema(getattr(best_amp, "forward_primer", None))
-    reverse = _primer_obj_to_schema(getattr(best_amp, "reverse_primer", None))
-    probe   = _primer_obj_to_schema(getattr(best_amp, "probe", None))
-
-    product_size = getattr(best_amp, "amplicon_length", None)
-    if product_size is None:
-        product_size = getattr(best_amp, "product_size", None)
-
-    best_pair = PrimerPair(
-        forward=forward,
-        reverse=reverse,
-        probe=probe,
-        product_size=product_size,
-    )
-
-    # 2) 상위 n_best 개를 테이블용 row 리스트로
-    primer_rows = []
-    for rank, amp in enumerate(qp.amplicon_list[:n_best], start=1):
-        f = getattr(amp, "forward_primer", None)
-        r = getattr(amp, "reverse_primer", None)
-        p = getattr(amp, "probe", None)
-
-        row = {
-            "rank": rank,
-            "product_size": getattr(amp, "amplicon_length", None) or getattr(amp, "product_size", None),
-
-            "forward_seq": getattr(f, "sequence", None),
-            "forward_tm": getattr(f, "tm", None),
-            "forward_gc": getattr(f, "gc", None),
-
-            "reverse_seq": getattr(r, "sequence", None),
-            "reverse_tm": getattr(r, "tm", None),
-            "reverse_gc": getattr(r, "gc", None),
-
-            "probe_seq": getattr(p, "sequence", None),
-            "probe_tm": getattr(p, "tm", None),
-            "probe_gc": getattr(p, "gc", None),
-
-            # 선택 기준들 있으면 getattr 로 추가 (없으면 None)
-            "probe_cpg_count": getattr(amp, "probe_cpg_count", None),
-            "forward_cpg_count": getattr(amp, "forward_cpg_count", None),
-            "reverse_cpg_count": getattr(amp, "reverse_cpg_count", None),
-        }
-        primer_rows.append(row)
-
-    # ★ main 에서는 (최상위 1쌍, N개 row 리스트)를 같이 받도록
-    return best_pair, primer_rows

@@ -3,6 +3,7 @@ import primer3
 from primer.pcr_components import Primer, Amplicon
 from Bio.Seq import reverse_complement
 from primer.designer import PrimerDesigner
+import pysam
 
 
 class qPCRdesigner():
@@ -10,42 +11,59 @@ class qPCRdesigner():
     """
 
     #TODO input as sequence
-    def __init__(self, f_reference_fasta, chrom, start, end, region_id=None, min_amplicon_length=80, max_amplicon_length=120, 
-                n_probes=100, n_primers=100, min_primer_probe_tm_diff=6, max_primer_probe_tm_diff=8, 
-                bisulfite=False, cpg_default='methyl', methylation_pattern=[], probe_kwargs={}, primer_kwargs={}):
+    def __init__(self, f_reference_fasta, chrom, start, end, region_id=None, 
+                min_amplicon_length=80, max_amplicon_length=120, 
+                n_probes=100, n_primers=100, bisulfite=False, cpg_default='methyl', 
+                methylation_pattern=[], probe_kwargs={}, primer_kwargs={}):
         
         self.f_reference_fasta = f_reference_fasta
         self.chrom = chrom
-        self.start = start
-        self.end = end
-        if region_id == None:
-            self.region_id = f'{chrom}:{start}-{end}'
+        self.start = start - 1   
+        self.end = end           
+
+        if region_id is None:
+            self.region_id = f"{chrom}:{start}-{end}"
         else:
             self.region_id = region_id
+
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
         self.bisulfite = bisulfite
-        self.reference_template_sequence = f_reference_fasta.fetch(chrom, end-max_amplicon_length, start+max_amplicon_length+1).upper()
-        if bisulfite == True:
-            self.template_sequence = self.bisulfite_conversion(f_reference_fasta, chrom, end-max_amplicon_length, start+max_amplicon_length+1, cpg_default=cpg_default, methylation_pattern=methylation_pattern)
+
+        # template fetch 구간
+        template_start = end - max_amplicon_length
+        template_end   = self.start + max_amplicon_length + 1
+
+        self.reference_template_sequence = f_reference_fasta.fetch(
+            chrom, template_start, template_end
+        ).upper()
+
+        if bisulfite:
+            self.template_sequence = self.bisulfite_conversion(
+                f_reference_fasta, chrom, template_start, template_end,
+                cpg_default=cpg_default, methylation_pattern=methylation_pattern
+            )
         else:
-            self.template_sequence = f_reference_fasta.fetch(chrom, end-max_amplicon_length, start+max_amplicon_length+1).upper()
+            self.template_sequence = self.reference_template_sequence
 
-        self.target_start_index = max_amplicon_length-(end-start)-1
-        self.target_end_index = max_amplicon_length-2
-        self.target_sequence = self.template_sequence[self.target_start_index:self.target_end_index+1]
+        # ✔ target index 계산 (template_sequence 기준)
+        self.target_start_index = self.start - template_start
+        self.target_end_index   = self.end - template_start
 
-        self.n_probes = n_probes
-        self.n_primers = n_primers
-        self.min_primer_probe_tm_diff = min_primer_probe_tm_diff
-        self.max_primer_probe_tm_diff = max_primer_probe_tm_diff
+        # ✔ target_sequence 추출
+        self.target_sequence = self.template_sequence[
+            self.target_start_index : self.target_end_index
+        ]
+
+        self.n_probes = 100
+        self.n_primers = 100
         self.probe_kwargs = probe_kwargs
         self.primer_kwargs = primer_kwargs
-
         self.probe_designer = None
         self.primer_designer = None
         self.amplicon_list = []
-
+        print('??????????')
+        
         #### ####
         self.design_probe()
         self.design_primer()
@@ -53,7 +71,6 @@ class qPCRdesigner():
     @staticmethod
     def bisulfite_conversion(f_reference_fasta, chrom, start, end, cpg_default='methyl', methylation_pattern=[]):
         #TODO apply to reverse strand
-        print('??????????')
         sequence = f_reference_fasta.fetch(chrom, start, end+1).upper()
         converted_sequence = ''
         for i, base in enumerate(sequence):
@@ -90,25 +107,20 @@ class qPCRdesigner():
         self.probe_kwargs['min_amplicon_length'] = self.min_amplicon_length
         self.probe_kwargs['max_amplicon_length'] = self.max_amplicon_length
         self.probe_kwargs['n_primers'] = self.n_probes
-        print(self.probe_designer)
 
         probe_designer = PrimerDesigner(**self.probe_kwargs)
         probe_designer.design_primer()
-        print(123123)
         self.probe_designer = probe_designer
+        print(self.probe_designer)
 
     def design_primer(self):
         """
         """
         if self.probe_designer == None:
             self.design_probe()
-            print(1)
         else:
             pass
-        print('okoko')
-        print(self.primer_kwargs)
-        print(self.probe_designer)
-
+        
         for probe_rank, probe_amplicon in enumerate(self.probe_designer.amplicon_list):
             self.primer_kwargs['template_sequence'] = self.template_sequence
             self.primer_kwargs['reference_template_sequence'] = self.reference_template_sequence
@@ -126,8 +138,6 @@ class qPCRdesigner():
             probe_sequence = probe_amplicon.probe.sequence
             self.primer_kwargs['probe_sequence'] = probe_sequence
             
-            print(self.primer_kwargs)
-
 
             primer_designer = PrimerDesigner(**self.primer_kwargs)
             primer_designer.design_primer()

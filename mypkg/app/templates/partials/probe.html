@@ -1,9 +1,96 @@
 <div class="section-title">Probe</div>
+
 <div class="ref-toggle">
-    <div class="ref-btn probe-btn active" data-probe="yes">Yes</div>
-    <div class="ref-btn probe-btn" data-probe="no">No</div>
+    <div class="ref-btn probe-btn" data-probe="yes">Yes</div>
+    <div class="ref-btn probe-btn active" data-probe="no">No</div>
+</div>
+
+<div id="probe-options" class="probe-options" style="display: none;">
+    <h3>Probe Design Options</h3>
+
+    <div class="primer-form">
+        <!-- n_probes -->
+        <div class="form-row">
+            <label for="probe-n-probes">Number of Probes</label>
+            <input type="number" id="probe-n-probes" name="n_probes" value="100" min="1">
+        </div>
+        <!-- Probe Length -->
+        <div class="form-row">
+            <label for="probe-opt-length">Optimal Probe Length</label>
+            <input type="number" id="probe-opt-length" name="probe_opt_length" value="25" min="10" max="60">
+        </div>
+
+        <div class="form-row">
+            <label for="probe-min-length">Minimum Probe Length</label>
+            <input type="number" id="probe-min-length" name="probe_min_length" value="20" min="8" max="60">
+        </div>
+
+        <div class="form-row">
+            <label for="probe-max-length">Maximum Probe Length</label>
+            <input type="number" id="probe-max-length" name="probe_max_length" value="30" min="10" max="80">
+        </div>
+
+        <!-- Probe Tm -->
+        <div class="form-row">
+            <label for="probe-opt-tm">Optimal Probe Tm (℃)</label>
+            <input type="number" id="probe-opt-tm" name="probe_opt_tm" value="60" step="0.1">
+        </div>
+
+        <div class="form-row">
+            <label for="probe-min-tm">Minimum Probe Tm (℃)</label>
+            <input type="number" id="probe-min-tm" name="probe_min_tm" value="60" step="0.1">
+        </div>
+
+        <div class="form-row">
+            <label for="probe-max-tm">Maximum Probe Tm (℃)</label>
+            <input type="number" id="probe-max-tm" name="probe_max_tm" value="65" step="0.1">
+        </div>
+
+        <!-- Probe GC -->
+        <div class="form-row">
+            <label for="probe-opt-gc">Optimal Probe GC%</label>
+            <input type="number" id="probe-opt-gc" name="probe_opt_gc" value="50" step="1">
+        </div>
+
+        <div class="form-row">
+            <label for="probe-min-gc">Minimum Probe GC%</label>
+            <input type="number" id="probe-min-gc" name="probe_min_gc" value="35" step="1">
+        </div>
+
+        <div class="form-row">
+            <label for="probe-max-gc">Maximum Probe GC%</label>
+            <input type="number" id="probe-max-gc" name="probe_max_gc" value="65" step="1">
+        </div>
+    </div>
 </div>
 
 <div class="help-text">
-    - Probe = Yes 인 경우 PrimerDesigner(probe=True) 옵션 등으로 연결
+    - When Probe = Yes, probe-related primer design settings will be applied.
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const probeButtons = document.querySelectorAll(".probe-btn");
+    const probeOptions = document.getElementById("probe-options");
+
+    function updateProbeOptions(selectedProbe) {
+      // update button active state
+      probeButtons.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.probe === selectedProbe);
+      });
+
+      // toggle options visibility
+      probeOptions.style.display = selectedProbe === "yes" ? "block" : "none";
+    }
+
+    // Default: No → hide options
+    updateProbeOptions("no");
+
+    // add click event
+    probeButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        updateProbeOptions(btn.dataset.probe);
+      });
+    });
+  });
+</script>

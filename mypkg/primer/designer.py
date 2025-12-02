@@ -14,7 +14,7 @@ class PrimerDesigner():
 
     #TODO design for reverse strand probe
     def __init__(self, template_sequence, target_start_index, target_end_index,
-                min_amplicon_length=80, max_amplicon_length=100, n_primers=10, max_tm_difference=2,
+                min_amplicon_length=80, max_amplicon_length=100, n_primers=10,n_probes=10, max_tm_difference=2,
                 forward_primer=True, reverse_primer=True, probe=False, probe_sequence=None,
                 opt_length=25, min_length=20, max_length=30,
                 opt_tm=60, min_tm=50, max_tm=70,
@@ -32,6 +32,7 @@ class PrimerDesigner():
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
         self.n_primers = n_primers
+        self.n_probes = n_probes
         self.max_tm_difference = max_tm_difference
         self.forward_primer = forward_primer
         self.reverse_primer = reverse_primer
@@ -69,7 +70,9 @@ class PrimerDesigner():
             self.update_primer3_seq_args(
                 {
                     'SEQUENCE_TARGET': [target_start_index, target_end_index-target_start_index+1],
-                    'SEQUENCE_INTERNAL_EXCLUDED_REGION': [[0, target_end_index-self.max_length], [target_start_index+self.max_length, len(self.template_sequence)-(target_start_index+self.max_length)]]
+                    'SEQUENCE_INTERNAL_EXCLUDED_REGION': [
+                        [0, target_end_index-self.max_length], 
+                        [target_start_index+self.max_length, len(self.template_sequence)-(target_start_index+self.max_length)]]
                 }
             )
             self.update_primer3_global_args(

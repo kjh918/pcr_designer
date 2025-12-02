@@ -1,0 +1,39 @@
+references:
+  hg19: 
+    fasta: /storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa
+  hg38: 
+    fasta: /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa
+
+pcr_params:
+  primer_kwargs:
+    min_amplicon_length: 80
+    max_amplicon_length: 120
+    n_primers: 100
+    opt_length: 25
+    min_length: 20
+    max_length: 30
+    opt_gc: 50
+    min_gc: 35
+    max_gc: 65
+    primer3_global_args: {}
+
+  bisulfite:
+    run: false
+    cpg_default: "methyl"
+
+  probe_kwargs:
+    n_probes: 100
+    min_primer_probe_tm_diff: 6
+    max_primer_probe_tm_diff: 8
+    opt_length: 25
+    min_length: 20
+    max_length: 30
+    opt_tm: 60
+    min_tm: 60
+    max_tm: 65
+    opt_gc: 50
+    min_gc: 35
+    max_gc: 65
+    # primer3_global_args:
+    #   PRIMER_INTERNAL_MUST_MATCH_FIVE_PRIME: "HNNNN"
+

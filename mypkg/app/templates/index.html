@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -21,7 +22,7 @@
         <input type="hidden" name="mode" id="mode-input" value="single">
         <input type="hidden" name="primer_type" id="primer-type-input" value="default">
         <input type="hidden" name="reference" id="reference-input" value="hg19">
-        <input type="hidden" name="probe" id="probe-input" value="yes">
+        <input type="hidden" name="probe" id="probe-input" value="no">
 
         {# 단일 / 다중 입력 폼 #}
         {% include "partials/form_single.html" %}
