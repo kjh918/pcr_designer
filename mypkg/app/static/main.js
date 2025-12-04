@@ -64,3 +64,26 @@ probeBtns.forEach(btn => {
         btn.classList.add("active");
     });
 });
+
+const btn = document.getElementById("qc-toggle-btn");
+const panel = document.getElementById("qc-panel");
+
+btn.addEventListener("click", () => {
+    const hidden = panel.classList.toggle("hidden");
+    btn.textContent = hidden ? "Show QC Thresholds ▼" : "Hide QC Thresholds ▲";
+})
+
+const express = require('express');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// body parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// 정적 파일 (style.css, 기존 html 등)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// QC 설정 받는 엔드포인트 (BLAST 관련 없음)

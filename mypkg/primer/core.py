@@ -7,7 +7,19 @@ from primer._get_cfg import get_fasta_handle, get_pcr_params_with_override
 from config.settings import settings
 
 import pysam
+import pandas as pd 
+import primer3
 
+def compute_heterodimer(f_seq: str, r_seq: str):
+    """F/R heterodimer ΔG / Tm 계산."""
+    hetero = primer3.calc_heterodimer(f_seq, r_seq)
+    if hetero.structure_found:
+        het_dg = hetero.dg / 1000.0
+        het_tm = hetero.tm
+    else:
+        het_dg = 0.0
+        het_tm = 0.0
+    return het_dg, het_tm
 
 def _primer_obj_to_schema(primer_obj) -> Optional[Primer]:
     """
@@ -38,6 +50,36 @@ def _primer_obj_to_schema(primer_obj) -> Optional[Primer]:
         end=end,
         strand=strand,
     )
+
+def amplicon_passes_qc(a: dict, th: dict) -> bool:
+    """
+    a: amplicon.to_dict() 결과 (dict)
+    th: qc_thresholds dict
+    """
+
+    # 1) Primer Tm (각각 범위 + F/R ΔTm)
+    # 3) Hairpin (Tm, dG 기준)
+    hairpin_ok = (
+        a["forward_hairpin_tm"] <= th["hairpin_max_tm"]
+        and a["reverse_hairpin_tm"] <= th["hairpin_max_tm"]
+        and a["forward_hairpin_dg"] >= th["hairpin_min_dg"]
+        and a["reverse_hairpin_dg"] >= th["hairpin_min_dg"]
+    )
+
+    # 4) Homodimer (각각 dG 기준)
+    homodimer_ok = (
+        a["forward_homodimer_dg"] >= th["homodimer_min_dg"]
+        and a["reverse_homodimer_dg"] >= th["homodimer_min_dg"]
+    )
+
+    # 5) Heterodimer (dG, Tm 기준)
+    heterodimer_ok = (
+        a["heterodimer_dg"] >= th["heterodimer_min_dg"]
+        and a["heterodimer_tm"] <= th["heterodimer_max_tm"]
+    )
+
+    return hairpin_ok and homodimer_ok and heterodimer_ok
+
 
 def design_qpcr_for_region(
         region: RegionInput,
@@ -129,3 +171,35 @@ def design_qpcr_for_region(
         primer_kwargs=primer_kwargs,
         probe_kwargs=probe_kwargs,
     )
+    qc_thresholds = {
+        "hairpin_max_tm": 47.0,
+        "hairpin_min_dg": -5.0,
+        "homodimer_min_dg": -6.0,
+        "heterodimer_min_dg": -6.0,
+        "heterodimer_max_tm": 45.0,
+    }
+
+    filtered_amplicons = []
+    filtered_rows = []
+    total_rows = []
+
+    for amplicon in qp.amplicon_list:
+        a_dict = amplicon.to_dict()
+        f_primer, r_primer = a_dict['forward_sequence'], a_dict['reverse_sequence']
+
+        het_dg, het_tm = compute_heterodimer(f_primer, r_primer)
+        a_dict['heterodimer_dg'] = het_dg 
+        a_dict['heterodimer_tm'] = het_tm 
+        amplicon_df = pd.DataFrame(a_dict.items()).T
+        total_rows.append(a_dict)
+        # print(amplicon_df)  # 디버깅용
+
+        if amplicon_passes_qc(a_dict, qc_thresholds):
+            filtered_amplicons.append(amplicon)
+            filtered_rows.append(a_dict)
+
+    filtered_df = pd.DataFrame(filtered_rows)
+    total_df    = pd.DataFrame(total_rows)
+    print("QC 통과 primer 개수:", len(filtered_df))
+    print(filtered_df.head())
+    return total_df, filtered_df

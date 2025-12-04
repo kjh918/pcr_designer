@@ -144,11 +144,50 @@ class SingleRegionDesignRequest(BaseModel):
         description="Probe 설계 옵션 (없으면 config 기본값/Probe 미사용)",
     )
 
+# app/schemas.py
+
+from pydantic import BaseModel
+from typing import Optional, List
+
+
+class RegionInput(BaseModel):
+    chrom: str
+    start: int
+    end: int
+    name: Optional[str] = None
+    sequence: str = ""
+
+
+class PrimerCandidate(BaseModel):
+    rank: int
+    product_size: int
+
+    forward_seq: str
+    forward_tm: Optional[float] = None
+    forward_gc: Optional[float] = None
+
+    reverse_seq: str
+    reverse_tm: Optional[float] = None
+    reverse_gc: Optional[float] = None
+
+    probe_seq: Optional[str] = None
+    probe_tm: Optional[float] = None
+    probe_gc: Optional[float] = None
+
+    probe_cpg_count: Optional[int] = None
+    forward_cpg_count: Optional[int] = None
+    reverse_cpg_count: Optional[int] = None
+
 
 class SingleRegionDesignResponse(BaseModel):
     region: RegionInput
-    primer_pair: PrimerPair
+    # "대표" primer 한 쌍 (예: rank 1)
+    primer_pair: Optional[PrimerCandidate] = None
 
+
+class MultiRegionDesignResult(BaseModel):
+    region: RegionInput
+    primer_pair: Optional[PrimerCandidate] = None  # 각 row에서 best 하나
 
 class MultiRegionDesignResult(BaseModel):
     region: RegionInput

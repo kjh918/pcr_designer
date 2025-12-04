@@ -55,18 +55,20 @@ class qPCRdesigner():
             self.target_start_index : self.target_end_index
         ]
 
-        self.n_probes = 100
-        self.n_primers = 100
+        self.n_probes = n_probes
+        self.n_primers = n_primers
         self.probe_kwargs = probe_kwargs
         self.primer_kwargs = primer_kwargs
         self.probe_designer = None
         self.primer_designer = None
         self.amplicon_list = []
-        print('??????????')
-        
+
+        if self.n_probes == 0:
+            self.design_primer_only()
         #### ####
-        self.design_probe()
-        self.design_primer()
+        else:
+            self.design_probe()
+            self.design_primer()
 
     @staticmethod
     def bisulfite_conversion(f_reference_fasta, chrom, start, end, cpg_default='methyl', methylation_pattern=[]):
@@ -99,9 +101,9 @@ class qPCRdesigner():
         """
         self.probe_kwargs['template_sequence'] = self.template_sequence
         self.probe_kwargs['reference_template_sequence'] = self.reference_template_sequence
-        self.probe_kwargs['forward_primer'] = False
-        self.probe_kwargs['reverse_primer'] = False
-        self.probe_kwargs['probe'] = True
+        self.probe_kwargs['forward_primer'] = True
+        self.probe_kwargs['reverse_primer'] = True
+        self.probe_kwargs['probe'] = False
         self.probe_kwargs['target_start_index'] = self.target_start_index
         self.probe_kwargs['target_end_index'] = self.target_end_index
         self.probe_kwargs['min_amplicon_length'] = self.min_amplicon_length
@@ -111,7 +113,27 @@ class qPCRdesigner():
         probe_designer = PrimerDesigner(**self.probe_kwargs)
         probe_designer.design_primer()
         self.probe_designer = probe_designer
-        print(self.probe_designer)
+        
+
+    def design_primer_only(self):
+        """
+        """
+        self.primer_kwargs['template_sequence'] = self.template_sequence
+        self.primer_kwargs['reference_template_sequence'] = self.reference_template_sequence
+        self.primer_kwargs['forward_primer'] = True
+        self.primer_kwargs['reverse_primer'] = True
+        self.primer_kwargs['probe'] = False
+        self.primer_kwargs['target_start_index'] = self.target_start_index
+        self.primer_kwargs['target_end_index'] = self.target_end_index
+        self.primer_kwargs['min_amplicon_length'] = self.min_amplicon_length
+        self.primer_kwargs['max_amplicon_length'] = self.max_amplicon_length
+        self.primer_kwargs['n_primers'] = self.n_primers
+
+        primer_designer = PrimerDesigner(**self.primer_kwargs)
+        primer_designer.design_primer()
+        self.primer_designer = primer_designer
+        self.amplicon_list += self.primer_designer.amplicon_list
+        
 
     def design_primer(self):
         """

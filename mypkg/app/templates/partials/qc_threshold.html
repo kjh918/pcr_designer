@@ -1,0 +1,56 @@
+<!-- Toggle Button -->
+<button type="button" class="toggle-btn active" id="qc-toggle-btn">
+    Hide QC Thresholds ▲
+</button>
+
+<!-- QC Threshold Panel (접히는 영역) -->
+<div id="qc-panel">
+
+    <div class="section-title">Primer QC Thresholds</div>
+
+    <div class="primer-form">
+
+        <div class="form-row">
+            <label for="hairpin_max_tm">Max Hairpin Tm (℃):</label>
+            <input type="number" id="hairpin_max_tm" name="hairpin_max_tm" value="47" step="0.1">
+        </div>
+
+        <div class="form-row">
+            <label for="hairpin_min_dg">Min Hairpin ΔG (kcal/mol):</label>
+            <input type="number" id="hairpin_min_dg" name="hairpin_min_dg" value="-5.0" step="0.1">
+        </div>
+
+        <div class="form-row">
+            <label for="homodimer_min_dg">Min Homodimer ΔG (kcal/mol):</label>
+            <input type="number" id="homodimer_min_dg" name="homodimer_min_dg" value="-6.0" step="0.1">
+        </div>
+
+        <div class="form-row">
+            <label for="heterodimer_min_dg">Min Heterodimer ΔG (kcal/mol):</label>
+            <input type="number" id="heterodimer_min_dg" name="heterodimer_min_dg" value="-6.0" step="0.1">
+        </div>
+
+        <div class="form-row">
+            <label for="heterodimer_max_tm">Max Heterodimer Tm (℃):</label>
+            <input type="number" id="heterodimer_max_tm" name="heterodimer_max_tm" value="45" step="0.1">
+        </div>
+
+    </div>
+
+</div>
+<script>
+    const btn = document.getElementById('qc-toggle-btn');
+    const panel = document.getElementById('qc-panel');
+
+    btn.addEventListener('click', () => {
+        const hidden = panel.classList.toggle('hidden');
+
+        if (hidden) {
+            btn.classList.add('active');
+            btn.textContent = "Show QC Thresholds ▼";
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = "Hide QC Thresholds ▲";
+        }
+    });
+</script>

@@ -34,6 +34,12 @@ pcr_params:
     opt_gc: 50
     min_gc: 35
     max_gc: 65
-    # primer3_global_args:
-    #   PRIMER_INTERNAL_MUST_MATCH_FIVE_PRIME: "HNNNN"
+    
+qc_thresholds:
+  HAIRPIN_MAX_TM: 47.0   # hairpin_max_tm
+  HAIRPIN_MIN_DG: -5.0   # hairpin_min_dg
+  HOMODIMER_MIN_DG: -6.0   # homodimer_min_dg
+  HETERODIMER_MIN_DG: -6.0   # heterodimer_min_dg
+  HETERODIMER_MAX_TM: 45.0   # heterodimer_max_tm
+
 

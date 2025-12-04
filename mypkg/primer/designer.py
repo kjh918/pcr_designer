@@ -153,7 +153,6 @@ class PrimerDesigner():
             self.primer3_global_args[key] = value
 
     def run_primer3(self):
-        
         self.primer3_result = primer3.bindings.designPrimers(
             seq_args = self.primer3_seq_args,
             global_args = self.primer3_global_args
@@ -164,14 +163,13 @@ class PrimerDesigner():
         n_primer_pairs = self.primer3_result['PRIMER_PAIR_NUM_RETURNED']
 
         n_designed_primer = max(n_forward_primers, n_reverse_primers, n_probes, n_primer_pairs)
+        print(n_forward_primers, n_reverse_primers, n_probes, n_primer_pairs)
         amplicon_list = []
         forward_primer = None
         reverse_primer = None
         probe = None
         for primer3_rank in range(0, n_designed_primer):
             if self.probe == True:
-                print(1)
-                
                 if self.primer3_result.get(f'PRIMER_LEFT_{primer3_rank}') != None:
                     forward_primer = Primer(template_sequence=self.template_sequence,
                                             reference_template_sequence=self.reference_template_sequence,
@@ -200,7 +198,6 @@ class PrimerDesigner():
                                     forward_primer=forward_primer,
                                     reverse_primer=reverse_primer,
                                     probe=probe)
-                print(amplicone)
                 if probe != None:
                     probe_start = probe.template_sequence.find(probe.sequence)
                     probe_end = probe_start + len(probe.sequence)
@@ -208,7 +205,27 @@ class PrimerDesigner():
                         amplicon_list.append(amplicon)
                 else:
                     amplicon_list.append(amplicon)
-        
+            else:
+                if self.primer3_result.get(f'PRIMER_LEFT_{primer3_rank}') != None:
+                    forward_primer = Primer(template_sequence=self.template_sequence,
+                                            reference_template_sequence=self.reference_template_sequence,
+                                            sequence=self.primer3_result[f'PRIMER_LEFT_{primer3_rank}_SEQUENCE'],
+                                            target_start_index=self.target_start_index, target_end_index=self.target_end_index,
+                                            strand='forward', primer_type='forward')    
+
+                if self.primer3_result.get(f'PRIMER_RIGHT_{primer3_rank}') != None:
+                    reverse_primer = Primer(template_sequence=self.template_sequence,
+                                            reference_template_sequence=self.reference_template_sequence,
+                                            sequence=self.primer3_result[f'PRIMER_RIGHT_{primer3_rank}_SEQUENCE'],
+                                            target_start_index=self.target_start_index, target_end_index=self.target_end_index,
+                                            strand='reverse', primer_type='reverse')
+                amplicon = Amplicon(template_sequence=self.template_sequence,
+                    reference_template_sequence=self.reference_template_sequence,
+                    target_start_index=self.target_start_index, 
+                    target_end_index=self.target_end_index,
+                    forward_primer=forward_primer,
+                    reverse_primer=reverse_primer)
+                amplicon_list.append(amplicon)
         self.amplicon_list = amplicon_list
 
     def design_primer(self):
