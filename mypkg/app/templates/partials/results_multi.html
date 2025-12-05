@@ -1,21 +1,61 @@
-<div class="card result-block">
-    <h2>Excel 다중 영역 결과</h2>
-    <table>
-        <tr>
-            <th>Region</th>
-            <th>Location</th>
-            <th>Forward</th>
-            <th>Reverse</th>
-            <th>Product size</th>
-        </tr>
-        {% for item in multi_results %}
+<!-- app/templates/results_multi.html -->
+
+<hr>
+<h2>Multi Region Results</h2>
+
+{% for res in multi_results %}
+  <div style="margin-bottom: 2rem; border: 1px solid #ccc; padding: 0.5rem;">
+    <h3>
+      {{ res.region.chrom }}:{{ res.region.start }}-{{ res.region.end }}
+      (총 {{ res.total_count }}개, QC 통과 {{ res.filtered_count }}개)
+    </h3>
+
+    {% if res.filtered_amplicons %}
+      <h4>QC 통과 Amplicons (Top 5)</h4>
+      <table border="1" cellpadding="4" cellspacing="0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Amplicon Length</th>
+            <th>Forward Seq</th>
+            <th>Reverse Seq</th>
+            <th>Forward Tm</th>
+            <th>Reverse Tm</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in res.filtered_amplicons[:5] %}
             <tr>
-                <td>{{ item.region.name or "-" }}</td>
-                <td>{{ item.region.chrom }}:{{ item.region.start }}-{{ item.region.end }}</td>
-                <td>{{ item.primer_pair.forward.seq }}</td>
-                <td>{{ item.primer_pair.reverse.seq }}</td>
-                <td>{{ item.primer_pair.product_size }}</td>
+              <td>{{ loop.index }}</td>
+              <td>{{ row.amplicon_length }}</td>
+              <td>{{ row.forward_sequence }}</td>
+              <td>{{ row.reverse_sequence }}</td>
+              <td>{{ "%.2f"|format(row.forward_tm) if row.forward_tm is not none else "" }}</td>
+              <td>{{ "%.2f"|format(row.reverse_tm) if row.reverse_tm is not none else "" }}</td>
             </tr>
-        {% endfor %}
-    </table>
-</div>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- region별 필터된 amplicon export -->
+      <form method="post" action="/design/export" style="margin-top: 0.5rem;">
+        <input type="hidden" name="kind" value="multi_filtered_{{ loop.index }}">
+        <textarea name="data_json" style="display:none;">
+          {{ res.filtered_amplicons | tojson }}
+        </textarea>
+        <button type="submit">Export Filtered (Excel)</button>
+      </form>
+    {% endif %}
+
+    {% if res.total_amplicons %}
+      <!-- region별 전체 amplicon export -->
+      <form method="post" action="/design/export" style="margin-top: 0.5rem;">
+        <input type="hidden" name="kind" value="multi_total_{{ loop.index }}">
+        <textarea name="data_json" style="display:none;">
+          {{ res.total_amplicons | tojson }}
+        </textarea>
+        <button type="submit">Export All (Excel)</button>
+      </form>
+    {% endif %}
+  </div>
+{% endfor %}

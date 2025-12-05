@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -15,7 +14,6 @@
     {% include "partials/mode_toggle.html" %}
     {% include "partials/primer_type.html" %}
     {% include "partials/reference.html" %}
-    {% include "partials/probe.html" %}
 
     <form action="/design/form" method="post" enctype="multipart/form-data">
         {# 숨겨서 서버로 넘길 값들 #}
@@ -27,49 +25,21 @@
         {# 단일 / 다중 입력 폼 #}
         {% include "partials/form_single.html" %}
         {% include "partials/form_multi.html" %}
+        {% include "partials/probe.html" %}
         {% include "partials/qc_threshold.html" %}
 
         <button type="submit">디자인 실행</button>
     </form>
 </div>
 
-{# 결과 영역 #}
+{# Single result #}
 {% if single_result %}
-  <h2>상위 10개 primer 후보</h2>
-
-  <form method="post" action="/download_excel">
-    <!-- 여기에 chrom/start/end, reference 등 hidden input으로 그대로 넘기기 -->
-    <input type="hidden" name="chrom" value="{{ single_result.region.chrom }}">
-    <input type="hidden" name="start" value="{{ single_result.region.start }}">
-    <input type="hidden" name="end" value="{{ single_result.region.end }}">
-    <input type="hidden" name="reference" value="{{ request.form.reference if request.form else 'hg19' }}">
-    <!-- 필요하면 다른 threshold들도 hidden으로 넣기 -->
-
-    <button type="submit">Excel 다운로드</button>
-  </form>
-
-  <table>
-    <thead>
-      <tr>
-        {% for key in single_primers[0] %}
-          <th>{{ key }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in single_primers %}
-        <tr>
-          {% for value in row.values() %}
-            <td>{{ value }}</td>
-          {% endfor %}
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% include "partials/results_single.html" %}
 {% endif %}
 
+{# Multi result #}
 {% if multi_results %}
     {% include "partials/results_multi.html" %}
 {% endif %}
 
-{% endblock %}
+{% endblock content %}

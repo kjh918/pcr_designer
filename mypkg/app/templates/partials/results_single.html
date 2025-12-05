@@ -1,93 +1,64 @@
-<div class="results-section">
-    <h2>Primer candidates</h2>
-    <p class="results-desc">
-        아래 표는 선택된 영역에 대해 설계된 primer 후보들을 보여줍니다.
-    </p>
+<!-- app/templates/results_single.html -->
 
-    <table class="results-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Product size (bp)</th>
+<hr>
+<h2>Single Region Result</h2>
 
-                <th>Forward seq</th>
-                <th>F Tm (°C)</th>
-                <th>F GC (%)</th>
+<p>
+  Region:
+  {{ single_result.region.chrom }}:
+  {{ single_result.region.start }} - {{ single_result.region.end }}
+  (총 {{ single_result.total_count }}개, QC 통과 {{ single_result.filtered_count }}개)
+</p>
 
-                <th>Reverse seq</th>
-                <th>R Tm (°C)</th>
-                <th>R GC (%)</th>
+{% if single_filtered_amplicons %}
+  <h3>QC 통과 Amplicons (Top 10)</h3>
 
-                <th>Probe seq</th>
-                <th>P Tm (°C)</th>
-                <th>P GC (%)</th>
+  <table border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Amplicon Length</th>
+        <th>Forward Seq</th>
+        <th>Reverse Seq</th>
+        <th>Forward Tm</th>
+        <th>Reverse Tm</th>
+        <th>Heterodimer ΔG</th>
+        <th>Heterodimer Tm</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in single_filtered_amplicons[:10] %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ row.amplicon_length }}</td>
+          <td>{{ row.forward_sequence }}</td>
+          <td>{{ row.reverse_sequence }}</td>
+          <td>{{ "%.2f"|format(row.forward_tm) if row.forward_tm is not none else "" }}</td>
+          <td>{{ "%.2f"|format(row.reverse_tm) if row.reverse_tm is not none else "" }}</td>
+          <td>{{ "%.2f"|format(row.heterodimer_dg) if row.heterodimer_dg is not none else "" }}</td>
+          <td>{{ "%.2f"|format(row.heterodimer_tm) if row.heterodimer_tm is not none else "" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-                <!-- 선택 기준들 컬럼 (예: CpG 개수, 점수 등) -->
-                <th>Probe CpG</th>
-                <th>F CpG</th>
-                <th>R CpG</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for p in single_primers %}
-            <tr>
-                <td>{{ p.rank }}</td>
-                <td>{{ p.product_size }}</td>
+  <!-- QC 통과 전체 다운로드 -->
+  <!-- <form method="post" action="/design/export" style="margin-top: 1rem;">
+    <input type="hidden" name="kind" value="single_filtered">
+    <textarea name="data_json" style="display:none;">
+      {{ single_filtered_amplicons | tojson }}
+    </textarea>
+    <button type="submit">Export Filtered (Excel)</button>
+  </form> -->
+{% endif %}
 
-                <td class="seq-cell">{{ p.forward_seq }}</td>
-                <td>{{ "%.2f"|format(p.forward_tm) if p.forward_tm is not none }}</td>
-                <td>{{ "%.1f"|format(p.forward_gc) if p.forward_gc is not none }}</td>
-
-                <td class="seq-cell">{{ p.reverse_seq }}</td>
-                <td>{{ "%.2f"|format(p.reverse_tm) if p.reverse_tm is not none }}</td>
-                <td>{{ "%.1f"|format(p.reverse_gc) if p.reverse_gc is not none }}</td>
-
-                <td class="seq-cell">
-                    {% if p.probe_seq %}
-                        {{ p.probe_seq }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if p.probe_tm is not none %}
-                        {{ "%.2f"|format(p.probe_tm) }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if p.probe_gc is not none %}
-                        {{ "%.1f"|format(p.probe_gc) }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if p.probe_cpg_count is not none %}
-                        {{ p.probe_cpg_count }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if p.forward_cpg_count is not none %}
-                        {{ p.forward_cpg_count }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if p.reverse_cpg_count is not none %}
-                        {{ p.reverse_cpg_count }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+{% if single_total_amplicons %}
+  <h3>전체 Amplicons 다운로드</h3>
+  <form method="post" action="/design/export">
+    <input type="hidden" name="kind" value="single_total">
+    <textarea name="data_json" style="display:none;">
+      {{ single_total_amplicons | tojson }}
+    </textarea>
+    <button type="submit">Export All (Excel)</button>
+  </form>
 {% endif %}
