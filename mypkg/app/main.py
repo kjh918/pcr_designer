@@ -30,6 +30,13 @@ app.add_middleware(
 )
 
 # -----------------------
+#   /design 관련 라우터
+# -----------------------
+
+app.include_router(design.router)
+app.include_router(export.router)
+
+# -----------------------
 #   기본 페이지 (GET /)
 # -----------------------
 @app.get("/", response_class=HTMLResponse)
@@ -46,9 +53,3 @@ async def root(request: Request):
         },
     )
 
-# -----------------------
-#   /design 관련 라우터
-# -----------------------
-
-app.include_router(design.router)
-app.include_router(export.router)

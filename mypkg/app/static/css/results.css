@@ -1,0 +1,44 @@
+/* static/css/results.css */
+
+.results-section {
+    margin-top: 32px;
+    padding: 16px 20px;
+    border-top: 1px solid #ddd;
+}
+
+.results-section h2 {
+    margin-bottom: 8px;
+    font-size: 1.2rem;
+}
+
+.results-desc {
+    margin-bottom: 12px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* 결과용 테이블 (기본 table과 분리해서 커스터마이징) */
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    table-layout: fixed;
+}
+
+.results-table th,
+.results-table td {
+    border: 1px solid #e0e0e0;
+    padding: 4px 6px;
+    text-align: center;
+    word-break: break-all;
+}
+
+.results-table thead {
+    background-color: #f7f7f7;
+}
+
+/* 서열 세포 */
+.results-table .seq-cell {
+    font-family: "Fira Code", monospace;
+    font-size: 0.8rem;
+}

@@ -1,0 +1,53 @@
+/* static/css/form.css */
+
+label {
+    display: block;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+    width: 100%;
+    max-width: 400px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccccd4;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* 프라이머 설정용 폼 레이아웃 */
+.primer-form {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    row-gap: 10px;
+    column-gap: 20px;
+    max-width: 600px;
+    margin-top: 10px;
+}
+
+/* grid-template-columns에서 label + input 을 하나의 row 로 쓰기 위해 */
+.form-row {
+    display: contents;
+}
+
+.primer-form label {
+    font-weight: 500;
+    padding-top: 6px;
+}
+
+.primer-form input {
+    padding: 6px 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}

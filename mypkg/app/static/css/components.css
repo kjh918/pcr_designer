@@ -1,0 +1,107 @@
+/* static/css/components.css */
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+}
+
+/* 섹션 제목 (중복 정의 있었던 것 통합) */
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+/* 상단 모드/옵션 배너 영역 */
+.banner-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #d0d0d5;
+    background: #f0f0f5;
+    cursor: pointer;
+    font-weight: 500;
+    text-align: center;
+    font-size: 14px;
+    transition: all 0.15s ease-in-out;
+}
+
+.toggle-btn.active {
+    background: #2f80ed;
+    color: #ffffff;
+    border-color: #2f80ed;
+}
+
+.toggle-btn:hover {
+    filter: brightness(0.96);
+}
+
+/* reference 토글 */
+.ref-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.ref-btn {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d0d0d5;
+    background: #f0f0f5;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease-in-out;
+}
+
+.ref-btn.active {
+    background: #27ae60;
+    color: #ffffff;
+    border-color: #27ae60;
+}
+
+.ref-btn:hover {
+    filter: brightness(0.96);
+}
+
+/* 도움말 텍스트 */
+.help-text {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* 제출 버튼 공통 */
+button[type="submit"] {
+    margin-top: 16px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #2f80ed;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+button[type="submit"]:hover {
+    filter: brightness(0.94);
+}
+
+/* 기타 레이아웃 요소 */
+.result-block {
+    margin-top: 15px;
+}
+
+.mode-section {
+    margin-top: 10px;
+}

@@ -3,15 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Primer Design Web{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css">
+
+    {# 공통 CSS들 #}
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/form.css">
+    <link rel="stylesheet" href="/static/css/results.css">
+
+    {# 페이지별로 추가 CSS가 필요하면 여기서 확장 #}
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="container">
         {% block content %}{% endblock %}
     </div>
 
-    {% block scripts %}
-    <script src="/static/main.js"></script>
-    {% endblock %}
+    {# 공통 JS (폼/토글 관련) #}
+    <script src="/static/js/toggles.js"></script>
+
+    {# 페이지별로 추가 스크립트가 필요하면 여기에서 #}
+    {% block scripts %}{% endblock %}
 </body>
 </html>
