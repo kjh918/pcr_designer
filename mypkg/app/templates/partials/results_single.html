@@ -10,6 +10,23 @@
   (총 {{ single_result.total_count }}개, QC 통과 {{ single_result.filtered_count }}개)
 </p>
 
+<style>
+  /* 템플릿 내 색상 지정 (원하면 CSS 파일로 빼도 됨) */
+  .seq-forward { color: red; }
+  .seq-reverse { color: red; }
+  .seq-probe   { color: blue; }
+
+  .probe-seq {
+      font-family: "Fira Code", monospace;
+      font-size: 0.8rem;
+      color: blue;
+  }
+  .probe-seq.probe-empty {
+      color: #aaa;
+      font-style: italic;
+  }
+</style>
+
 {% if single_filtered_amplicons %}
   <h3>QC 통과 Amplicons (Top 10)</h3>
 
@@ -20,6 +37,8 @@
         <th>Amplicon Length</th>
         <th>Forward Seq</th>
         <th>Reverse Seq</th>
+        <th>Probe Seq</th>
+        <th>Template (Colored)</th>
         <th>Forward Tm</th>
         <th>Reverse Tm</th>
         <th>Heterodimer ΔG</th>
@@ -33,6 +52,51 @@
           <td>{{ row.amplicon_length }}</td>
           <td>{{ row.forward_sequence }}</td>
           <td>{{ row.reverse_sequence }}</td>
+
+          {# ✅ probe 없을 때도 셀은 항상 존재, '-'로 표기 #}
+          {% set probe_seq = row.probe_sequence %}
+          <td class="probe-seq {% if not probe_seq %}probe-empty{% endif %}">
+              {{ probe_seq if probe_seq else '-' }}
+          </td>
+
+          {# ✅ Template (Colored) : replace 체인을 probe 존재 여부에 따라 처리 #}
+          <td>
+            {# 기본 템플릿 서열 #}
+            {% set tmpl = row.template_sequence %}
+
+            {# forward 서열 하이라이트 #}
+            {% if row.forward_sequence %}
+              {% set tmpl = tmpl
+                  | replace(
+                      row.forward_sequence,
+                      '<span class="seq-forward">' ~ row.forward_sequence ~ '</span>'
+                    )
+              %}
+            {% endif %}
+
+            {# reverse 서열 하이라이트 #}
+            {% if row.reverse_sequence %}
+              {% set tmpl = tmpl
+                  | replace(
+                      row.reverse_sequence,
+                      '<span class="seq-reverse">' ~ row.reverse_sequence ~ '</span>'
+                    )
+              %}
+            {% endif %}
+
+            {# probe 서열이 있을 때만 하이라이트 적용 #}
+            {% if row.probe_sequence %}
+              {% set tmpl = tmpl
+                  | replace(
+                      row.probe_sequence,
+                      '<span class="seq-probe">' ~ row.probe_sequence ~ '</span>'
+                    )
+              %}
+            {% endif %}
+
+            {{ tmpl | safe }}
+          </td>
+
           <td>{{ "%.2f"|format(row.forward_tm) if row.forward_tm is not none else "" }}</td>
           <td>{{ "%.2f"|format(row.reverse_tm) if row.reverse_tm is not none else "" }}</td>
           <td>{{ "%.2f"|format(row.heterodimer_dg) if row.heterodimer_dg is not none else "" }}</td>
@@ -42,19 +106,11 @@
     </tbody>
   </table>
 
-  <!-- QC 통과 전체 다운로드 -->
-  <!-- <form method="post" action="/design/export" style="margin-top: 1rem;">
-    <input type="hidden" name="kind" value="single_filtered">
-    <textarea name="data_json" style="display:none;">
-      {{ single_filtered_amplicons | tojson }}
-    </textarea>
-    <button type="submit">Export Filtered (Excel)</button>
-  </form> -->
 {% endif %}
 
 {% if single_total_amplicons %}
   <h3>전체 Amplicons 다운로드</h3>
-  <form method="post" action="/design/export">
+  <form method="post" action="/export/excel">
     <input type="hidden" name="kind" value="single_total">
     <textarea name="data_json" style="display:none;">
       {{ single_total_amplicons | tojson }}

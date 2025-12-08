@@ -309,7 +309,9 @@ class Amplicon:
         return self.template_sequence[self.forward_start_index : self.reverse_end_index + 1]
 
     def to_dict(self) -> Dict[str, Any]:
+        ######################### ERRR ########################
         amplicon_dict: Dict[str, Any] = {
+            "id":f"{self.chrom}:{str(self.start + 1)}-{str(self.end)}",
             "reference_template_sequence": self.reference_template_sequence,
             "template_sequence": self.template_sequence,
             "target_start_index": self.target_start_index,

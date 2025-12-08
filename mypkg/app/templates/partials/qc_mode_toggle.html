@@ -1,0 +1,17 @@
+<div class="qc-tabs">
+    <button
+        type="button"
+        class="qc-tab-btn {% if active_qc_mode == 'qc_only' %}active{% endif %}"
+        data-qc-mode="qc_only"
+    >
+        🧪 QC Only
+    </button>
+
+    <button
+        type="button"
+        class="qc-tab-btn {% if active_qc_mode == 'design' %}active{% endif %}"
+        data-qc-mode="design"
+    >
+        🔧 Primer Design
+    </button>
+</div>

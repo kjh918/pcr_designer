@@ -258,8 +258,6 @@ def design_qpcr_for_region(
     filtered_df = pd.DataFrame(filtered_rows)
 
     print("QC 통과 primer 개수:", len(filtered_df))
-    if not filtered_df.empty:
-        print(filtered_df.head())
 
     return total_df, filtered_df
 

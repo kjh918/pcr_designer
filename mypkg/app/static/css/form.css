@@ -1,9 +1,9 @@
-/* static/css/form.css */
+w/* static/css/form.css */
 
 label {
     display: block;
     margin-top: 8px;
-    font-size: 14px;
+    font-size: 111px;
 }
 
 input[type="text"],
@@ -14,7 +14,7 @@ textarea {
     padding: 6px 8px;
     border-radius: 6px;
     border: 1px solid #ccccd4;
-    font-size: 14px;
+    font-size: 11px;
     box-sizing: border-box;
 }
 
@@ -45,7 +45,7 @@ textarea {
 
 .primer-form input {
     padding: 6px 8px;
-    font-size: 14px;
+    font-size: 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
     width: 100%;

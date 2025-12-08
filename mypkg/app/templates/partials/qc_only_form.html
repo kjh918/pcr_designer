@@ -1,0 +1,56 @@
+{# templates/partials/qc_only_form.html #}
+
+
+<div class="section-title">QC Only 분석</div>
+
+  <p class="help-text">
+    Forward / Reverse primer, (선택) Probe 서열을 직접 입력하면
+    hairpin / homodimer / heterodimer 등의 QC 정보만 계산합니다.
+    유전체 위치 정보는 사용하지 않습니다.
+  </p>
+
+  <form action="/qc/only" method="post" class="primer-form" style="margin-top: 12px;">
+
+    <div class="form-row">
+      <label for="qc-forward">Forward Primer (5' → 3')</label>
+      <input
+        type="text"
+        id="qc-forward"
+        name="forward"
+        placeholder="예: AGCTGACTGACTGACTGACT"
+        required
+      >
+    </div>
+
+    <div class="form-row">
+      <label for="qc-reverse">Reverse Primer (5' → 3')</label>
+      <input
+        type="text"
+        id="qc-reverse"
+        name="reverse"
+        placeholder="예: CAGTCAGTCAGTCAGTCAGT"
+        required
+      >
+    </div>
+
+    <div class="form-row">
+      <label for="qc-probe">Probe Sequence (optional)</label>
+      <input
+        type="text"
+        id="qc-probe"
+        name="probe"
+        placeholder="TaqMan / hydrolysis probe 서열 (없으면 비워둠)"
+      >
+    </div>
+
+    <div class="form-row">
+      <label for="qc-template">Template DNA Sequence (optional)</label>
+      <textarea
+        id="qc-template"
+        name="template_sequence"
+        placeholder="5' → 3' 방향 DNA 서열 (필수 아님)"
+      ></textarea>
+    </div>
+
+    <button type="submit" style="margin-top: 12px;">RUN</button>
+</form>

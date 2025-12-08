@@ -5,6 +5,7 @@ from __future__ import annotations
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
+import traceback
 import json, openpyxl
 import pandas as pd
 from fastapi import APIRouter, Request, Form, File, UploadFile, HTTPException
@@ -13,6 +14,10 @@ from fastapi.templating import Jinja2Templates
 
 from app.schemas import RegionInput
 from primer.core import design_qpcr_for_region  # qPCR wrapper
+
+## internal service ## 
+from app.service.amplicone_normlizer import normalize_record, df_to_normalized_records
+
 
 router = APIRouter(
     prefix="/design",      # ★ /design/xxx 로 묶인다
@@ -192,9 +197,12 @@ async def design_from_form(
                 "total_count": len(total_records),
                 "filtered_count": len(filtered_records),
             }
+
+            
+
+
             context["single_total_amplicons"] = total_records
             context["single_filtered_amplicons"] = filtered_records
-            print(filtered_records)
 
         # 2) Multi 모드
         elif mode == "multi":
@@ -260,49 +268,19 @@ async def design_from_form(
             )
 
     except HTTPException as e:
+        print(f"[HTTPException Error] {e.detail}")
+        traceback.print_exc() 
         context["error"] = e.detail
+
     except ValueError as e:
+        print(f"[ValueError] {e}")
+        traceback.print_exc() 
         context["error"] = f"Reference/설계 에러: {e}"
+
     except Exception as e:
+        print(f"[Unhandled Exception] {e}")
+        traceback.print_exc() 
         context["error"] = str(e)
 
     return templates.TemplateResponse("index.html", context)
 
-
-@router.post("/export")
-async def export_amplicons_to_excel(
-    kind: str = Form(...),      # "single_total" / "single_filtered" / "multi_..." 등
-    data_json: str = Form(...), # 템플릿에서 넘겨주는 JSON 문자열
-):
-    """
-    템플릿에서 넘겨준 amplicon 리스트(JSON)를 엑셀로 변환하여 다운로드.
-    """
-    try:
-        rows = json.loads(data_json)
-        if not isinstance(rows, list):
-            raise ValueError("data_json must be a list of dicts")
-
-        df = pd.DataFrame(rows)
-        print(df)
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            sheet_name = kind[:31] if kind else "Sheet1"  # 엑셀 시트 이름 최대 31자
-            df.to_excel(writer, index=False, sheet_name=sheet_name)
-
-        buffer.seek(0)
-
-        filename = f"{kind}_amplicons.xlsx"
-
-        return StreamingResponse(
-            buffer,
-            media_type=(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ),
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
-            },
-        )
-    except Exception as e:
-        # 프론트용 메시지로 쓰려면 TemplateResponse로 돌려도 되는데,
-        # 여기서는 단순 HTTP 400 에러로 처리
-        raise HTTPException(status_code=400, detail=f"엑셀 export 실패: {e}")

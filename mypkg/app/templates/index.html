@@ -5,42 +5,57 @@
 <p>영역 정보 또는 Excel 파일을 이용해 프라이머를 자동으로 디자인합니다.</p>
 
 {% if error %}
-    <div class="card error">에러: {{ error }}</div>
+  <div class="card error">에러: {{ error }}</div>
 {% endif %}
+
+
+{# 👉 결과가 있으면 design 모드로, 아니면 qc_only로 기본값 설정 #}
+{% set active_qc_mode = 'qc_only' %}
+{% if single_result or multi_results %}
+  {% set active_qc_mode = 'design' %}
+{% endif %}
+
+{# 🔹 상단 탭에 active_qc_mode 전달 #}
+{% include "partials/qc_mode_toggle.html" with context %}
 
 <div class="card">
+    
+    <div id="qc-wrapper" >
+        {% include "partials/qc_only_form.html" %}
+    </div>
 
-    {# 상단 배너들 #}
-    {% include "partials/only_qc.html" %}
-    {% include "partials/mode_toggle.html" %}
-    {% include "partials/primer_type.html" %}
-    {% include "partials/reference.html" %}
+    <div id="design-wrapper" class="hidden">
+        {% include "partials/mode_toggle.html" %}
+        {% include "partials/primer_type.html" %}
+        {% include "partials/reference.html" %}
 
-    <form action="/design/form" method="post" enctype="multipart/form-data">
-        {# 숨겨서 서버로 넘길 값들 #}
-        <input type="hidden" name="mode" id="mode-input" value="single">
-        <input type="hidden" name="primer_type" id="primer-type-input" value="default">
-        <input type="hidden" name="reference" id="reference-input" value="hg19">
-        <input type="hidden" name="probe" id="probe-input" value="no">
+        <form action="/design/form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="mode" id="mode-input" value="single">
+            <input type="hidden" name="primer_type" id="primer-type-input" value="default">
+            <input type="hidden" name="reference" id="reference-input" value="hg19">
+            <input type="hidden" name="probe" id="probe-input" value="no">
 
-        {# 단일 / 다중 입력 폼 #}
-        {% include "partials/form_single.html" %}
-        {% include "partials/form_multi.html" %}
-        {% include "partials/probe.html" %}
-        {% include "partials/qc_threshold.html" %}
+            {% include "partials/form_single.html" %}
+            {% include "partials/form_multi.html" %}
+            {% include "partials/probe.html" %}
 
-        <button type="submit">디자인 실행</button>
-    </form>
+            {# ← QC Threshold 버튼은 form 안쪽에 위치시킴 #}
+            {% include "partials/qc_threshold.html" %}
+
+            <button type="submit">RUN</button>
+        </form>
+        
+        {# 결과 영역 #}
+        {% if single_result %}
+            {% include "partials/results_single.html" %}
+        {% endif %}
+
+        {% if multi_results %}
+            {% include "partials/results_multi.html" %}
+        {% endif %}
+    </div>
+
 </div>
 
-{# Single result #}
-{% if single_result %}
-    {% include "partials/results_single.html" %}
-{% endif %}
-
-{# Multi result #}
-{% if multi_results %}
-    {% include "partials/results_multi.html" %}
-{% endif %}
-
 {% endblock content %}
+

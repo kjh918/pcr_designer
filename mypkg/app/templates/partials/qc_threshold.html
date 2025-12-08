@@ -38,19 +38,3 @@
     </div>
 
 </div>
-<script>
-    const btn = document.getElementById('qc-toggle-btn');
-    const panel = document.getElementById('qc-panel');
-
-    btn.addEventListener('click', () => {
-        const hidden = panel.classList.toggle('hidden');
-
-        if (hidden) {
-            btn.classList.add('active');
-            btn.textContent = "Show QC Thresholds ▼";
-        } else {
-            btn.classList.remove('active');
-            btn.textContent = "Hide QC Thresholds ▲";
-        }
-    });
-</script>
