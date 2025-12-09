@@ -9,34 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initQcViewToggle();   // ← 이 줄이 실제로 있는지!
 });
 
-// === 1) Single / Multi 설계 모드 토글 ===
-function initModeToggle() {
-    const modeInput = document.getElementById("mode-input");
-    const singleSection = document.getElementById("single-section");
-    const multiSection = document.getElementById("multi-section");
-    const modeBtns = document.querySelectorAll(".mode-btn");
-
-    if (!modeInput || !singleSection || !multiSection || !modeBtns.length) return;
-
-    modeBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const mode = btn.getAttribute("data-mode");
-            modeInput.value = mode;
-
-            modeBtns.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-
-            if (mode === "single") {
-                singleSection.classList.remove("hidden");
-                multiSection.classList.add("hidden");
-            } else {
-                singleSection.classList.add("hidden");
-                multiSection.classList.remove("hidden");
-            }
-        });
-    });
-}
-
 // === 2) Primer Type 토글 ===
 function initPrimerTypeToggle() {
     const primerInput = document.getElementById("primer-type-input");
@@ -127,6 +99,66 @@ function initQcViewToggle() {
                 designWrapper.classList.add("hidden");
                 qcWrapper.classList.remove("hidden");
             }
+        });
+    });
+}
+function initModeToggle() {
+    const designWrapper = document.getElementById("design-wrapper");
+    if (!designWrapper) return;
+
+    const modeInput = document.getElementById("mode-input");
+    const singleSection = document.getElementById("single-section");
+    const multiSection = document.getElementById("multi-section");
+    const modeBtns = document.querySelectorAll(".mode-btn");
+
+    // 🔥 결과 영역 wrapper도 같이 잡아줌
+    const singleResults = document.getElementById("single-results");
+    const multiResults = document.getElementById("multi-results");
+
+    if (!modeInput || !singleSection || !multiSection || !modeBtns.length) {
+        return;
+    }
+
+    function applyMode(mode) {
+        modeInput.value = mode;
+
+        // 폼 섹션 토글
+        if (mode === "single") {
+            singleSection.classList.remove("hidden");
+            multiSection.classList.add("hidden");
+        } else {
+            singleSection.classList.add("hidden");
+            multiSection.classList.remove("hidden");
+        }
+
+        // 결과 섹션 토글 (있을 때만)
+        if (singleResults && multiResults) {
+            if (mode === "single") {
+                singleResults.classList.remove("hidden");
+                multiResults.classList.add("hidden");
+            } else {
+                singleResults.classList.add("hidden");
+                multiResults.classList.remove("hidden");
+            }
+        }
+
+        // 버튼 active 스타일
+        modeBtns.forEach(btn => {
+            const btnMode = btn.dataset.mode;
+            btn.classList.toggle("active", btnMode === mode);
+        });
+
+        console.log("[MODE]", modeInput.value);
+    }
+
+    const initialMode = modeInput.value || "single";
+    applyMode(initialMode);
+
+    modeBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const mode = btn.dataset.mode;
+            if (!mode) return;
+            applyMode(mode);
         });
     });
 }

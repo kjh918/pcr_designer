@@ -188,6 +188,9 @@ def design_qpcr_for_region(
     # 4) PrimerDesigner / ProbePrimerDesigner 선택해서 실행
     if n_probes is not None and n_probes > 0:
         # probe 포함 설계
+
+        ### Probe 부분 - target 영역 포함하게 디자인하는거 추가 ###
+        
         designer = ProbePrimerDesigner(
             template_sequence=template_sequence,
             target_start_index=target_start_index,
@@ -197,7 +200,7 @@ def design_qpcr_for_region(
             max_amplicon_length=max_amplicon_length,
             n_primers=n_primers,
             n_probes=n_probes,
-            # primer 조건
+            # primer 조건 (BasePrimerDesigner로 전달)
             opt_length=primer_opt_length_eff,
             min_length=primer_min_length_eff,
             max_length=primer_max_length_eff,
@@ -205,11 +208,11 @@ def design_qpcr_for_region(
             min_gc=primer_min_gc_eff,
             max_gc=primer_max_gc_eff,
             primer3_global_args=primer3_global_args,
-            # probe 조건
+            # probe 조건 (ProbePrimerDesigner 내부에서 probe_*로 사용)
             probe_opt_length=probe_opt_length_eff,
             probe_min_length=probe_min_length_eff,
             probe_max_length=probe_max_length_eff,
-            probe_opt_tm=probe_opt_tm_eff,
+            opt_tm=probe_opt_tm_eff,
             probe_min_tm=probe_min_tm_eff,
             probe_max_tm=probe_max_tm_eff,
             probe_opt_gc=probe_opt_gc_eff,
@@ -217,6 +220,7 @@ def design_qpcr_for_region(
             probe_max_gc=probe_max_gc_eff,
             probe_primer3_global_args=probe_primer3_global_args,
         )
+
     else:
         # 프라이머만 설계
         designer = PrimerDesigner(
@@ -249,7 +253,9 @@ def design_qpcr_for_region(
         heterodimer_max_tm=45.0,
     )
 
+    genomic_id = f'{region.chrom}:{region.start}-{region.end}'
     total_rows, filtered_rows = evaluate_amplicons(
+        genomic_id,
         designer.amplicon_list,
         qc_thresholds=qc_th,
     )
@@ -257,7 +263,10 @@ def design_qpcr_for_region(
     total_df = pd.DataFrame(total_rows)
     filtered_df = pd.DataFrame(filtered_rows)
 
-    print("QC 통과 primer 개수:", len(filtered_df))
+    total_df.index = [genomic_id] * len(total_df)
+    filtered_df.index = [genomic_id] * len(filtered_df)
 
+    print("QC 통과 primer 개수:", len(filtered_df))
+    print(total_df.columns)
     return total_df, filtered_df
 

@@ -224,8 +224,14 @@ class PrimerDesigner(BasePrimerDesigner):
 class ProbePrimerDesigner(BasePrimerDesigner):
     """
     primer + internal probe까지 디자인하는 클래스.
-    - 자동 probe 디자인 (probe=True)
-    - 혹은 고정 probe_sequence 주입 모드 지원
+    - 자동 probe 디자인 (probe_sequence=None)
+    - 고정 probe_sequence 주입 모드 지원 (probe_sequence 제공)
+    
+    NOTE:
+    - BasePrimerDesigner 쪽 opt_length, min_length, max_length, opt_gc, ... 는
+      'primer'용 조건으로 사용됩니다.
+    - 이 클래스의 opt_tm, probe_min_tm, probe_max_tm, probe_* 길이/GC 조건은
+      'probe(내부 올리고)' 용으로만 사용됩니다.
     """
 
     def __init__(
@@ -234,37 +240,47 @@ class ProbePrimerDesigner(BasePrimerDesigner):
         target_start_index: int,
         target_end_index: int,
         *,
+        # probe 관련
         n_probes: int = 10,
         probe_sequence: Optional[str] = None,
-        opt_length: int = 25,
-        min_length: int = 20,
-        max_length: int = 30,
-        opt_tm: float = 60.0,
-        min_tm: float = 50.0,
-        max_tm: float = 70.0,
-        opt_gc: float = 45.0,
-        min_gc: float = 35.0,
-        max_gc: float = 65.0,
+        probe_opt_length: int = 25,
+        probe_min_length: int = 20,
+        probe_max_length: int = 30,
+        opt_tm: float = 60.0,          # == probe_opt_tm (사용 예: opt_tm=probe_opt_tm_eff)
+        probe_min_tm: float = 50.0,
+        probe_max_tm: float = 70.0,
+        probe_opt_gc: float = 45.0,
+        probe_min_gc: float = 35.0,
+        probe_max_gc: float = 65.0,
+        probe_primer3_global_args: Optional[Dict[str, Any]] = None,
         reference_template_sequence: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
+        # probe 개수/시퀀스
         self.n_probes: int = n_probes
         self.probe_sequence: Optional[str] = probe_sequence
 
-        # 기본 primer 설정은 그대로 상속
+        # probe 조건 (primer 조건과 별도)
+        self.probe_opt_length: int = probe_opt_length
+        self.probe_min_length: int = probe_min_length
+        self.probe_max_length: int = probe_max_length
+
+        self.probe_opt_tm: float = opt_tm
+        self.probe_min_tm: float = probe_min_tm
+        self.probe_max_tm: float = probe_max_tm
+
+        self.probe_opt_gc: float = probe_opt_gc
+        self.probe_min_gc: float = probe_min_gc
+        self.probe_max_gc: float = probe_max_gc
+
+        # 기본 primer 설정은 BasePrimerDesigner에 위임
+        # - kwargs 안에 들어있는 opt_length, min_length, max_length, opt_gc, ...
+        #   는 모두 primer 조건으로 사용됨
+        # - 여기서 opt_tm(=probe_opt_tm)은 super()에 넘기지 않아서 primer Tm에는 영향 없음
         super().__init__(
             template_sequence=template_sequence,
             target_start_index=target_start_index,
             target_end_index=target_end_index,
-            opt_length=opt_length,
-            min_length=min_length,
-            max_length=max_length,
-            opt_tm=opt_tm,
-            min_tm=min_tm,
-            max_tm=max_tm,
-            opt_gc=opt_gc,
-            min_gc=min_gc,
-            max_gc=max_gc,
             reference_template_sequence=reference_template_sequence,
             **kwargs,
         )
@@ -279,15 +295,26 @@ class ProbePrimerDesigner(BasePrimerDesigner):
         else:
             self._configure_probe_auto()
 
+        # 사용자 지정 probe용 global args (primer용 primer3_global_args와 별도로 merge)
+        if probe_primer3_global_args:
+            self.update_primer3_global_args(probe_primer3_global_args)
+
+    # ------------------------------------------------------------------
+    # probe 자동 디자인 설정
+    # ------------------------------------------------------------------
     def _configure_probe_auto(self) -> None:
         """
         타겟 전체를 커버하는 probe 자동 디자인을 위한 primer3 설정.
+        - primer3 내부 올리고 관련 파라미터는 probe_* 속성을 사용
         """
         target_len = self.target_end_index - self.target_start_index + 1
 
+        # 타겟 범위 지정 + probe 위치 제약 (primer 위치와 간섭 최소화)
         self.update_primer3_seq_args(
             {
                 "SEQUENCE_TARGET": [self.target_start_index, target_len],
+                # 필요시 조정 가능: 여기에서는 primer 길이(self.max_length)를 사용해
+                # 양 끝에서 primer 영역을 제외하도록 설정
                 "SEQUENCE_INTERNAL_EXCLUDED_REGION": [
                     [0, self.target_end_index - self.max_length],
                     [
@@ -299,24 +326,28 @@ class ProbePrimerDesigner(BasePrimerDesigner):
             }
         )
 
+        # probe(내부 올리고) 특성 설정
         self.update_primer3_global_args(
             {
                 "PRIMER_INTERNAL_SALT_MONOVALENT": self.DEFAULT_SALT_MONOVALENT,
                 "PRIMER_INTERNAL_SALT_DIVALENT": self.DEFAULT_SALT_DIVALENT,
                 "PRIMER_INTERNAL_DNTP_CONC": self.DEFAULT_DNTP_CONC,
                 "PRIMER_INTERNAL_DNA_CONC": self.DEFAULT_DNA_CONC,
-                "PRIMER_INTERNAL_OPT_SIZE": self.opt_length,
-                "PRIMER_INTERNAL_MIN_SIZE": self.min_length,
-                "PRIMER_INTERNAL_MAX_SIZE": self.max_length,
-                "PRIMER_INTERNAL_OPT_TM": self.opt_tm,
-                "PRIMER_INTERNAL_MIN_TM": self.min_tm,
-                "PRIMER_INTERNAL_MAX_TM": self.max_tm,
-                "PRIMER_INTERNAL_OPT_GC_PERCENT": self.opt_gc,
-                "PRIMER_INTERNAL_MIN_GC": self.min_gc,
-                "PRIMER_INTERNAL_MAX_GC": self.max_gc,
+                "PRIMER_INTERNAL_OPT_SIZE": self.probe_opt_length,
+                "PRIMER_INTERNAL_MIN_SIZE": self.probe_min_length,
+                "PRIMER_INTERNAL_MAX_SIZE": self.probe_max_length,
+                "PRIMER_INTERNAL_OPT_TM": self.probe_opt_tm,
+                "PRIMER_INTERNAL_MIN_TM": self.probe_min_tm,
+                "PRIMER_INTERNAL_MAX_TM": self.probe_max_tm,
+                "PRIMER_INTERNAL_OPT_GC_PERCENT": self.probe_opt_gc,
+                "PRIMER_INTERNAL_MIN_GC": self.probe_min_gc,
+                "PRIMER_INTERNAL_MAX_GC": self.probe_max_gc,
             }
         )
 
+    # ------------------------------------------------------------------
+    # 고정 probe 시퀀스 사용 설정
+    # ------------------------------------------------------------------
     def _configure_fixed_probe(self) -> None:
         """미리 정해진 probe_sequence를 사용하는 경우 설정."""
         probe_start = self.template_sequence.find(self.probe_sequence)
@@ -328,10 +359,14 @@ class ProbePrimerDesigner(BasePrimerDesigner):
             {
                 "SEQUENCE_INTERNAL_OLIGO": self.probe_sequence,
                 # TODO: probe와 primer 사이 간격을 인자로 받도록 개선 가능
-                "SEQUENCE_EXCLUDED_REGION": [[probe_start - 1, len(self.probe_sequence) + 2]],
+                "SEQUENCE_EXCLUDED_REGION": [
+                    [probe_start - 1, len(self.probe_sequence) + 2]
+                ],
             }
         )
 
+        # 고정 probe의 경우 길이/Tm/GC 제약은 크게 풀어둔 상태
+        # (원하면 self.probe_* 를 사용하도록 변경 가능)
         self.update_primer3_global_args(
             {
                 "PRIMER_INTERNAL_SALT_MONOVALENT": self.DEFAULT_SALT_MONOVALENT,
@@ -347,6 +382,9 @@ class ProbePrimerDesigner(BasePrimerDesigner):
             }
         )
 
+    # ------------------------------------------------------------------
+    # Amplicon 생성
+    # ------------------------------------------------------------------
     def _build_amplicons(self) -> List[Amplicon]:
         """
         primer + probe를 모두 Amplicon에 포함하고,
@@ -409,10 +447,13 @@ class ProbePrimerDesigner(BasePrimerDesigner):
                 reverse_primer=reverse,
                 probe=probe,
             )
-
+            # probe가 타겟 전체를 커버하는 경우만 사용 (probe 없으면 그냥 통과)
             if probe is not None:
                 probe_start = probe.template_sequence.find(probe.sequence)
                 probe_end = probe_start + len(probe.sequence)
+                print('p',probe_start, probe_end)
+                print('t',self.target_start_index,self.target_end_index)
+                print()
                 if (
                     probe_start <= self.target_start_index
                     and probe_end >= self.target_end_index
@@ -420,5 +461,5 @@ class ProbePrimerDesigner(BasePrimerDesigner):
                     amplicons.append(amplicon)
             else:
                 amplicons.append(amplicon)
-
+        print(amplicons)
         return amplicons

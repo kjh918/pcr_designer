@@ -18,7 +18,7 @@ app = FastAPI(
 
 # static /templates 설정
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="app/templates", auto_reload=True)
 
 # CORS
 app.add_middleware(

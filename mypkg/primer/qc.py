@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Dict, Tuple, List, Iterable, Any
 
 import primer3
+from Bio.Seq import Seq
+
 
 
 def compute_heterodimer(f_seq: str, r_seq: str) -> Tuple[float, float]:
@@ -29,7 +31,6 @@ class QCThresholds:
     homodimer_min_dg: float = -6.0
     heterodimer_min_dg: float = -6.0
     heterodimer_max_tm: float = 45.0
-
 
 def _qc_bool_flags(amp: Dict[str, Any], th: QCThresholds) -> Tuple[bool, bool, bool]:
     """
@@ -76,6 +77,7 @@ def _hetero_ok(dg: float, tm: float, th: QCThresholds) -> bool:
 
 
 def evaluate_amplicons(
+    genomic_id, 
     amplicons: Iterable[Any],
     qc_thresholds: QCThresholds,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -97,9 +99,12 @@ def evaluate_amplicons(
 
     for amplicon in amplicons:
         a_dict = amplicon.to_dict()
-
+        
+        a_dict['ID'] = genomic_id
         f_seq = a_dict.get("forward_sequence")
         r_seq = a_dict.get("reverse_sequence")
+        rc_r_seq = str(Seq(a_dict.get("reverse_sequence")).reverse_complement())
+        a_dict['rc_reverse_sequence'] = rc_r_seq
         p_seq = a_dict.get("probe_sequence")
 
         # ---------- 1) heterodimer 계산 ----------

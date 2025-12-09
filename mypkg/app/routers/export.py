@@ -23,6 +23,57 @@ router = APIRouter(
 
 
 @router.post("/excel")
+async def export_excel(
+    kind: str = Form(...),
+    data_json: str = Form(...),
+    meta_json: str | None = Form(None),
+):
+    """
+    - data_json : Amplicon 리스트 (records)
+    - meta_json : 분석 시점 / 파라미터 정보
+    """
+    rows: List[Dict[str, Any]] = json.loads(data_json)
+    df = pd.DataFrame(rows)
+
+    meta = None
+    if meta_json:
+        meta = json.loads(meta_json)
+
+    buf = BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        # 1) 결과 시트
+        df.to_excel(writer, index=False, sheet_name="amplicons")
+
+        # 2) 메타 시트
+        if meta:
+            flat_items: List[Dict[str, Any]] = []
+
+            def flatten(prefix: str, obj: Any):
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        new_prefix = f"{prefix}.{k}" if prefix else k
+                        flatten(new_prefix, v)
+                else:
+                    flat_items.append({"key": prefix, "value": obj})
+
+            flatten("", meta)
+            meta_df = pd.DataFrame(flat_items)
+            meta_df.to_excel(writer, index=False, sheet_name="meta")
+
+    buf.seek(0)
+    filename = f"{kind}_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return StreamingResponse(
+        buf,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        },
+    )
+    
+@router.post("/excel")
 async def export_amplicons_to_excel(
     kind: str = Form(...),
     data_json: str = Form(...),

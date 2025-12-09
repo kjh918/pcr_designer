@@ -8,7 +8,6 @@
   <div class="card error">에러: {{ error }}</div>
 {% endif %}
 
-
 {# 👉 결과가 있으면 design 모드로, 아니면 qc_only로 기본값 설정 #}
 {% set active_qc_mode = 'qc_only' %}
 {% if single_result or multi_results %}
@@ -20,42 +19,51 @@
 
 <div class="card">
     
-    <div id="qc-wrapper" >
+    <div id="qc-wrapper" class="{% if active_qc_mode == 'design' %}hidden{% endif %}">
         {% include "partials/qc_only_form.html" %}
     </div>
 
-    <div id="design-wrapper" class="hidden">
-        {% include "partials/mode_toggle.html" %}
-        {% include "partials/primer_type.html" %}
-        {% include "partials/reference.html" %}
+    <div id="design-wrapper" class="{% if active_qc_mode != 'design' %}hidden{% endif %}">
+      <!-- {% set current_design_mode = mode if mode is defined else 'single' %} -->
 
-        <form action="/design/form" method="post" enctype="multipart/form-data">
-            <input type="hidden" name="mode" id="mode-input" value="single">
-            <input type="hidden" name="primer_type" id="primer-type-input" value="default">
-            <input type="hidden" name="reference" id="reference-input" value="hg19">
-            <input type="hidden" name="probe" id="probe-input" value="no">
+      {% include "partials/mode_toggle.html" %}
+      {% include "partials/primer_type.html" %}
+      {% include "partials/reference.html" %}
 
-            {% include "partials/form_single.html" %}
-            {% include "partials/form_multi.html" %}
-            {% include "partials/probe.html" %}
+      <form id="design-form" action="/design/form" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="mode" id="mode-input" value="{{ current_design_mode }}">
+          <input type="hidden" name="primer_type" id="primer-type-input" value="default">
+          <input type="hidden" name="reference" id="reference-input" value="hg19">
+          <input type="hidden" name="probe" id="probe-input" value="no">
 
-            {# ← QC Threshold 버튼은 form 안쪽에 위치시킴 #}
-            {% include "partials/qc_threshold.html" %}
+          <div id="single-section" class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
+              {% include "partials/form_single.html" %}
+          </div>
 
-            <button type="submit">RUN</button>
-        </form>
-        
-        {# 결과 영역 #}
-        {% if single_result %}
-            {% include "partials/results_single.html" %}
-        {% endif %}
+          <div id="multi-section" class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
+              {% include "partials/form_multi.html" %}
+          </div>
 
-        {% if multi_results %}
-            {% include "partials/results_multi.html" %}
-        {% endif %}
-    </div>
+          {% include "partials/probe.html" %}
+          {% include "partials/qc_threshold.html" %}
+
+          <button type="submit">RUN</button>
+      </form>
+
+      <div id="single-results"
+           class="{% if current_design_mode != 'single' %}hidden{% endif %}">
+          {% if single_result %}
+              {% include "partials/results_single.html" %}
+          {% endif %}
+      </div>
+
+      <div id="multi-results"
+           class="{% if current_design_mode != 'multi' %}hidden{% endif %}">
+          {% if multi_results %}
+              {% include "partials/results_multi.html" %}
+          {% endif %}
+      </div>
+  </div>
 
 </div>
-
 {% endblock content %}
-
