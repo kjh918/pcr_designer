@@ -14,56 +14,75 @@
   {% set active_qc_mode = 'design' %}
 {% endif %}
 
-{# 🔹 상단 탭에 active_qc_mode 전달 #}
 {% include "partials/qc_mode_toggle.html" with context %}
 
 <div class="card">
-    
-    <div id="qc-wrapper" class="{% if active_qc_mode == 'design' %}hidden{% endif %}">
-        {% include "partials/qc_only_form.html" %}
-    </div>
 
-    <div id="design-wrapper" class="{% if active_qc_mode != 'design' %}hidden{% endif %}">
-      <!-- {% set current_design_mode = mode if mode is defined else 'single' %} -->
-
-      {% include "partials/mode_toggle.html" %}
-      {% include "partials/primer_type.html" %}
-      {% include "partials/reference.html" %}
-
-      <form id="design-form" action="/design/form" method="post" enctype="multipart/form-data">
-          <input type="hidden" name="mode" id="mode-input" value="{{ current_design_mode }}">
-          <input type="hidden" name="primer_type" id="primer-type-input" value="default">
-          <input type="hidden" name="reference" id="reference-input" value="hg19">
-          <input type="hidden" name="probe" id="probe-input" value="no">
-
-          <div id="single-section" class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
-              {% include "partials/form_single.html" %}
-          </div>
-
-          <div id="multi-section" class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
-              {% include "partials/form_multi.html" %}
-          </div>
-
-          {% include "partials/probe.html" %}
-          {% include "partials/qc_threshold.html" %}
-
-          <button type="submit">RUN</button>
-      </form>
-
-      <div id="single-results"
-           class="{% if current_design_mode != 'single' %}hidden{% endif %}">
-          {% if single_result %}
-              {% include "partials/results_single.html" %}
-          {% endif %}
-      </div>
-
-      <div id="multi-results"
-           class="{% if current_design_mode != 'multi' %}hidden{% endif %}">
-          {% if multi_results %}
-              {% include "partials/results_multi.html" %}
-          {% endif %}
-      </div>
+  <div id="qc-wrapper" class="{% if active_qc_mode == 'design' %}hidden{% endif %}">
+    {% include "partials/qc_only_form.html" %}
   </div>
 
+  <div id="design-wrapper" class="{% if active_qc_mode != 'design' %}hidden{% endif %}">
+    {# 🔹 서버에서 넘어온 mode 값 기준으로 현재 디ザイン 모드 설정 #}
+    {% set current_design_mode = mode if mode is defined and mode in ['single', 'multi'] else 'single' %}
+
+    {% include "partials/mode_toggle.html" %}
+
+    {# 기본 옵션 (항상 보이는 것들 - 예: primer 타입, reference 선택) #}
+    {% include "partials/primer_type.html" %}
+    {% include "partials/reference.html" %}
+
+    <form id="design-form" action="/design/form" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="mode" id="mode-input" value="{{ current_design_mode }}">
+      <input type="hidden" name="primer_type" id="primer-type-input" value="{{ primer_type or 'default' }}">
+      <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg19' }}">
+      <input type="hidden" name="probe" id="probe-input" value="{{ probe or 'no' }}">
+
+      {# 🟢 Single 입력 영역 #}
+      <div id="single-section"
+           class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
+        {% include "partials/form_single.html" %}
+      </div>
+
+      {# 🟢 Multi 입력 영역 (엑셀 업로드) #}
+      <div id="multi-section"
+           class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
+        {% include "partials/form_multi.html" %}
+      </div>
+
+      {# 🟡 고급 옵션 영역: 토글로 접기/펼치기 #}
+      <div class="options-wrapper">
+        <button type="button" id="btn-toggle-options" class="toggle-btn">
+          ⚙ 옵션 파라미터 보기/숨기기
+        </button>
+
+        <div id="options-panel" class="options-panel hidden">
+          {# 여기 안에 "옵션 같은 parameter"들 넣기 #}
+          {% include "partials/primer_options.html" %}
+          {% include "partials/probe.html" %}
+          {% include "partials/qc_threshold.html" %}
+          {# 필요하면 primer length / Tm / GC 세부 값들도 이 안으로 이동 #}
+        </div>
+      </div>
+
+      <button type="submit">RUN</button>
+    </form>
+
+    {# 결과 영역 #}
+    <div id="single-results"
+         class="{% if current_design_mode != 'single' %}hidden{% endif %}">
+      {% if single_result %}
+        {% include "partials/results_single.html" %}
+      {% endif %}
+    </div>
+
+    <div id="multi-results"
+         class="{% if current_design_mode != 'multi' %}hidden{% endif %}">
+      {% if multi_results %}
+        {% include "partials/results_multi.html" %}
+      {% endif %}
+    </div>
+
+  </div>
 </div>
 {% endblock content %}

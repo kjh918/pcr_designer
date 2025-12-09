@@ -282,5 +282,23 @@ async def design_from_form(
         traceback.print_exc() 
         context["error"] = str(e)
 
-    return templates.TemplateResponse("index.html", context)
+    except HTTPException as e:
+        print(f"[HTTPException Error] {e.detail}")
+        traceback.print_exc()
+        context["error"] = e.detail
 
+    except ValueError as e:
+        print(f"[ValueError] {e}")
+        traceback.print_exc()
+        context["error"] = f"Reference/설계 에러: {e}"
+
+    except Exception as e:
+        print(f"[Unhandled Exception] {e}")
+        traceback.print_exc()
+        context["error"] = str(e)
+
+    # 🔥 여기!! context 그대로 넘기면 됨
+    return templates.TemplateResponse(
+        "index.html",
+        context,
+    )

@@ -41,15 +41,18 @@ app.include_router(export.router)
 # -----------------------
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """처음 접속할 때는 결과 없이 빈 폼만 보여줌"""
+    """
+    처음 접속할 때는 결과 없이 빈 폼만 보여줌.
+    - mode: 'single' 또는 'multi' (템플릿에서 current_design_mode 로 사용)
+    """
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
+            "mode": "single",          # 🔹 Jinja에서 current_design_mode 기본값
             "single_result": None,
-            "single_primers": None,   # 처음에는 비움
+            "single_primers": None,
             "multi_results": None,
             "error": None,
         },
     )
-
