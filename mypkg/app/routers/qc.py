@@ -32,7 +32,7 @@ async def qc_page(
     """
     qc_result = None
     return templates.TemplateResponse(
-        "qc.html",
+        "index.html",
         {
             "request": request,
             "error": error,
@@ -58,7 +58,6 @@ async def qc_only_run(
     """
     error: str | None = None
     qc_result = None
-    print(forward, reverse)
     try:
         # 1) Thermo 기반 QC (Amplicon + evaluate_amplicons)
         amp = make_amplicon_for_qc(
@@ -108,7 +107,7 @@ async def qc_only_run(
         error = f"QC 수행 중 오류: {e}"
 
     return templates.TemplateResponse(
-        "qc.html",
+        "index.html",
         {
             "request": request,
             "error": error,

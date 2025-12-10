@@ -6,7 +6,7 @@
 <p>리드 품질 QC 또는 Primer Design 기능을 선택하여 사용할 수 있습니다.</p>
 
 {# 상단 탭: QC Only 활성 #}
-{% include "partials/qc_mode_tabs.html" with context %}
+{% include "partials/qc_mode_toggle.html" with context %}
 
 {% if error %}
   <div class="card error">에러: {{ error }}</div>
@@ -23,12 +23,4 @@
         <button type="submit">RUN QC</button>
     </form>
 
-    {% if qc_result %}
-        <div class="result-block">
-            <h3 class="section-title">QC 결과</h3>
-            {# qc_result 구조에 맞게 UI 꾸미기. 지금은 JSON으로 단순표시 #}
-            <pre>{{ qc_result | tojson(indent=2) }}</pre>
-        </div>
-    {% endif %}
 </div>
-{% endblock content %}

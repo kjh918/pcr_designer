@@ -23,8 +23,14 @@
     QC ONLY 영역
     ======================= #}
   <div id="qc-wrapper" class="{% if active_qc_mode == 'design' %}hidden{% endif %}">
+    {# QC 폼 (이미 내부에 <form> 있음) #}
     {% include "partials/qc_only_form.html" %}
-  </div>
+
+    {# QC 결과 카드 #}
+    {% if qc_result %}
+        {% include "partials/results_only_qc.html" %}
+    {% endif %}
+    </div>
 
     {# =======================
     DESIGN 영역

@@ -644,7 +644,7 @@ def blast_qc_for_primer_pair(
         qc_blast_hit = (
             "O" if (f_hits <= config.max_hits and r_hits <= config.max_hits) else "X"
         )
-        qc_blast_amplicon = "O" if nearby_count == 0 else "X"
+        qc_blast_amplicon = "O" if nearby_count <= 1 else "X"
 
     return {
         "f_hits": f_hits,
