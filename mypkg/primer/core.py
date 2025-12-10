@@ -242,15 +242,15 @@ def design_qpcr_for_region(
     # 메서드 이름이 design_primer() 라면 여기만 바꾸면 됨
     designer.design()
 
-    # 5) QC Threshold 설정
-    qc_th = QCThresholds(
-        hairpin_max_tm=47.0,
-        hairpin_min_dg=-5.0,
-        homodimer_min_dg=-6.0,
-        heterodimer_min_dg=-6.0,
-        heterodimer_max_tm=45.0,
-    )
+    qc_cfg = settings.qc_params  # QCParams 모델
 
+    qc_th = QCThresholds(
+        hairpin_min_dg=qc_cfg.HAIRPIN_MIN_DG,
+        homodimer_min_dg=qc_cfg.HOMODIMER_MIN_DG,
+        heterodimer_min_dg=qc_cfg.HETERODIMER_MIN_DG,
+        # hairpin_max_tm, heterodimer_max_tm 은 QCThresholds 의 기본값(47, 45 등)을 그대로 사용
+        # 필요하면 나중에 qc_params 에 HAIRPIN_MAX_TM, HETERODIMER_MAX_TM 추가해서 여기서도 넘기면 됨.
+    )
     genomic_id = f'{region.chrom}:{region.start}-{region.end}'
     total_rows, filtered_rows = evaluate_amplicons(
         genomic_id,

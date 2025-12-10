@@ -156,7 +156,6 @@ def _qc_bool_flags(amp: Dict[str, Any], th: QCThresholds) -> Tuple[bool, bool, b
     # F–R heterodimer (기본 heterodimer_dg / heterodimer_tm 사용)
     hetero_fr_ok = (
         amp.get("heterodimer_dg", 0.0) >= th.heterodimer_min_dg
-        and amp.get("heterodimer_tm", 0.0) <= th.heterodimer_max_tm
     )
 
     return hairpin_ok, homodimer_ok, hetero_fr_ok
@@ -175,7 +174,7 @@ def _hetero_ok(dg: float, tm: float, th: QCThresholds) -> bool:
     """
     단일 heterodimer 쌍에 대한 QC 여부.
     """
-    return (dg >= th.heterodimer_min_dg) and (tm <= th.heterodimer_max_tm)
+    return (dg >= th.heterodimer_min_dg) 
 
 
 # -----------------------------

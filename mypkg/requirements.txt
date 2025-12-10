@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+jinja2
+primer3-py
+biopython
+PyYAML
+pandas
+openpyxl
+pysam
+pyfaidx
+python-multipart
