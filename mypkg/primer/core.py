@@ -72,7 +72,6 @@ def design_qpcr_for_region(
         n_primers=n_primers,
         bisulfite=bisulfite,
     )
-
     # 2) settings 에서 primer/probe 기본 kwargs 가져오고, 웹에서 들어온 값으로 override
     pcr_cfg = settings.pcr_params
 
@@ -90,7 +89,6 @@ def design_qpcr_for_region(
     primer_max_gc_eff = primer_max_gc if primer_max_gc is not None else pk.max_gc
 
     primer3_global_args = dict(pk.primer3_global_args or {})
-
     # primer Tm 기준값 (diff 계산용, override 안 함)
     primer_base_opt_tm = primer3_global_args.get("PRIMER_OPT_TM", 60.0)
 
@@ -180,12 +178,12 @@ def design_qpcr_for_region(
     # 템플릿 내에서 타겟의 index (0-based, inclusive)
     target_start_index = target_genomic_start - template_start
     target_end_index = target_start_index + target_len - 1
-
     # reference_template_sequence 는 일반적으로 원본 서열 전체
     # (bisulfite 모드에서는 여기서 변환 전/후를 나눌 수도 있음)
     reference_template_sequence = template_sequence
 
-    # 4) PrimerDesigner / ProbePrimerDesigner 선택해서 실행
+    # # 4) PrimerDesigner / ProbePrimerDesigner 선택해서 실행
+    # n_probes = 100
     if n_probes is not None and n_probes > 0:
         # probe 포함 설계
 
@@ -267,6 +265,6 @@ def design_qpcr_for_region(
     filtered_df.index = [genomic_id] * len(filtered_df)
 
     print("QC 통과 primer 개수:", len(filtered_df))
-    print(total_df.columns)
-    return total_df, filtered_df
+    designer.reset()
 
+    return total_df, filtered_df

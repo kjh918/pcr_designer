@@ -182,7 +182,6 @@ async def design_from_form(
                 name=name or None,
                 sequence="",
             )
-
             total_df, filtered_df = design_qpcr_for_region(
                 region=region,
                 reference_name=reference,
@@ -197,9 +196,6 @@ async def design_from_form(
                 "total_count": len(total_records),
                 "filtered_count": len(filtered_records),
             }
-
-            
-
 
             context["single_total_amplicons"] = total_records
             context["single_filtered_amplicons"] = filtered_records
@@ -298,7 +294,12 @@ async def design_from_form(
         context["error"] = str(e)
 
     # 🔥 여기!! context 그대로 넘기면 됨
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "index.html",
         context,
     )
+    # 브라우저/프록시 캐시 끄기
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response

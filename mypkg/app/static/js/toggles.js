@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initPrimerTypeToggle();
     initReferenceToggle();
     initProbeToggle();
-    initQcPanelToggle();
+    initPanelToggles();
     initQcViewToggle();   // ← 이 줄이 실제로 있는지!
 });
 
@@ -64,19 +64,27 @@ function initProbeToggle() {
 }
 
 // === 5) QC Threshold 패널 토글 ===
-function initQcPanelToggle() {
-    const qcToggleBtn = document.getElementById("qc-toggle-btn");
-    const qcPanel = document.getElementById("qc-panel");
+function initPanelToggles() {
+    // 모든 toggle-btn 을 가져옴
+    const toggleButtons = document.querySelectorAll("[data-toggle]");
 
-    if (!qcToggleBtn || !qcPanel) return;
+    toggleButtons.forEach((btn) => {
+        const targetId = btn.getAttribute("data-toggle");
+        const panel = document.getElementById(targetId);
 
-    qcToggleBtn.addEventListener("click", () => {
-        const hidden = qcPanel.classList.toggle("hidden");
-        qcToggleBtn.textContent = hidden
-            ? "Show QC Thresholds ▼"
-            : "Hide QC Thresholds ▲";
+        if (!panel) return;
+
+        btn.addEventListener("click", () => {
+            const hidden = panel.classList.toggle("hidden");
+
+            // 버튼 텍스트 자동 변경
+            btn.textContent = hidden
+                ? `${btn.dataset.label} ▼`
+                : `${btn.dataset.label} ▲`;
+        });
     });
 }
+
 // === 6) Primer Design / QC Only wrapper 전환 ===
 function initQcViewToggle() {
     const tabs = document.querySelectorAll(".qc-tab-btn");
@@ -89,9 +97,11 @@ function initQcViewToggle() {
         tab.addEventListener("click", () => {
             const mode = tab.dataset.qcMode;  // "qc_only" or "design"
 
+            // 탭 버튼 active 클래스 토글
             tabs.forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
 
+            // wrapper 표시/숨김
             if (mode === "design") {
                 designWrapper.classList.remove("hidden");
                 qcWrapper.classList.add("hidden");
@@ -102,6 +112,7 @@ function initQcViewToggle() {
         });
     });
 }
+
 function initModeToggle() {
     const designWrapper = document.getElementById("design-wrapper");
     if (!designWrapper) return;

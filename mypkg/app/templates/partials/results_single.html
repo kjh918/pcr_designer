@@ -194,7 +194,19 @@
         </tr>
         <tr>
           <th>Probe</th>
-          <td>{{ row.probe_sequence or '-' }}</td>
+          <td>
+            {% if row.probe_sequence %}
+             {{ row.probe_sequence }}
+             {% if row.probe_tm is not none %}
+              ({{ "Tm: %.2f"|format(row.probe_tm) }} ℃)
+             {% endif %}
+             {% if row.probe_gc_percent is not none %}
+              ({{ "GC: %.2f"|format(row.probe_gc_percent) }} %)
+             {% endif %}
+            {% else %}
+                <!-- probe 디자인 실패 → 빈칸 -->
+            {% endif %}
+          </td>
         </tr>
         <tr>
           <th>Heterodimer</th>

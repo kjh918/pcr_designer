@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 
-from app.routers import design, export
+from app.routers import design, export, qc 
 
 
 app = FastAPI(
@@ -35,6 +35,7 @@ app.add_middleware(
 
 app.include_router(design.router)
 app.include_router(export.router)
+app.include_router(qc.router)   # 👈 새 QC 라우터
 
 # -----------------------
 #   기본 페이지 (GET /)

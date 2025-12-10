@@ -1,8 +1,10 @@
 references:
   hg19: 
     fasta: /storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa
+    blast: /storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/h19
   hg38: 
     fasta: /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa
+    blast: /storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38
 
 pcr_params:
   primer_kwargs:
@@ -38,11 +40,22 @@ pcr_params:
     min_gc: 35
     max_gc: 65
 
-qc_thresholds:
-  HAIRPIN_MAX_TM: 47.0   # hairpin_max_tm
+qc_params:
+
+  # 실행 파일 경로
+  BLAST_ROOT: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+"
+  BLAST_BIN_DIR: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin"
+  BLASTN: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastn"
+  BLASTDBCMD: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastdbcmd"
+
+  MAX_TM_DIFF: 3
   HAIRPIN_MIN_DG: -5.0   # hairpin_min_dg
   HOMODIMER_MIN_DG: -6.0   # homodimer_min_dg
   HETERODIMER_MIN_DG: -6.0   # heterodimer_min_dg
-  HETERODIMER_MAX_TM: 45.0   # heterodimer_max_tm
 
-
+  # BLAST 필터 기준
+  BLAST_IDENTITY_THRESHOLD: 80.0   # %
+  BLAST_LENGTH_THRESHOLD: 10       # 최소 매칭 길이 (nt)
+  BLAST_MAX_ALIGNMENTS: 200        # 최대 리포트 align 수  
+  MIN_AMP_BP: 50
+  MAX_AMP_BP: 300

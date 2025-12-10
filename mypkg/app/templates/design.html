@@ -1,36 +1,20 @@
+{# app/templates/design.html #}
 {% extends "base.html" %}
 
 {% block content %}
 <h1>GCX - Primer Design Web</h1>
 <p>영역 정보 또는 Excel 파일을 이용해 프라이머를 자동으로 디자인합니다.</p>
 
+{# 상단 탭: Design 활성 #}
+{% include "partials/qc_mode_tabs.html" with context %}
+
 {% if error %}
   <div class="card error">에러: {{ error }}</div>
 {% endif %}
 
-{# 👉 기본은 qc_only, 서버에서 mode로 design 초기 활성화 여부만 제어 #}
-{% set active_qc_mode = 'qc_only' %}
-{% if mode is defined and (single_result or multi_results) %}
-  {% set active_qc_mode = 'design' %}
-{% endif %}
-
-{# 탭 영역 #}
-{% include "partials/qc_mode_toggle.html" with context %}
-
 <div class="card">
-    
-    {# =======================
-    QC ONLY 영역
-    ======================= #}
-  <div id="qc-wrapper" class="{% if active_qc_mode == 'design' %}hidden{% endif %}">
-    {% include "partials/qc_only_form.html" %}
-  </div>
 
-    {# =======================
-    DESIGN 영역
-    ======================= #}
-  <div id="design-wrapper" class="{% if active_qc_mode != 'design' %}hidden{% endif %}">
-
+    {# 🔹 서버에서 넘어온 mode 값 기준으로 현재 디자인 모드 설정 #}
     {% set current_design_mode = mode if mode is defined and mode in ['single', 'multi'] else 'single' %}
 
     {% include "partials/mode_toggle.html" %}
@@ -64,7 +48,7 @@
       <button type="submit">RUN</button>
     </form>
 
-    {# 결과 영역 (⭐ 디자인 wrapper 안에만 둔다) #}
+    {# 결과 영역 #}
     <div id="single-results"
          class="{% if current_design_mode != 'single' %}hidden{% endif %}">
       {% if single_result %}
@@ -79,6 +63,5 @@
       {% endif %}
     </div>
 
-  </div>
 </div>
 {% endblock content %}

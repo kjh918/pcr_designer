@@ -21,6 +21,21 @@ class BasePrimerDesigner:
     DEFAULT_DNTP_CONC: float = 0.6
     DEFAULT_DNA_CONC: float = 50.0
 
+    def _init_primer3_args(self) -> None:
+        """primer3 인자들을 초기 상태로 세팅."""
+        self.primer3_seq_args = {
+            "SEQUENCE_ID": "PRIMER",
+            "SEQUENCE_TEMPLATE": self.template_sequence,
+        }
+        self.primer3_global_args = {
+            "PRIMER_TASK": "generic",
+            "PRIMER_NUM_RETURN": self.n_primers,
+            "PRIMER_PICK_LEFT_PRIMER": int(self.forward_primer),
+            "PRIMER_PICK_RIGHT_PRIMER": int(self.reverse_primer),
+            "PRIMER_PICK_INTERNAL_OLIGO": 0,
+        }
+        self._configure_primer_common()
+
     def __init__(
         self,
         template_sequence: str,
@@ -161,6 +176,14 @@ class BasePrimerDesigner:
         return self.amplicon_list
 
 
+    def reset(self) -> None:
+        """
+        한 번 run_primer3()를 돌린 뒤,
+        다른 조건/타겟으로 다시 쓰고 싶을 때 내부 상태를 초기화.
+        """
+        self._init_primer3_args()
+        self.primer3_result = None
+        self.amplicon_list = []
 # ----------------------------------------------------------------------
 # Primer only
 # ----------------------------------------------------------------------
@@ -304,46 +327,35 @@ class ProbePrimerDesigner(BasePrimerDesigner):
     # ------------------------------------------------------------------
     def _configure_probe_auto(self) -> None:
         """
-        타겟 전체를 커버하는 probe 자동 디자인을 위한 primer3 설정.
-        - primer3 내부 올리고 관련 파라미터는 probe_* 속성을 사용
+        target(SNP/CpG, 1~2bp)을 반드시 포함하는 probe를 만들기 위한 설정.
+        - probe start 위치는 '어떤 start를 골라도 최소 길이(probe_min_length)로 target을 항상 포함'하는 구간만 허용
+        - 길이/GC/Tm 조건은 probe_* 속성을 사용
         """
-        target_len = self.target_end_index - self.target_start_index + 1
-
-        # 타겟 범위 지정 + probe 위치 제약 (primer 위치와 간섭 최소화)
         self.update_primer3_seq_args(
-            {
-                "SEQUENCE_TARGET": [self.target_start_index, target_len],
-                # 필요시 조정 가능: 여기에서는 primer 길이(self.max_length)를 사용해
-                # 양 끝에서 primer 영역을 제외하도록 설정
-                "SEQUENCE_INTERNAL_EXCLUDED_REGION": [
-                    [0, self.target_end_index - self.max_length],
-                    [
-                        self.target_start_index + self.max_length,
-                        len(self.template_sequence)
-                        - (self.target_start_index + self.max_length),
-                    ],
-                ],
-            }
-        )
-
-        # probe(내부 올리고) 특성 설정
+                {
+                    'SEQUENCE_TARGET': [self.target_start_index, self.target_end_index-self.target_start_index+1],
+                    'SEQUENCE_INTERNAL_EXCLUDED_REGION': [[0, self.target_end_index-self.probe_min_length], [self.target_start_index+self.probe_min_length, len(self.template_sequence)-(self.target_start_index+self.probe_min_length)]]
+                }
+            )
+        # ---- probe(내부 올리고) 특성 설정 ----
         self.update_primer3_global_args(
             {
-                "PRIMER_INTERNAL_SALT_MONOVALENT": self.DEFAULT_SALT_MONOVALENT,
-                "PRIMER_INTERNAL_SALT_DIVALENT": self.DEFAULT_SALT_DIVALENT,
-                "PRIMER_INTERNAL_DNTP_CONC": self.DEFAULT_DNTP_CONC,
-                "PRIMER_INTERNAL_DNA_CONC": self.DEFAULT_DNA_CONC,
-                "PRIMER_INTERNAL_OPT_SIZE": self.probe_opt_length,
-                "PRIMER_INTERNAL_MIN_SIZE": self.probe_min_length,
-                "PRIMER_INTERNAL_MAX_SIZE": self.probe_max_length,
-                "PRIMER_INTERNAL_OPT_TM": self.probe_opt_tm,
-                "PRIMER_INTERNAL_MIN_TM": self.probe_min_tm,
-                "PRIMER_INTERNAL_MAX_TM": self.probe_max_tm,
-                "PRIMER_INTERNAL_OPT_GC_PERCENT": self.probe_opt_gc,
-                "PRIMER_INTERNAL_MIN_GC": self.probe_min_gc,
-                "PRIMER_INTERNAL_MAX_GC": self.probe_max_gc,
-            }
-        )
+            "PRIMER_INTERNAL_SALT_MONOVALENT": self.DEFAULT_SALT_MONOVALENT,
+            "PRIMER_INTERNAL_SALT_DIVALENT": self.DEFAULT_SALT_DIVALENT,
+            "PRIMER_INTERNAL_DNTP_CONC": self.DEFAULT_DNTP_CONC,
+            "PRIMER_INTERNAL_DNA_CONC": self.DEFAULT_DNA_CONC,
+            "PRIMER_INTERNAL_OPT_SIZE": self.probe_opt_length,
+            "PRIMER_INTERNAL_MIN_SIZE": self.probe_min_length,
+            "PRIMER_INTERNAL_MAX_SIZE": self.probe_max_length,
+            "PRIMER_INTERNAL_OPT_TM": self.probe_opt_tm,
+            "PRIMER_INTERNAL_MIN_TM": self.probe_min_tm,
+            "PRIMER_INTERNAL_MAX_TM": self.probe_max_tm,
+            "PRIMER_INTERNAL_OPT_GC_PERCENT": self.probe_opt_gc,
+            "PRIMER_INTERNAL_MIN_GC": self.probe_min_gc,
+            "PRIMER_INTERNAL_MAX_GC": self.probe_max_gc,
+        }
+    )
+
 
     # ------------------------------------------------------------------
     # 고정 probe 시퀀스 사용 설정
@@ -382,6 +394,18 @@ class ProbePrimerDesigner(BasePrimerDesigner):
             }
         )
 
+    def reset(self) -> None:
+        super().reset()
+
+        # probe 사용 설정 다시
+        self.primer3_global_args["PRIMER_PICK_INTERNAL_OLIGO"] = 1
+        self.primer3_global_args["PRIMER_INTERNAL_NUM_RETURN"] = self.n_probes
+
+        # probe 자동/고정 모드 다시 설정
+        if self.probe_sequence is not None:
+            self._configure_fixed_probe()
+        else:
+            self._configure_probe_auto()
     # ------------------------------------------------------------------
     # Amplicon 생성
     # ------------------------------------------------------------------
