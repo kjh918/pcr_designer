@@ -1,0 +1,216 @@
+/* static/css/components.css */
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+}
+
+/* 섹션 제목 */
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 11px;
+    margin-bottom: 11px;
+}
+
+/* 공통 섹션 래퍼 */
+.section-block {
+    margin-bottom: 18px;
+}
+
+.section-header {
+    margin-bottom: 8px;
+}
+
+.section-desc {
+    font-size: 13px;
+    color: #666;
+    margin: 2px 0 0;
+}
+
+/* 상단 모드/옵션 배너 영역 */
+.banner-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #d0d0d5;
+    background: #f0f0f5;
+    cursor: pointer;
+    font-weight: 500;
+    text-align: center;
+    font-size: 14px;
+    transition: all 0.15s ease-in-out;
+}
+
+.toggle-btn.active {
+    background: #27ae60;
+    color: #ffffff;
+    border-color: #27ae60;
+}
+
+.toggle-btn:hover {
+    filter: brightness(0.96);
+}
+
+/* reference / probe / mode 토글 공통 */
+.ref-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #d0d0d5;
+    background: #f0f0f5;
+    cursor: pointer;
+    font-weight: 500;
+    text-align: center;
+    font-size: 14px;
+    transition: all 0.15s ease-in-out;
+}
+
+.mode-btn.active {
+    background: #27ae60;
+    color: #ffffff;
+    border-color: #27ae60;
+}
+
+.mode-btn:hover {
+    filter: brightness(0.96);
+}
+
+.ref-btn {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d0d0d5;
+    background: #f0f0f5;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease-in-out;
+}
+
+.ref-btn.active {
+    background: #27ae60;
+    color: #ffffff;
+    border-color: #27ae60;
+}
+
+.ref-btn:hover {
+    filter: brightness(0.96);
+}
+
+/* 도움말 텍스트 */
+.help-text {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* 제출 버튼 공통 */
+button[type="submit"] {
+    margin-top: 20px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #27ae60;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 20px;
+    display: block;
+}
+
+button[type="submit"]:hover {
+    filter: brightness(0.94);
+}
+
+/* 기타 레이아웃 요소 */
+.result-block {
+    margin-top: 15px;
+}
+
+.mode-section {
+    margin-top: 10px;
+}
+
+/* ==============================
+   QC Only / Primer Design 탭 UI
+   ============================== */
+
+.qc-tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+    gap: 0;
+}
+
+.qc-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 12px 14px;
+    border: none;
+    background: #f3f4f6;
+    color: #b6b6c7;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+}
+
+.qc-tab-btn:hover {
+    background: #e5e7eb;
+}
+
+.qc-tab-btn.active {
+    background: #ffffff;
+    color: #30332f;
+    border-bottom-color: #4aba1e;
+}
+
+/* ==============================
+   Primer Options / Panel 스타일
+   ============================== */
+
+/* 접히는 옵션 패널 카드 */
+.primer-panel {
+    margin-top: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    background-color: #fafafa;
+}
+
+/* Primer / Probe 옵션 내부 서브 섹션 */
+.sub-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+}
+
+.sub-section-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: #444;
+}
+
+/* 유틸리티: 숨김 */
+.hidden {
+    display: none !important;
+}

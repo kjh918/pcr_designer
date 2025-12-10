@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Primer Design | GCX{% endblock %}
+
+{% block content %}
+<h1>Primer Design</h1>
+
+<div class="card">
+
+{% if error %}
+    <div class="card error">에러: {{ error }}</div>
+{% endif %}
+
+{# 현재 디자인 모드 결정 #}
+{% set current_design_mode = mode if mode is defined and mode in ['single', 'multi'] else 'single' %}
+
+{# 모드 토글 (Single / Multi) #}
+{% include "partials/mode_toggle.html" %}
+
+{# 프라이머 타입 및 Reference 선택 #}
+{% include "partials/primer_type.html" %}
+{% include "partials/reference.html" %}
+</div>
+<div class="card">
+<form id="design-form"
+      action="{{ url_for('design_from_form') }}"
+      method="post"
+      enctype="multipart/form-data">
+
+  <input type="hidden" name="mode" id="mode-input" value="{{ current_design_mode }}">
+  <input type="hidden" name="primer_type" id="primer-type-input" value="{{ primer_type or 'default' }}">
+  <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg19' }}">
+  <input type="hidden" name="probe" id="probe-input" value="{{ probe or 'no' }}">
+
+  {# 🟢 Single 폼 영역 #}
+  <div id="single-section"
+       class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
+    {% include "partials/form_single.html" %}
+  </div>
+
+  {# 🟢 Multi 폼 영역 #}
+  <div id="multi-section"
+       class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
+    {% include "partials/form_multi.html" %}
+  </div>
+
+  {# 🔵 아래 옵션들은 공통으로 항상 보여도 OK #}
+  {% include "partials/probe.html" %}
+  {% include "partials/primer_options.html" %}
+  {% include "partials/qc_threshold.html" %}
+
+  <button type="submit">RUN</button>
+</form>
+
+{# ======================
+   결과 영역
+   ====================== #}
+
+{# 🔹 Single 결과 wrapper: 항상 DOM에 존재 + hidden 으로만 제어 #}
+<div id="single-results"
+     class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
+  {% if single_result %}
+      {% include "partials/results_single.html" %}
+  {% endif %}
+</div>
+
+{# 🔹 Multi 결과 wrapper: 항상 DOM에 존재 + hidden 으로만 제어 #}
+<div id="multi-results"
+     class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
+  {% if multi_results %}
+      {% include "partials/results_multi.html" %}
+  {% endif %}
+</div>
+</div>
+
+{% endblock content %}

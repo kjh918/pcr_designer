@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}GCX - Primer Design Web{% endblock %}</title>
+
+    {# 공통 CSS들 (FastAPI static mount 기준) #}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/form.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}">
+
+    {# 페이지별로 추가 CSS가 필요하면 여기서 확장 #}
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {# 상단 공통 네비게이션 영역 #}
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="/" class="logo">GCX Primer</a>
+
+            <nav class="nav-links">
+                {# /design, /qc 라우트 만들면 여기서 연결 #}
+                <a href="/design" class="nav-link">Design</a>
+                <a href="/qc" class="nav-link">QC Only</a>
+                {# 나중에 /blast, /report 같은 거 추가 가능 #}
+                {# <a href="/blast" class="nav-link">BLAST</a> #}
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    {# 공통 JS (폼/토글 관련) #}
+    <script src="{{ url_for('static', path='js/toggles.js') }}"></script>
+
+    {# 페이지별로 추가 스크립트가 필요하면 여기에서 #}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

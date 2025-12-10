@@ -1,0 +1,62 @@
+{# templates/partials/qc_only_form.html #}
+
+<div class="section-title">QC Only 분석</div>
+
+<div class="help-box">
+  <p>
+    Forward / Reverse primer, optional Probe sequence를 입력하여  
+    <strong>hairpin / homodimer / heterodimer</strong> 등의 Thermo QC 및  
+    <strong>BLAST 기반 off-target amplicon 검사</strong>를 수행합니다.
+  </p>
+</div>
+
+<form action="/qc/only" method="post" class="primer-form qc-form">
+
+  <!-- Forward Primer -->
+  <div class="form-row">
+    <label for="qc-forward">Forward Primer (5' → 3')</label>
+    <input
+      type="text"
+      id="qc-forward"
+      name="forward"
+      placeholder="예: AGCTGACTGACTGACTGACT"
+      required
+    >
+  </div>
+
+  <!-- Reverse Primer -->
+  <div class="form-row">
+    <label for="qc-reverse">Reverse Primer (5' → 3')</label>
+    <input
+      type="text"
+      id="qc-reverse"
+      name="reverse"
+      placeholder="예: CAGTCAGTCAGTCAGTCAGT"
+      required
+    >
+  </div>
+
+  <!-- Probe (optional) -->
+  <div class="form-row">
+    <label for="qc-probe">Probe Sequence (Optional)</label>
+    <input
+      type="text"
+      id="qc-probe"
+      name="probe"
+      placeholder="예: FAM-ACCTGACTGACTG-BHQ1 (비워도 됩니다)"
+    >
+  </div>
+
+  <!-- Template (optional) -->
+  <div class="form-row">
+    <label for="qc-template">Template DNA Sequence (Optional)</label>
+    <textarea
+      id="qc-template"
+      name="template_sequence"
+      rows="4"
+      placeholder="5' → 3' 방향의 template 서열을 넣으면 정확한 위치 기반 QC 수행 가능 (없으면 BLAST 기반 QC만 수행)"
+    ></textarea>
+  </div>
+
+  <button type="submit" class="submit-btn w-full">RUN QC</button>
+</form>

@@ -1,0 +1,125 @@
+{# app/templates/partials/amplicon_macros.html #}
+{% macro render_colored_template(row) %}
+  {% set seq = row.template_sequence %}
+  {% if not seq %}
+    -
+  {% else %}
+    {% set length = seq|length %}
+    <span class="seq-segment">
+      {%- for i in range(length) -%}
+        {%- set ch = seq[i] -%}
+        {%- if row.target_start_index is not none
+               and row.target_end_index is not none
+               and i >= row.target_start_index
+               and i <= row.target_end_index -%}
+          <span class="seq-target">{{ ch }}</span>
+        {%- elif row.forward_start_index is not none
+                 and row.forward_end_index is not none
+                 and i >= row.forward_start_index
+                 and i <= row.forward_end_index -%}
+          <span class="seq-forward">{{ ch }}</span>
+        {%- elif row.reverse_start_index is not none
+                 and row.reverse_end_index is not none
+                 and i >= row.reverse_start_index
+                 and i <= row.reverse_end_index -%}
+          <span class="seq-reverse">{{ ch }}</span>
+        {%- elif row.probe_start_index is defined
+                 and row.probe_end_index is defined
+                 and row.probe_start_index is not none
+                 and row.probe_end_index is not none
+                 and i >= row.probe_start_index
+                 and i <= row.probe_end_index -%}
+          <span class="seq-probe">{{ ch }}</span>
+        {%- else -%}
+          <span class="seq-normal">{{ ch }}</span>
+        {%- endif -%}
+      {%- endfor -%}
+    </span>
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_amplicon_card(region, row) %}
+  <div class="amplicon-card">
+    <div class="amplicon-header">
+      ID: {{ row.ID }}
+      <span class="len">({{ row.amplicon_length }} bp)</span>
+    </div>
+
+    <table class="amplicon-meta">
+      <tr>
+        <th>Forward Primer</th>
+        <td>
+          {{ row.forward_sequence or '-' }}
+          {% if row.forward_tm is not none %}
+            (Tm: {{ "%.2f"|format(row.forward_tm) }} ℃)
+          {% endif %}
+          {% if row.forward_gc_percent is not none %}
+            (GC: {{ "%.2f"|format(row.forward_gc_percent) }} %)
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Reverse Primer</th>
+        <td>
+          {{ row.reverse_sequence or '-' }}
+          {% if row.reverse_tm is not none %}
+            (Tm: {{ "%.2f"|format(row.reverse_tm) }} ℃)
+          {% endif %}
+          {% if row.reverse_gc_percent is not none %}
+            (GC: {{ "%.2f"|format(row.reverse_gc_percent) }} %)
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Probe</th>
+        <td>
+          {% if row.probe_sequence %}
+            {{ row.probe_sequence }}
+            {% if row.probe_tm is not none %}
+              (Tm: {{ "%.2f"|format(row.probe_tm) }} ℃)
+            {% endif %}
+            {% if row.probe_gc_percent is not none %}
+              (GC: {{ "%.2f"|format(row.probe_gc_percent) }} %)
+            {% endif %}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Heterodimer</th>
+        <td>
+          {% if row.heterodimer_dg is not none %}
+            ΔG = {{ "%.2f"|format(row.heterodimer_dg) }}
+          {% endif %}
+          {% if row.heterodimer_tm is not none %}
+            , Tm = {{ "%.2f"|format(row.heterodimer_tm) }} ℃
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+
+    <div class="template-view">
+      <strong>Template Sequence:</strong>
+      <div class="template-seq">
+        {{ render_colored_template(row) }}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{% macro render_seq_legend() %}
+  <div class="legend-box">
+    <div class="legend-item">
+      <span class="seq-target">TARGET</span> : 타깃 영역 (index 기반)
+    </div>
+    <div class="legend-item">
+      <span class="seq-forward">PRIMER (F/R)</span> : 프라이머 영역
+    </div>
+    <div class="legend-item">
+      <span class="seq-probe">PROBE</span> : 프로브 영역
+    </div>
+  </div>
+{% endmacro %}

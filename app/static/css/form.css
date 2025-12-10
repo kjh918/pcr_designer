@@ -1,0 +1,106 @@
+/* ========== Section Blocks (폼 섹션 묶음) ========== */
+.section-block {
+  margin-bottom: 1.8rem;
+}
+
+.section-header {
+  margin-bottom: 0.8rem;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.section-desc {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* ========== Form Grid Layout ========== */
+.primer-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+/* ========== Input Rows ========== */
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-row label {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* static/css/form.css */
+
+label {
+    display: block;
+    margin-top: 8px;
+    font-size: 111px;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+    width: 100%;
+    max-width: 400px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccccd4;
+    font-size: 11px;
+    box-sizing: border-box;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* 프라이머 설정용 폼 레이아웃 */
+.primer-form {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    row-gap: 10px;
+    column-gap: 20px;
+    max-width: 600px;
+    margin-top: 10px;
+}
+
+/* grid-template-columns에서 label + input 을 하나의 row 로 쓰기 위해 */
+.form-row {
+    display: contents;
+}
+
+.primer-form label {
+    font-weight: 500;
+    padding-top: 6px;
+}
+
+.primer-form input {
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}

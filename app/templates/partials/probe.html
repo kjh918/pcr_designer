@@ -1,0 +1,97 @@
+{# app/templates/partials/probe.html #}
+
+<div class="section-block">
+  <div class="section-header">
+    <h2 class="section-title">Probe</h2>
+    <p class="section-desc">
+      Probe를 사용하는 qPCR(TaqMan 등) 설계 여부를 선택합니다.
+    </p>
+  </div>
+
+  <div class="ref-toggle">
+    <div class="ref-btn probe-btn"
+         data-probe="yes">
+      Yes
+    </div>
+    <div class="ref-btn probe-btn active"
+         data-probe="no">
+      No
+    </div>
+  </div>
+
+  <div class="help-text">
+    - Probe = Yes 인 경우에만 아래 Probe 관련 옵션이 적용됩니다.
+  </div>
+</div>
+
+<div id="probe-options" class="section-block" style="display: none;">
+  <div class="section-header">
+    <h3 class="section-title">Probe Design Options</h3>
+  </div>
+
+  <div class="primer-form primer-form-grid">
+    <!-- n_probes -->
+    <div class="form-row">
+      <label for="probe-n-probes">Number of Probes</label>
+      <input type="number" id="probe-n-probes" name="n_probes" value="100" min="1">
+    </div>
+
+    <!-- Probe Length -->
+    <div class="form-row">
+      <label for="probe-opt-length">Optimal Probe Length</label>
+      <input type="number" id="probe-opt-length" name="probe_opt_length" value="25" min="10" max="60">
+    </div>
+
+    <div class="form-row">
+      <label for="probe-min-length">Minimum Probe Length</label>
+      <input type="number" id="probe-min-length" name="probe_min_length" value="20" min="8" max="60">
+    </div>
+
+    <div class="form-row">
+      <label for="probe-max-length">Maximum Probe Length</label>
+      <input type="number" id="probe-max-length" name="probe_max_length" value="30" min="10" max="80">
+    </div>
+
+    <!-- Probe Tm diff -->
+    <div class="form-row">
+      <label for="probe-min-tm-diff">Probe Min Tm Diff (℃)</label>
+      <input type="number" id="probe-min-tm-diff" name="min_primer_probe_tm_diff" value="6">
+    </div>
+    <div class="form-row">
+      <label for="probe-max-tm-diff">Probe Max Tm Diff (℃)</label>
+      <input type="number" id="probe-max-tm-diff" name="max_primer_probe_tm_diff" value="8">
+    </div>
+
+    <!-- Probe Tm -->
+    <div class="form-row">
+      <label for="probe-opt-tm">Optimal Probe Tm (℃)</label>
+      <input type="number" id="probe-opt-tm" name="probe_opt_tm" value="60" step="0.1">
+    </div>
+
+    <div class="form-row">
+      <label for="probe-min-tm">Minimum Probe Tm (℃)</label>
+      <input type="number" id="probe-min-tm" name="probe_min_tm" value="60" step="0.1">
+    </div>
+
+    <div class="form-row">
+      <label for="probe-max-tm">Maximum Probe Tm (℃)</label>
+      <input type="number" id="probe-max-tm" name="probe_max_tm" value="65" step="0.1">
+    </div>
+
+    <!-- Probe GC -->
+    <div class="form-row">
+      <label for="probe-opt-gc">Optimal Probe GC%</label>
+      <input type="number" id="probe-opt-gc" name="probe_opt_gc" value="50" step="1">
+    </div>
+
+    <div class="form-row">
+      <label for="probe-min-gc">Minimum Probe GC%</label>
+      <input type="number" id="probe-min-gc" name="probe_min_gc" value="35" step="1">
+    </div>
+
+    <div class="form-row">
+      <label for="probe-max-gc">Maximum Probe GC%</label>
+      <input type="number" id="probe-max-gc" name="probe_max_gc" value="65" step="1">
+    </div>
+  </div>
+</div>

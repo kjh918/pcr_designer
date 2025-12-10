@@ -1,0 +1,38 @@
+{# app/templates/partials/results_single.html #}
+{% from "partials/amplicon_macros.html" import
+    render_amplicon_card,
+    render_seq_legend %}
+
+{% if single_result %}
+  <hr>
+  <h2>Single Region Result</h2>
+
+  <p class="single-region-summary">
+    Region:
+    {{ single_result.region.chrom }}:
+    {{ single_result.region.start }}-{{ single_result.region.end }}
+    (총 {{ single_result.total_count }}개, QC 통과 {{ single_result.filtered_count }}개)
+  </p>
+{% endif %}
+
+{% if single_filtered_amplicons %}
+  <h3>QC 통과 Amplicons (Top 5)</h3>
+
+  <div class="amplicon-list">
+    {% for row in single_filtered_amplicons[:5] %}
+      {{ render_amplicon_card(single_result.region, row) }}
+    {% endfor %}
+  </div>
+
+  {{ render_seq_legend() }}
+{% endif %}
+
+{% if single_total_amplicons %}
+  <form method="post" action="/export/excel" class="export-form">
+    <input type="hidden" name="kind" value="single_total">
+    <textarea name="data_json" style="display:none;">
+      {{ single_total_amplicons | tojson }}
+    </textarea>
+    <button type="submit">Export All (Excel)</button>
+  </form>
+{% endif %}

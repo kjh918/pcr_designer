@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Primer QC | GCX{% endblock %}
+
+{% block content %}
+<h1>Primer QC Only</h1>
+<p>기존 프라이머를 Thermo / BLAST 기반으로 검증합니다.</p>
+
+{% if error %}
+    <div class="card error">에러: {{ error }}</div>
+{% endif %}
+
+{# QC 입력 폼 #}
+{% include "partials/qc_only_form.html" %}
+
+{# QC 결과 #}
+{% if qc_result %}
+    {% include "partials/results_only_qc.html" %}
+{% endif %}
+
+{% endblock content %}
