@@ -14,23 +14,39 @@
 {# 현재 디자인 모드 결정 #}
 {% set current_design_mode = mode if mode is defined and mode in ['single', 'multi'] else 'single' %}
 
+{# ✅ assay 결정 (qpcr/methyl/as-pcr) #}
+{% set current_assay = assay if assay is defined and assay in ['qpcr', 'methyl', 'as-pcr'] else 'qpcr' %}
+
+{# ✅ assay에 따른 endpoint 선택 #}
+{% if current_assay == 'methyl' %}
+  {% set submit_endpoint = 'design_methyl_from_form' %}
+{% elif current_assay == 'as-pcr' %}
+  {% set submit_endpoint = 'design_aspcr_from_form' %}
+{% else %}
+  {% set submit_endpoint = 'design_qpcr_from_form' %}
+{% endif %}
+
 {# 모드 토글 (Single / Multi) #}
 {% include "partials/mode_toggle.html" %}
 
 {# 프라이머 타입 및 Reference 선택 #}
 {% include "partials/primer_type.html" %}
 {% include "partials/reference.html" %}
+{% include "partials/probe.html" %}
 </div>
+
 <div class="card">
 <form id="design-form"
-      action="{{ url_for('design_from_form') }}"
+      action="{{ url_for(submit_endpoint) }}"
       method="post"
       enctype="multipart/form-data">
-
   <input type="hidden" name="mode" id="mode-input" value="{{ current_design_mode }}">
   <input type="hidden" name="primer_type" id="primer-type-input" value="{{ primer_type or 'default' }}">
   <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg19' }}">
   <input type="hidden" name="probe" id="probe-input" value="{{ probe or 'no' }}">
+
+  {# ✅ 선택: 현재 assay도 hidden으로 유지하면 JS/서버에서 편함 #}
+  <input type="hidden" name="assay" id="assay-input" value="{{ current_assay }}">
 
   {# 🟢 Single 폼 영역 #}
   <div id="single-section"
@@ -44,19 +60,19 @@
     {% include "partials/form_multi.html" %}
   </div>
 
-  {# 🔵 아래 옵션들은 공통으로 항상 보여도 OK #}
-  {% include "partials/probe.html" %}
+  {# 🔵 옵션 영역 #}
   {% include "partials/primer_options.html" %}
   {% include "partials/qc_threshold.html" %}
 
   <button type="submit">RUN</button>
 </form>
+</div>
 
 {# ======================
    결과 영역
    ====================== #}
 
-{# 🔹 Single 결과 wrapper: 항상 DOM에 존재 + hidden 으로만 제어 #}
+<div class="card">
 <div id="single-results"
      class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
   {% if single_result %}
@@ -64,7 +80,6 @@
   {% endif %}
 </div>
 
-{# 🔹 Multi 결과 wrapper: 항상 DOM에 존재 + hidden 으로만 제어 #}
 <div id="multi-results"
      class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
   {% if multi_results %}
