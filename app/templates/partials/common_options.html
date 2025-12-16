@@ -1,0 +1,103 @@
+<div class="section-block">
+  <div class="section-header">
+    <h2 class="section-title">Common Options</h2>
+    <p class="section-desc">모든 assay(qPCR / methyl / AS-PCR)에 공통으로 적용됩니다.</p>
+  </div>
+
+  <!-- Reference -->
+  <div class="sub-section">
+    <div class="sub-section-title">Reference</div>
+    <div class="ref-toggle">
+      <button type="button" class="ref-btn ref-btn-ref" data-ref="hg19">hg19</button>
+      <button type="button" class="ref-btn ref-btn-ref" data-ref="hg38">hg38</button>
+    </div>
+    <div class="help-text">BLAST DB / FASTA가 reference 선택에 따라 바뀝니다.</div>
+  </div>
+
+  <!-- Probe -->
+  <div class="sub-section">
+    <div class="sub-section-title">Probe</div>
+
+    <div class="ref-toggle">
+      <button type="button" class="ref-btn probe-btn" data-probe="no">No</button>
+      <button type="button" class="ref-btn probe-btn" data-probe="yes">Yes</button>
+    </div>
+
+    <!-- Probe 옵션: primer option처럼 접기/펴기 -->
+    <button type="button"
+            class="toggle-btn"
+            data-toggle="probe-panel"
+            data-label="Probe Options">
+      Probe Options ▼
+    </button>
+
+    <div id="probe-panel" class="primer-panel hidden">
+      <div class="primer-form primer-form-grid">
+
+        <div class="form-row">
+          <label for="n_probes">Number of Probes</label>
+          <input type="number" id="n_probes" name="n_probes" value="100" min="1">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_opt_length">Optimal Probe Length</label>
+          <input type="number" id="probe_opt_length" name="probe_opt_length" value="25">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_min_length">Minimum Probe Length</label>
+          <input type="number" id="probe_min_length" name="probe_min_length" value="20">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_max_length">Maximum Probe Length</label>
+          <input type="number" id="probe_max_length" name="probe_max_length" value="30">
+        </div>
+
+        <div class="form-row">
+          <label for="min_primer_probe_tm_diff">Min Primer–Probe ΔTm</label>
+          <input type="number" id="min_primer_probe_tm_diff" name="min_primer_probe_tm_diff" value="6" step="0.1">
+        </div>
+
+        <div class="form-row">
+          <label for="max_primer_probe_tm_diff">Max Primer–Probe ΔTm</label>
+          <input type="number" id="max_primer_probe_tm_diff" name="max_primer_probe_tm_diff" value="8" step="0.1">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_opt_tm">Optimal Probe Tm</label>
+          <input type="number" id="probe_opt_tm" name="probe_opt_tm" value="60" step="0.1">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_min_tm">Minimum Probe Tm</label>
+          <input type="number" id="probe_min_tm" name="probe_min_tm" value="60" step="0.1">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_max_tm">Maximum Probe Tm</label>
+          <input type="number" id="probe_max_tm" name="probe_max_tm" value="65" step="0.1">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_opt_gc">Optimal Probe GC%</label>
+          <input type="number" id="probe_opt_gc" name="probe_opt_gc" value="50">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_min_gc">Minimum Probe GC%</label>
+          <input type="number" id="probe_min_gc" name="probe_min_gc" value="35">
+        </div>
+
+        <div class="form-row">
+          <label for="probe_max_gc">Maximum Probe GC%</label>
+          <input type="number" id="probe_max_gc" name="probe_max_gc" value="65">
+        </div>
+      </div>
+
+      <div class="help-text">
+        Probe=Yes인 경우에만 이 값들이 서버에서 적용되도록 처리하세요.
+      </div>
+    </div>
+  </div>
+</div>

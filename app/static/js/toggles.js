@@ -1,21 +1,49 @@
 // app/static/js/toggles.js
 
 document.addEventListener("DOMContentLoaded", () => {
-  // initModeToggle();  // ✅ single/multi 제거했으면 호출 안 해도 됨
-  initPrimerTypeToggle();
-  initReferenceToggle();
-  initProbeToggle();
-  initPanelToggles();
-  initQcViewToggle();
+  initAssayTabs();        // qpcr / methyl / as-pcr
+  initReferenceToggle();  // hg19 / hg38 ...
+  initProbeToggle();      // yes / no + options enable/disable
+  initPanelToggles();     // Primer options, QC thresholds 접기/펼치기
+  initQcViewToggle();     // QC-only / Design 탭 (있는 페이지에서만)
 });
 
-function initPrimerTypeToggle() {
+/* =========================
+ * 0) Utils
+ * ======================= */
+function setHidden(el, hidden) {
+  if (!el) return;
+  el.classList.toggle("hidden", hidden);
+}
+
+function setDisabledInside(container, disabled) {
+  if (!container) return;
+  container.querySelectorAll("input, select, textarea, button").forEach(node => {
+    // 버튼까지 disable하면 panel toggle 버튼도 죽을 수 있어서, panel 안쪽만 대상으로 하세요.
+    node.disabled = disabled;
+  });
+}
+
+/* =========================
+ * 1) Assay Tabs (primer-tab)
+ * - .primer-tab data-assay="qpcr|methyl|as-pcr"
+ * - hidden input: #assay-input
+ * - form: #design-form (data-action-qpcr/methyl/aspcr 옵션)
+ * - panels: #assay-panel-qpcr / #assay-panel-methyl / #assay-panel-aspcr
+ * ======================= */
+function initAssayTabs() {
   const tabs = document.querySelectorAll(".primer-tab");
   const assayInput = document.getElementById("assay-input");
   const primerTypeInput = document.getElementById("primer-type-input"); // optional
   const form = document.getElementById("design-form");
 
   if (!tabs.length || !assayInput || !form) return;
+
+  const panelMap = {
+    "qpcr": document.getElementById("assay-panel-qpcr"),
+    "methyl": document.getElementById("assay-panel-methyl"),
+    "as-pcr": document.getElementById("assay-panel-aspcr"),
+  };
 
   function assayToPrimerType(assay) {
     if (assay === "methyl") return "methyl";
@@ -29,52 +57,26 @@ function initPrimerTypeToggle() {
     return form.dataset.actionQpcr;
   }
 
-  function setVisibilityAndDisable(activeAssay) {
-    const groups = [
-      { assay: "qpcr",  ids: ["assay-input-qpcr",  "assay-panel-qpcr"] },
-      { assay: "methyl", ids: ["assay-input-methyl", "assay-panel-methyl"] },
-      { assay: "as-pcr", ids: ["assay-input-aspcr", "assay-panel-aspcr"] },
-    ];
-
-    groups.forEach(g => {
-      const isActive = g.assay === activeAssay;
-
-      g.ids.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-
-        el.style.display = isActive ? "" : "none";
-        el.classList.toggle("hidden", !isActive);
-
-        el.querySelectorAll("input, select, textarea").forEach(node => {
-          node.disabled = !isActive;
-        });
-      });
-    });
-  }
-
   function applyAssay(assay) {
-    // 1) active 탭 표시
     tabs.forEach(t => t.classList.toggle("active", t.dataset.assay === assay));
-
-    // 2) hidden 업데이트
     assayInput.value = assay;
     if (primerTypeInput) primerTypeInput.value = assayToPrimerType(assay);
 
-    // 3) form action 변경
     const nextAction = actionForAssay(assay);
     if (nextAction) form.action = nextAction;
 
-    // 4) 패널 전환
-    setVisibilityAndDisable(assay);
+    Object.entries(panelMap).forEach(([k, panel]) => {
+      const isActive = (k === assay);
+      setHidden(panel, !isActive);
+      // 비활성 panel input은 disable 처리 (POST 안되게)
+      setDisabledInside(panel, !isActive);
+    });
 
     console.log("[ASSAY]", assay, "action:", form.action);
   }
 
-  // 초기 적용(서버 렌더 hidden 값 기준)
   applyAssay(assayInput.value || "qpcr");
 
-  // 클릭 바인딩
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
       const assay = tab.dataset.assay;
@@ -84,96 +86,71 @@ function initPrimerTypeToggle() {
   });
 }
 
-  function applyAssayFromPrimer(primerType) {
-    const assay = primerToAssay(primerType);
-
-    // hidden 업데이트
-    assayInput.value = assay;
-    if (primerInput) primerInput.value = primerType;
-
-    // 버튼 active
-    primerBtns.forEach(b => b.classList.toggle("active", b.dataset.primer === primerType));
-
-    // form action 변경
-    const nextAction = actionForAssay(assay);
-    if (nextAction) form.action = nextAction;
-
-    // 패널 전환
-    setVisibilityAndDisable(assay);
-
-    console.log("[TAB]", primerType, "=>", assay, "action:", form.action);
-  }
-
-  // 초기 상태 결정: hidden assay 기준으로 primerType 역매핑
-  function assayToPrimer(assay) {
-    if (assay === "methyl") return "methyl";
-    if (assay === "as-pcr") return "as";
-    return "default";
-  }
-
-  const initialAssay = assayInput.value || "qpcr";
-  const initialPrimerType =
-    (primerInput && primerInput.value) ||
-    (document.querySelector(".primer-btn.active")?.dataset.primer) ||
-    assayToPrimer(initialAssay);
-
-  applyAssayFromPrimer(initialPrimerType);
-
-  // 클릭 이벤트
-  primerBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const primerType = btn.dataset.primer;
-      if (!primerType) return;
-      applyAssayFromPrimer(primerType);
-    });
-  });
-}
-
 /* =========================
- * 2) Reference 토글
+ * 2) Reference Toggle
+ * - hidden input: #reference-input
+ * - buttons: .ref-btn-ref data-ref="hg19|hg38"
  * ======================= */
 function initReferenceToggle() {
   const referenceInput = document.getElementById("reference-input");
   const refBtns = document.querySelectorAll(".ref-btn-ref");
-
   if (!referenceInput || !refBtns.length) return;
 
+  function applyRef(ref) {
+    referenceInput.value = ref;
+    refBtns.forEach(b => b.classList.toggle("active", b.dataset.ref === ref));
+    console.log("[REF]", referenceInput.value);
+  }
+
+  // ✅ 초기값 기준으로 active 동기화 (서버 렌더 값 반영)
+  applyRef(referenceInput.value || "hg19");
+
+  // 클릭 바인딩
   refBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-      const ref = btn.getAttribute("data-ref");
-      referenceInput.value = ref;
-
-      refBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+      const ref = btn.dataset.ref;
+      if (!ref) return;
+      applyRef(ref);
     });
   });
 }
 
 /* =========================
- * 3) Probe 토글
+ * 3) Probe Toggle (CARD inside)
+ * - hidden input: #probe-input (yes/no)
+ * - buttons: .probe-btn data-probe="yes|no"
+ * - panel: #probe-options (접힘/펼침)
+ * - Yes => panel show + panel inputs enabled
+ * - No  => panel hide + panel inputs disabled
  * ======================= */
 function initProbeToggle() {
   const probeInput = document.getElementById("probe-input");
   const probeBtns = document.querySelectorAll(".probe-btn");
-  const probeOptions = document.getElementById("probe-options");
+  const probePanel = document.getElementById("probe-options");
 
   if (!probeBtns.length) return;
 
-  const initialProbe = (probeInput && probeInput.value) ? probeInput.value : "no";
-
-  function applyProbeMode(value) {
-    if (probeInput) probeInput.value = value;
+  function applyProbeMode(val) {
+    if (probeInput) probeInput.value = val;
 
     probeBtns.forEach(btn => {
-      btn.classList.toggle("active", btn.dataset.probe === value);
+      btn.classList.toggle("active", btn.dataset.probe === val);
     });
 
-    if (probeOptions) {
-      probeOptions.style.display = (value === "yes") ? "" : "none";
+    // panel show/hide + 내부 입력 enable/disable
+    const show = (val === "yes");
+    setHidden(probePanel, !show);
+
+    // panel 안쪽 input만 disable (panel null이면 그냥 skip)
+    if (probePanel) {
+      probePanel.querySelectorAll("input, select, textarea").forEach(node => {
+        node.disabled = !show;
+      });
     }
   }
 
-  applyProbeMode(initialProbe);
+  const initial = (probeInput && probeInput.value) ? probeInput.value : "no";
+  applyProbeMode(initial);
 
   probeBtns.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -185,34 +162,33 @@ function initProbeToggle() {
 }
 
 /* =========================
- * 4) 옵션 패널 토글
+ * 4) Panel Toggles (접기/펼치기)
+ * - button: [data-toggle="panelId"] data-label="Primer Options"
+ * - panel: #panelId
+ * - hidden class만 사용 (style.display 섞지 않음)
  * ======================= */
 function initPanelToggles() {
   const toggleButtons = document.querySelectorAll("[data-toggle]");
 
   toggleButtons.forEach(btn => {
-    const targetId = btn.getAttribute("data-toggle");
+    const targetId = btn.dataset.toggle;
     const panel = document.getElementById(targetId);
     if (!panel) return;
 
-    btn.addEventListener("click", () => {
-      const isHidden =
-        panel.style.display === "none" ||
-        (panel.style.display === "" && panel.classList.contains("hidden"));
+    // 초기 텍스트 정합
+    const hidden = panel.classList.contains("hidden");
+    btn.textContent = `${btn.dataset.label} ${hidden ? "▼" : "▲"}`;
 
-      if (isHidden) {
-        panel.style.display = "";
-        btn.textContent = `${btn.dataset.label} ▲`;
-      } else {
-        panel.style.display = "none";
-        btn.textContent = `${btn.dataset.label} ▼`;
-      }
+    btn.addEventListener("click", () => {
+      panel.classList.toggle("hidden");
+      const nowHidden = panel.classList.contains("hidden");
+      btn.textContent = `${btn.dataset.label} ${nowHidden ? "▼" : "▲"}`;
     });
   });
 }
 
 /* =========================
- * 5) QC 모드 탭 전환 (있을 때만)
+ * 5) QC View Toggle (Design/QC only tabs)
  * ======================= */
 function initQcViewToggle() {
   const tabs = document.querySelectorAll(".qc-tab-btn");
@@ -222,20 +198,15 @@ function initQcViewToggle() {
   if (!tabs.length || !designWrapper || !qcWrapper) return;
 
   function applyQcMode(mode) {
-    if (mode === "design") {
-      designWrapper.style.display = "";
-      qcWrapper.style.display = "none";
-    } else {
-      designWrapper.style.display = "none";
-      qcWrapper.style.display = "";
-    }
-
-    tabs.forEach(t => {
-      t.classList.toggle("active", t.dataset.qcMode === mode);
-    });
+    const isDesign = (mode === "design");
+    setHidden(designWrapper, !isDesign);
+    setHidden(qcWrapper, isDesign);
+    tabs.forEach(t => t.classList.toggle("active", t.dataset.qcMode === mode));
   }
 
-  applyQcMode("design");
+  // 서버에서 기본 active 지정했으면 그걸 따름
+  const initial = document.querySelector(".qc-tab-btn.active")?.dataset.qcMode || "design";
+  applyQcMode(initial);
 
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {

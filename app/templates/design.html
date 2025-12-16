@@ -1,111 +1,137 @@
 {# app/templates/design.html #}
 {% extends "base.html" %}
-
 {% block title %}Primer Design | GCX{% endblock %}
 
 {% block content %}
-{% set current_assay = assay if assay is defined and assay in ['qpcr', 'methyl', 'as-pcr'] else 'qpcr' %}
+{% set current_assay = assay if assay is defined and assay in ['qpcr','methyl','as-pcr'] else 'qpcr' %}
 
 <div class="layout">
-
-  {# ✅ 왼쪽 배너: 클릭하면 /design?assay=... 로 페이지 변경 #}
   {% include "partials/sidebar_tabs.html" %}
 
   <main class="layout-main">
-    <h1>Primer Design</h1>
+    <div class="page-header">
+      <div>
+        <h1>Primer Design</h1>
+        <p class="page-desc">
+          Assay를 선택하고 입력값을 넣으면 primer3 기반 설계 + QC(thermo/blast)를 수행합니다.
+        </p>
+      </div>
+    </div>
 
     {% if error %}
       <div class="card error">에러: {{ error }}</div>
     {% endif %}
 
-    {# ======================
-       Submit endpoint per assay
-       ====================== #}
+    {# Submit endpoint per assay #}
     {% if current_assay == 'methyl' %}
       {% set submit_endpoint = 'design_methyl_from_form' %}
+      {% set primer_type_value = 'methyl' %}
     {% elif current_assay == 'as-pcr' %}
       {% set submit_endpoint = 'design_aspcr_from_form' %}
+      {% set primer_type_value = 'as' %}
     {% else %}
       {% set submit_endpoint = 'design_qpcr_from_form' %}
+      {% set primer_type_value = 'default' %}
     {% endif %}
 
-    <div class="card">
-      <form id="design-form"
-            action="{{ url_for(submit_endpoint) }}"
-            method="post"
-            enctype="multipart/form-data">
+    <form id="design-form"
+          class="card"
+          action="{{ url_for(submit_endpoint) }}"
+          method="post"
+          enctype="multipart/form-data">
 
-        {# keep assay in POST #}
-        <input type="hidden" name="assay" value="{{ current_assay }}">
-
-        {# keep primer_type if server uses it #}
-        <input type="hidden" name="primer_type"
-               value="{% if current_assay=='methyl' %}methyl{% elif current_assay=='as-pcr' %}as{% else %}default{% endif %}">
-
-        {# ======================
-           Common toggles
-           ====================== #}
-        {% include "partials/reference.html" %}
-        {% include "partials/probe.html" %}
-
-        {# ======================
-           Inputs: Single + Excel together
-           ====================== #}
-        <div class="section-block">
-          <div class="section-header">
-            <div class="section-title">Inputs</div>
-            <p class="section-desc">Single 입력과 Excel 업로드를 동시에 제출할 수 있습니다.</p>
-          </div>
-
-          {# ✅ server render: assay별 폼만 include (hidden 토글 제거) #}
-          {% if current_assay == 'qpcr' %}
-            {% include "partials/form_qpcr.html" %}
-          {% elif current_assay == 'methyl' %}
-            {% include "partials/form_methyl.html" %}
-          {% else %}
-            {% include "partials/form_aspcr.html" %}
-          {% endif %}
-
-          <div class="sub-section">
-            <div class="sub-section-title">Excel Upload (Optional)</div>
-            <div class="form-row">
-              <label for="excel_file">Excel File</label>
-              <input id="excel_file" name="excel_file" type="file" accept=".xlsx,.xls,.csv">
-              <div class="help-text">
-                예: 여러 타겟을 한 번에 넣고 싶을 때 사용. Single 입력도 같이 보내면 서버에서 둘 다 처리하도록 구현 가능합니다.
-              </div>
-            </div>
-          </div>
+      {# =======================
+         1) Inputs
+         ======================= #}
+      <section class="section-block" id="inputs">
+        <div class="section-header">
+          <div class="section-title">Inputs</div>
+          <p class="section-desc">Single 입력(필수) + Excel 업로드(옵션)</p>
         </div>
 
-        {# ======================
-           Options/QC per assay
-           ====================== #}
         {% if current_assay == 'qpcr' %}
-          {% include "partials/primer_options.html" %}
-          {% include "partials/qc_threshold.html" %}
+          {% include "partials/form_qpcr.html" %}
         {% elif current_assay == 'methyl' %}
-          {% include "partials/primer_options_methyl.html" %}
-          {% include "partials/qc_threshold_methyl.html" %}
+          {% include "partials/form_methyl.html" %}
         {% else %}
-          {% include "partials/primer_options_aspcr.html" %}
-          {% include "partials/qc_threshold_aspcr.html" %}
+          {% include "partials/form_aspcr.html" %}
         {% endif %}
+      </section>
 
-        <button type="submit">RUN</button>
-      </form>
-    </div>
+      {# =======================
+         2) Common (Reference / Probe)
+         ======================= #}
+      <section class="section-block" id="common">
+        <div class="section-header">
+          <div class="section-title">Common Settings</div>
+          <p class="section-desc">Reference와 Probe 사용 여부를 설정합니다.</p>
+        </div>
 
-    {# ======================
+        {% include "partials/reference.html" %}
+        {% include "partials/probe.html" %}
+      </section>
+
+      {# =======================
+         3) Options
+         ======================= #}
+      <section class="section-block" id="options">
+        <details class="fold-card" {% if current_assay == 'as-pcr' %}open{% endif %}>
+          <summary class="fold-summary">
+            <span>Primer Options</span>
+            <span class="fold-hint">열기/닫기</span>
+          </summary>
+          <div class="fold-body">
+            {% if current_assay == 'qpcr' %}
+              {% include "partials/primer_options.html" %}
+            {% elif current_assay == 'methyl' %}
+              {% include "partials/primer_options_methyl.html" %}
+            {% elif current_assay == 'as' %}
+              {% include "partials/primer_options_aspcr.html" %}
+            {% endif %}
+          </div>
+        </details>
+      </section>
+
+      {# =======================
+         4) QC Threshold
+         ======================= #}
+      <section class="section-block" id="qc">
+        <details class="fold-card" {% if current_assay == 'as-pcr' %}open{% endif %}>
+          <summary class="fold-summary">
+            <span>QC Thresholds</span>
+            <span class="fold-hint">열기/닫기</span>
+          </summary>
+          <div class="fold-body">
+            {% if current_assay == 'qpcr' %}
+              {% include "partials/qc_threshold.html" %}
+            {% elif current_assay == 'methyl' %}
+              {% include "partials/qc_threshold_methyl.html" %}]
+            {% elif current_assay == 'as' %}
+              {% include "partials/qc_threshold_aspcr.html" %}
+            {% endif %}
+          </div>
+        </details>
+      </section>
+
+      <input type="hidden" name="assay" value="{{ current_assay }}">
+      <input type="hidden" name="primer_type" value="{{ primer_type_value }}">
+      <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg19' }}">
+      <input type="hidden" name="probe" id="probe-input" value="{{ probe or 'no' }}">
+
+      <div class="actions">
+        <button type="submit" class="btn-primary">RUN</button>
+      </div>
+    </form>
+
+    {# =======================
        Results
-       ====================== #}
-    <div class="card">
-      {% if single_result %}
+       ======================= #}
+    {% if single_result %}
+      <div class="card" id="results">
         {% include "partials/results_single.html" %}
-      {% endif %}
-    </div>
+      </div>
+    {% endif %}
 
   </main>
 </div>
-
 {% endblock content %}

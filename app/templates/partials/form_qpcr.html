@@ -1,35 +1,36 @@
-{# templates/partials/form_single_qpcr.html #}
+{# app/templates/partials/form_aspcr.html #}
 
-<div class="section-title">qPCR Target Region</div>
+<div class="form-block">
+  <div class="section-title">AS-PCR Target</div>
 
-<div class="form-grid">
-  <div class="form-row">
-    <label for="chrom">Chrom</label>
-    <input id="chrom" name="chrom" type="text" placeholder="e.g. chr7" required>
-  </div>
-
-  <div class="form-row">
-    <label for="start">Start</label>
-    <input id="start" name="start" type="number" placeholder="e.g. 55000000" required>
-  </div>
-
-  <div class="form-row">
-    <label for="end">End</label>
-    <input id="end" name="end" type="number" placeholder="e.g. 55000200" required>
-  </div>
-    <div class="primer-form">
+  <div class="form-grid">
     <div class="form-row">
-        <label for="file">Excel 파일 업로드 (.xlsx / .xls)</label>
-        <input type="file" name="file" id="file" accept=".xlsx,.xls">
+      <label for="chrom">Chrom</label>
+      <input id="chrom" name="chrom" type="text" placeholder="e.g. chr7" required>
     </div>
 
-    <div class="help-text">
-        · 필수 컬럼: <strong>chrom, start, end</strong><br>
-        · 선택 컬럼: name, sequence<br>
-        · Reference가 hg19/hg38이면 chrom/start/end 기준으로 자동으로 서열을 불러옵니다.
+    <div class="form-row">
+      <label for="start">Start</label>
+      <input id="start" name="start" type="number" required>
     </div>
-</div>
 
-<div class="hint">
-  입력한 구간(chrom/start/end)을 기반으로 qPCR primer 디자인을 수행합니다.
+    <div class="form-row">
+      <label for="end">End</label>
+      <input id="end" name="end" type="number" required>
+    </div>
+
+    <div class="form-row">
+      <label for="variant">Variant (AS)</label>
+      <input id="variant" name="variant" type="text" placeholder="e.g. chr7:... A>G" required>
+      <div class="help-text">AS-PCR용 변이/allele 정보를 입력</div>
+    </div>
+  </div>
+
+  <div class="sub-section">
+    <div class="sub-section-title">Excel Upload (Optional)</div>
+    <div class="form-row">
+      <label for="excel_file">Excel File</label>
+      <input id="excel_file" name="excel_file" type="file" accept=".xlsx,.xls,.csv">
+    </div>
+  </div>
 </div>

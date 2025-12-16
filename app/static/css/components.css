@@ -228,20 +228,27 @@ button[type="submit"]:hover {
 .layout-main {
   min-width: 0;
 }
-
 /* ==============================
    Left Banner (Side Nav)
    ============================== */
-.side-nav {
+.side-nav{
   position: sticky;
   top: 16px;
+
+  /* ✅ 전체 높이감 */
+  min-height: calc(100vh - 32px);
+
   padding: 14px;
   border-radius: 12px;
   background: #ffffff;
+  border: 1px solid #e6e6ea;         /* ✅ 분리감 */
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+
+  display: flex;                      /* ✅ 아래 footer/설명 배치 가능 */
+  flex-direction: column;
 }
 
-.side-nav-title {
+.side-nav-title{
   font-size: 12px;
   font-weight: 800;
   color: #6b7280;
@@ -249,12 +256,19 @@ button[type="submit"]:hover {
   letter-spacing: 0.2px;
 }
 
-.side-nav-item {
+.side-nav-list{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* 기존 side-nav-item 유지하되, margin-bottom 제거 권장 */
+.side-nav-item{
   display: block;
   text-decoration: none;
   padding: 10px 12px;
   border-radius: 10px;
-  margin-bottom: 8px;
 
   background: #f0f0f5;
   border: 1px solid #d0d0d5;
@@ -265,12 +279,12 @@ button[type="submit"]:hover {
   transition: transform 0.06s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
-.side-nav-item:hover {
+.side-nav-item:hover{
   filter: brightness(0.97);
   box-shadow: 0 2px 10px rgba(0,0,0,0.06);
 }
 
-.side-nav-item.active {
+.side-nav-item.active{
   background: #27ae60;
   color: #ffffff;
   border-color: #27ae60;
@@ -278,14 +292,157 @@ button[type="submit"]:hover {
   box-shadow: inset 0 3px 10px rgba(0,0,0,0.18);
 }
 
-@media (max-width: 900px) {
-  .layout {
+/* ✅ 사이드바 하단 설명/링크가 있으면 아래로 밀리게 */
+.side-nav-footer{
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+  color: #666;
+  font-size: 12px;
+}
+
+@media (max-width: 900px){
+  .layout{
     grid-template-columns: 1fr;
   }
-  .side-nav {
+  .side-nav{
     position: static;
+    min-height: auto;
   }
-  .side-nav-item {
+  .side-nav-item{
     text-align: center;
   }
 }
+
+.top-tabs{
+  display:flex;
+  gap:10px;
+  margin: 10px 0 18px;
+  border-bottom: 2px solid #e5e7eb;
+}
+.top-tab{
+  padding: 10px 14px;
+  text-decoration:none;
+  color:#666;
+  font-weight:700;
+  border-bottom: 3px solid transparent;
+}
+.top-tab.active{
+  color:#111;
+  border-bottom-color:#27ae60;
+}
+
+/* page header */
+.page-header{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom: 12px;
+}
+.page-desc{
+  margin: 0;
+  color:#666;
+  font-size: 13px;
+}
+
+/* actions */
+.actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top: 14px;
+}
+.btn-primary{
+  padding: 10px 16px;
+  border-radius: 10px;
+  border:none;
+  background:#27ae60;
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-primary:hover{ filter: brightness(0.96); }
+
+/* foldable cards (details/summary) */
+.fold-card{
+  border: 1px solid #e6e6ea;
+  border-radius: 12px;
+  background: #fafafa;
+  overflow: hidden;
+}
+.fold-summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 12px 14px;
+  font-weight:800;
+  color:#333;
+  background:#f3f4f6;
+}
+.fold-summary::-webkit-details-marker{ display:none; }
+.fold-hint{
+  font-size: 12px;
+  color:#777;
+  font-weight:600;
+}
+.fold-body{
+  padding: 12px 14px;
+  background: #fff;
+}
+
+/* sidebar TOC */
+.toc{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.toc a{
+  padding:6px 10px;
+  border-radius:999px;
+  background:#f0f0f5;
+  border:1px solid #d0d0d5;
+  text-decoration:none;
+  color:#333;
+  font-weight:700;
+  font-size:12px;
+}
+.toc a:hover{ filter: brightness(0.98); }
+
+/* Fold card (details/summary) */
+.fold-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.fold-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.fold-card[open] .fold-summary {
+  background: #ffffff;
+}
+
+.fold-hint {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.fold-body {
+  padding: 12px 14px;
+}
+
+/* details 기본 삼각형 제거(브라우저별) */
+.fold-summary::-webkit-details-marker { display: none; }
