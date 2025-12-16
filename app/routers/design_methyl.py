@@ -16,7 +16,7 @@ from app.routers.design_common import (
 )
 
 # methyl용 pipeline 함수가 따로 있다고 가정 (없으면 qpcr에 bisulfite=True로 연결해도 됨)
-from pcr.pipelines.qpcr import design_qpcr_for_region
+from pcr.pipelines.qpcr import run_qpcr
 
 
 router = APIRouter(prefix="/design", tags=["design"])
@@ -48,7 +48,7 @@ async def design_methyl_from_form(
 
         if f.mode == "single":
             region = regions[0]
-            total_df, filtered_df = design_qpcr_for_region(
+            total_df, filtered_df = run_qpcr(
                 region=region, reference_name=f.reference, **kwargs
             )
             context["single_result"] = {
@@ -61,7 +61,7 @@ async def design_methyl_from_form(
         else:
             multi_results: List[Dict[str, Any]] = []
             for region in regions:
-                total_df, filtered_df = design_qpcr_for_region(
+                total_df, filtered_df = run_qpcr(
                     region=region, reference_name=f.reference, **kwargs
                 )
                 multi_results.append(

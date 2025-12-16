@@ -1,18 +1,16 @@
 # app/routers/qc.py
-
+# app/routers/qc.py
 from __future__ import annotations
 
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from pcr.qc import (
-    QCThresholds,
-    evaluate_amplicons,
-    make_amplicon_for_qc,
-    blast_qc_for_primer_pair,
-)
-from config.settings import settings
+from pcr.config.settings import settings
+from pcr.config.runtime import build_qc_params_from_web
+
+from pcr.qc.evaluate import run_thermo_qc, run_blast_qc
+from pcr.qc.factories import make_amplicon_for_qc
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -28,18 +26,16 @@ async def qc_page(
     error: str | None = None,
 ):
     """
-    QC Only 화면: 처음에는 결과 없이 폼만 보여줌
+    QC Only 화면 (초기 상태)
     """
-    qc_result = None
-
     return templates.TemplateResponse(
-        "qc.html",   # ✅ index.html → qc.html 로 변경
+        "qc.html",
         {
             "request": request,
             "error": error,
-            "qc_result": qc_result,
+            "qc_result": None,
 
-            # 폼 기본값들 (템플릿에서 value로 쓸 수 있게)
+            # form 기본값
             "forward": "",
             "reverse": "",
             "probe": "",
@@ -48,26 +44,69 @@ async def qc_page(
         },
     )
 
+
 @router.post("/only", response_class=HTMLResponse)
 async def qc_only_run(
     request: Request,
+
+    # --- primer / probe ---
     forward: str = Form(...),
     reverse: str = Form(...),
     probe: str | None = Form(None),
     template_sequence: str | None = Form(None),
+
+    # --- reference ---
     reference: str = Form("hg38"),
+
+    # =========================
+    # QC override (대문자 기준)
+    # =========================
+    PRIMER_MAX_DIFF_TM: float | None = Form(None),
+    PRIMER_MIN_DIFF_TM: float | None = Form(None),
+    PROBE_MAX_DIFF_TM: float | None = Form(None),
+    PROBE_MIN_DIFF_TM: float | None = Form(None),
+
+    HAIRPIN_MIN_DG: float | None = Form(None),
+    HOMODIMER_MIN_DG: float | None = Form(None),
+    HETERODIMER_MIN_DG: float | None = Form(None),
+
+    BLAST_IDENTITY_THRESHOLD: float | None = Form(None),
+    BLAST_LENGTH_THRESHOLD: int | None = Form(None),
+    BLAST_MAX_ALIGNMENTS: int | None = Form(None),
+    MIN_AMP_BP: int | None = Form(None),
+    MAX_AMP_BP: int | None = Form(None),
 ):
     """
-    Primer / Probe 서열만 넣어서
-    - primer3 기반 Thermo QC (hairpin / homodimer / heterodimer)
-    - BLAST 기반 off-target / self-amplicon QC
-    를 한 번에 계산하는 엔드포인트.
+    Primer / Probe sequence만으로
+    - Thermo QC (primer3)
+    - BLAST QC (off-target / self-amplicon)
+    실행
     """
     error: str | None = None
     qc_result = None
 
     try:
-        # 1) Thermo 기반 QC (primer3)
+        # -------------------------------------------------
+        # 1) QCParams 생성 (settings + web override)
+        # -------------------------------------------------
+        qc_params = build_qc_params_from_web({
+            "PRIMER_MAX_DIFF_TM": PRIMER_MAX_DIFF_TM,
+            "PRIMER_MIN_DIFF_TM": PRIMER_MIN_DIFF_TM,
+            "PROBE_MAX_DIFF_TM": PROBE_MAX_DIFF_TM,
+            "PROBE_MIN_DIFF_TM": PROBE_MIN_DIFF_TM,
+            "HAIRPIN_MIN_DG": HAIRPIN_MIN_DG,
+            "HOMODIMER_MIN_DG": HOMODIMER_MIN_DG,
+            "HETERODIMER_MIN_DG": HETERODIMER_MIN_DG,
+            "BLAST_IDENTITY_THRESHOLD": BLAST_IDENTITY_THRESHOLD,
+            "BLAST_LENGTH_THRESHOLD": BLAST_LENGTH_THRESHOLD,
+            "BLAST_MAX_ALIGNMENTS": BLAST_MAX_ALIGNMENTS,
+            "MIN_AMP_BP": MIN_AMP_BP,
+            "MAX_AMP_BP": MAX_AMP_BP,
+        })
+
+        # -------------------------------------------------
+        # 2) Thermo QC
+        # -------------------------------------------------
         amp = make_amplicon_for_qc(
             forward_seq=forward,
             reverse_seq=reverse,
@@ -75,42 +114,45 @@ async def qc_only_run(
             template_seq=template_sequence,
         )
 
-        qc_thresholds = QCThresholds()
-        total_rows, filtered_rows = evaluate_amplicons(
+        total_rows, _filtered_rows = run_thermo_qc(
             genomic_id="QC_ONLY",
             amplicons=[amp],
-            qc_thresholds=qc_thresholds,
+            qc_params=qc_params,
         )
 
-        thermo_row = total_rows[0]
+        thermo_row = total_rows[0] if total_rows else {}
 
-        # 2) BLAST 기반 QC
-        ref_cfg = settings.references[reference]
-        blast_db = str(ref_cfg.blast)
+        # -------------------------------------------------
+        # 3) BLAST QC
+        # -------------------------------------------------
+        if reference not in settings.references:
+            raise ValueError(f"Unknown reference: {reference}")
 
-        blast_qc = blast_qc_for_primer_pair(
+        blast_db = str(settings.references[reference].blast)
+
+        blast_qc = run_blast_qc(
             f_name="FORWARD",
             f_seq=forward,
             r_name="REVERSE",
             r_seq=reverse,
             db=blast_db,
+            qc_params=qc_params,
             probe_name="PROBE" if probe else None,
             probe_seq=probe,
         )
 
-        # 3) Thermo + BLAST 결과 합치기
+        # -------------------------------------------------
+        # 4) 결과 병합
+        # -------------------------------------------------
         qc_result = {
             **thermo_row,
-            "BLAST_F_HITS": blast_qc["f_hits"],
-            "BLAST_R_HITS": blast_qc["r_hits"],
-            "BLAST_NEARBY_AMP_COUNT": blast_qc["nearby_count"],
-            "BLAST_MIN_AMP_SIZE": blast_qc["min_amplicon_size"],
-            "BLAST_AMP_DETAIL": ";".join(blast_qc["amplicon_details"])
-            if blast_qc["amplicon_details"]
-            else "",
-            "QC_BLAST_HIT": blast_qc["qc_blast_hit"],
-            "QC_BLAST_AMP": blast_qc["qc_blast_amplicon"],
-            # probe가 F/R 사이 amplicon 안에 붙었는지 여부
+            "BLAST_F_HITS": blast_qc.get("f_hits"),
+            "BLAST_R_HITS": blast_qc.get("r_hits"),
+            "BLAST_NEARBY_AMP_COUNT": blast_qc.get("nearby_count"),
+            "BLAST_MIN_AMP_SIZE": blast_qc.get("min_amplicon_size"),
+            "BLAST_AMP_DETAIL": ";".join(blast_qc.get("amplicon_details") or []),
+            "QC_BLAST_HIT": blast_qc.get("qc_blast_hit"),
+            "QC_BLAST_AMP": blast_qc.get("qc_blast_amplicon"),
             "QC_PROBE_IN_AMP": blast_qc.get("qc_probe_in_amplicon", "-"),
         }
 
@@ -130,6 +172,7 @@ async def qc_only_run(
             "reference": reference,
         },
     )
+
 
 # @router.post("/excel")
 # async def qc_excel_run(

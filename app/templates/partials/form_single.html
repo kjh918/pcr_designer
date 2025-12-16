@@ -1,47 +1,8 @@
-{# partials/form_single.html #}
-<div class="section-block">
-    <div class="section-header">
-        <h2 class="section-title">Single Region Input</h2>
-        <p class="section-desc">
-            하나의 타깃 영역에 대해 프라이머를 설계합니다.
-            <span class="mono">chrom / start / end</span> 를 기준으로 reference 서열을 가져옵니다.
-        </p>
-    </div>
-
-    <div class="primer-form primer-form-grid">
-        <div class="form-row">
-            <label for="chrom">Chromosome</label>
-            <input
-                type="text"
-                id="chrom"
-                name="chrom"
-                placeholder="예: chr1"
-                value="{{ chrom or '' }}"
-            >
-        </div>
-
-        <div class="form-row">
-            <label for="start">Start (1-based)</label>
-            <input
-                type="number"
-                id="start"
-                name="start"
-                placeholder="예: 123456"
-                value="{{ start or '' }}"
-                min="1"
-            >
-        </div>
-
-        <div class="form-row">
-            <label for="end">End</label>
-            <input
-                type="number"
-                id="end"
-                name="end"
-                placeholder="예: 123789"
-                value="{{ end or '' }}"
-                min="1"
-            >
-        </div>
-    </div>
-</div>
+{# app/templates/partials/form_single.html #}
+{% if current_assay == 'as-pcr' %}
+  {% include "partials/form_aspcr.html" %}
+{% elif current_assay == 'methyl' %}
+  {% include "partials/form_methyl.html" %}
+{% else %}
+  {% include "partials/form_qpcr.html" %}
+{% endif %}

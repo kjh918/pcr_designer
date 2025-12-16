@@ -1,0 +1,15 @@
+{# app/templates/partials/sidebar_tabs.html #}
+{% set current_assay = assay if assay is defined and assay in ['qpcr','methyl','as-pcr'] else 'qpcr' %}
+
+<aside class="side-nav">
+  <div class="side-nav-title">Primer Design</div>
+
+  <a class="side-nav-item {% if current_assay=='qpcr' %}active{% endif %}"
+     href="{{ url_for('design_page') }}?assay=qpcr">qPCR</a>
+
+  <a class="side-nav-item {% if current_assay=='methyl' %}active{% endif %}"
+     href="{{ url_for('design_page') }}?assay=methyl">Methyl</a>
+
+  <a class="side-nav-item {% if current_assay=='as-pcr' %}active{% endif %}"
+     href="{{ url_for('design_page') }}?assay=as-pcr">AS-PCR</a>
+</aside>

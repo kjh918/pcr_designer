@@ -1,91 +1,111 @@
+{# app/templates/design.html #}
 {% extends "base.html" %}
 
 {% block title %}Primer Design | GCX{% endblock %}
 
 {% block content %}
-<h1>Primer Design</h1>
-
-<div class="card">
-
-{% if error %}
-    <div class="card error">에러: {{ error }}</div>
-{% endif %}
-
-{# 현재 디자인 모드 결정 #}
-{% set current_design_mode = mode if mode is defined and mode in ['single', 'multi'] else 'single' %}
-
-{# ✅ assay 결정 (qpcr/methyl/as-pcr) #}
 {% set current_assay = assay if assay is defined and assay in ['qpcr', 'methyl', 'as-pcr'] else 'qpcr' %}
 
-{# ✅ assay에 따른 endpoint 선택 #}
-{% if current_assay == 'methyl' %}
-  {% set submit_endpoint = 'design_methyl_from_form' %}
-{% elif current_assay == 'as-pcr' %}
-  {% set submit_endpoint = 'design_aspcr_from_form' %}
-{% else %}
-  {% set submit_endpoint = 'design_qpcr_from_form' %}
-{% endif %}
+<div class="layout">
 
-{# 모드 토글 (Single / Multi) #}
-{% include "partials/mode_toggle.html" %}
+  {# ✅ 왼쪽 배너: 클릭하면 /design?assay=... 로 페이지 변경 #}
+  {% include "partials/sidebar_tabs.html" %}
 
-{# 프라이머 타입 및 Reference 선택 #}
-{% include "partials/primer_type.html" %}
-{% include "partials/reference.html" %}
-{% include "partials/probe.html" %}
-</div>
+  <main class="layout-main">
+    <h1>Primer Design</h1>
 
-<div class="card">
-<form id="design-form"
-      action="{{ url_for(submit_endpoint) }}"
-      method="post"
-      enctype="multipart/form-data">
-  <input type="hidden" name="mode" id="mode-input" value="{{ current_design_mode }}">
-  <input type="hidden" name="primer_type" id="primer-type-input" value="{{ primer_type or 'default' }}">
-  <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg19' }}">
-  <input type="hidden" name="probe" id="probe-input" value="{{ probe or 'no' }}">
+    {% if error %}
+      <div class="card error">에러: {{ error }}</div>
+    {% endif %}
 
-  {# ✅ 선택: 현재 assay도 hidden으로 유지하면 JS/서버에서 편함 #}
-  <input type="hidden" name="assay" id="assay-input" value="{{ current_assay }}">
+    {# ======================
+       Submit endpoint per assay
+       ====================== #}
+    {% if current_assay == 'methyl' %}
+      {% set submit_endpoint = 'design_methyl_from_form' %}
+    {% elif current_assay == 'as-pcr' %}
+      {% set submit_endpoint = 'design_aspcr_from_form' %}
+    {% else %}
+      {% set submit_endpoint = 'design_qpcr_from_form' %}
+    {% endif %}
 
-  {# 🟢 Single 폼 영역 #}
-  <div id="single-section"
-       class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
-    {% include "partials/form_single.html" %}
-  </div>
+    <div class="card">
+      <form id="design-form"
+            action="{{ url_for(submit_endpoint) }}"
+            method="post"
+            enctype="multipart/form-data">
 
-  {# 🟢 Multi 폼 영역 #}
-  <div id="multi-section"
-       class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
-    {% include "partials/form_multi.html" %}
-  </div>
+        {# keep assay in POST #}
+        <input type="hidden" name="assay" value="{{ current_assay }}">
 
-  {# 🔵 옵션 영역 #}
-  {% include "partials/primer_options.html" %}
-  {% include "partials/qc_threshold.html" %}
+        {# keep primer_type if server uses it #}
+        <input type="hidden" name="primer_type"
+               value="{% if current_assay=='methyl' %}methyl{% elif current_assay=='as-pcr' %}as{% else %}default{% endif %}">
 
-  <button type="submit">RUN</button>
-</form>
-</div>
+        {# ======================
+           Common toggles
+           ====================== #}
+        {% include "partials/reference.html" %}
+        {% include "partials/probe.html" %}
 
-{# ======================
-   결과 영역
-   ====================== #}
+        {# ======================
+           Inputs: Single + Excel together
+           ====================== #}
+        <div class="section-block">
+          <div class="section-header">
+            <div class="section-title">Inputs</div>
+            <p class="section-desc">Single 입력과 Excel 업로드를 동시에 제출할 수 있습니다.</p>
+          </div>
 
-<div class="card">
-<div id="single-results"
-     class="mode-section {% if current_design_mode != 'single' %}hidden{% endif %}">
-  {% if single_result %}
-      {% include "partials/results_single.html" %}
-  {% endif %}
-</div>
+          {# ✅ server render: assay별 폼만 include (hidden 토글 제거) #}
+          {% if current_assay == 'qpcr' %}
+            {% include "partials/form_qpcr.html" %}
+          {% elif current_assay == 'methyl' %}
+            {% include "partials/form_methyl.html" %}
+          {% else %}
+            {% include "partials/form_aspcr.html" %}
+          {% endif %}
 
-<div id="multi-results"
-     class="mode-section {% if current_design_mode != 'multi' %}hidden{% endif %}">
-  {% if multi_results %}
-      {% include "partials/results_multi.html" %}
-  {% endif %}
-</div>
+          <div class="sub-section">
+            <div class="sub-section-title">Excel Upload (Optional)</div>
+            <div class="form-row">
+              <label for="excel_file">Excel File</label>
+              <input id="excel_file" name="excel_file" type="file" accept=".xlsx,.xls,.csv">
+              <div class="help-text">
+                예: 여러 타겟을 한 번에 넣고 싶을 때 사용. Single 입력도 같이 보내면 서버에서 둘 다 처리하도록 구현 가능합니다.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ======================
+           Options/QC per assay
+           ====================== #}
+        {% if current_assay == 'qpcr' %}
+          {% include "partials/primer_options.html" %}
+          {% include "partials/qc_threshold.html" %}
+        {% elif current_assay == 'methyl' %}
+          {% include "partials/primer_options_methyl.html" %}
+          {% include "partials/qc_threshold_methyl.html" %}
+        {% else %}
+          {% include "partials/primer_options_aspcr.html" %}
+          {% include "partials/qc_threshold_aspcr.html" %}
+        {% endif %}
+
+        <button type="submit">RUN</button>
+      </form>
+    </div>
+
+    {# ======================
+       Results
+       ====================== #}
+    <div class="card">
+      {% if single_result %}
+        {% include "partials/results_single.html" %}
+      {% endif %}
+    </div>
+
+  </main>
 </div>
 
 {% endblock content %}

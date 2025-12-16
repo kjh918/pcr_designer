@@ -1,4 +1,4 @@
-# primer/qc/thermo.py
+# pcr/qc/thermo.py
 from __future__ import annotations
 
 from typing import Dict, Tuple, List, Iterable, Any
@@ -6,7 +6,7 @@ from typing import Dict, Tuple, List, Iterable, Any
 import primer3
 from Bio.Seq import Seq
 
-from pcr.qc.config import QCThresholds
+from pcr.config.schema.qc import QCParams
 
 
 # -----------------------------
@@ -31,6 +31,7 @@ def compute_hairpin(seq: str) -> Tuple[float, float]:
     else:
         hp_dg = 0.0
         hp_tm = 0.0
+    # 기존 코드 리턴 순서 유지: (tm, dg)
     return hp_tm, hp_dg
 
 
@@ -43,34 +44,42 @@ def compute_homodimer(seq: str) -> float:
     return hd_dg
 
 
-def _qc_bool_flags(amp: Dict[str, Any], th: QCThresholds) -> Tuple[bool, bool, bool]:
+# -----------------------------
+# QC helpers
+# -----------------------------
+def _qc_bool_flags(amp: Dict[str, Any], qc_params: QCParams) -> Tuple[bool, bool, bool]:
     hairpin_ok = (
-        amp.get("forward_hairpin_dg", 0.0) >= th.hairpin_min_dg
-        and amp.get("reverse_hairpin_dg", 0.0) >= th.hairpin_min_dg
+        amp.get("forward_hairpin_dg", 0.0) >= qc_params.HAIRPIN_MIN_DG
+        and amp.get("reverse_hairpin_dg", 0.0) >= qc_params.HAIRPIN_MIN_DG
     )
 
     homodimer_ok = (
-        amp.get("forward_homodimer_dg", 0.0) >= th.homodimer_min_dg
-        and amp.get("reverse_homodimer_dg", 0.0) >= th.homodimer_min_dg
+        amp.get("forward_homodimer_dg", 0.0) >= qc_params.HOMODIMER_MIN_DG
+        and amp.get("reverse_homodimer_dg", 0.0) >= qc_params.HOMODIMER_MIN_DG
     )
 
-    hetero_fr_ok = (amp.get("heterodimer_dg", 0.0) >= th.heterodimer_min_dg)
+    hetero_fr_ok = amp.get("heterodimer_dg", 0.0) >= qc_params.HETERODIMER_MIN_DG
     return hairpin_ok, homodimer_ok, hetero_fr_ok
 
 
-def _hetero_ok(dg: float, tm: float, th: QCThresholds) -> bool:
-    return dg >= th.heterodimer_min_dg
+def _hetero_ok(dg: float, tm: float, qc_params: QCParams) -> bool:
+    # tm은 지금 로직에서 사용하지 않지만 시그니처는 유지
+    return dg >= qc_params.HETERODIMER_MIN_DG
 
 
-def amplicon_passes_qc(amp: Dict[str, Any], th: QCThresholds) -> bool:
-    hairpin_ok, homodimer_ok, hetero_fr_ok = _qc_bool_flags(amp, th)
+def amplicon_passes_qc(amp: Dict[str, Any], qc_params: QCParams) -> bool:
+    hairpin_ok, homodimer_ok, hetero_fr_ok = _qc_bool_flags(amp, qc_params)
     return hairpin_ok and homodimer_ok and hetero_fr_ok
 
 
+# -----------------------------
+# main evaluator
+# -----------------------------
 def evaluate_amplicons(
-    genomic_id,
+    genomic_id: str,
     amplicons: Iterable[Any],
-    qc_thresholds: QCThresholds,
+    *,
+    qc_params: QCParams,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     total_rows: List[Dict[str, Any]] = []
     filtered_rows: List[Dict[str, Any]] = []
@@ -89,7 +98,7 @@ def evaluate_amplicons(
         else:
             a_dict["rc_reverse_sequence"] = ""
 
-        # ---- hairpin/homodimer 계산(원래 SimpleAmplicon.to_dict에서 하던 것 포함) ----
+        # ---- hairpin/homodimer ----
         if f_seq:
             f_hp_tm, f_hp_dg = compute_hairpin(f_seq)
             f_hd_dg = compute_homodimer(f_seq)
@@ -119,7 +128,7 @@ def evaluate_amplicons(
             }
         )
 
-        # ---------- heterodimer 계산 ----------
+        # ---------- heterodimer ----------
         if f_seq and r_seq:
             het_fr_dg, het_fr_tm = compute_heterodimer(f_seq, r_seq)
         else:
@@ -146,10 +155,10 @@ def evaluate_amplicons(
         a_dict["heterodimer_rp_tm"] = het_rp_tm
 
         # ---------- QC flags ----------
-        hairpin_ok, homodimer_ok, hetero_fr_ok = _qc_bool_flags(a_dict, qc_thresholds)
+        hairpin_ok, homodimer_ok, hetero_fr_ok = _qc_bool_flags(a_dict, qc_params)
 
-        hetero_fp_ok = _hetero_ok(het_fp_dg, het_fp_tm, qc_thresholds) if (f_seq and p_seq) else True
-        hetero_rp_ok = _hetero_ok(het_rp_dg, het_rp_tm, qc_thresholds) if (r_seq and p_seq) else True
+        hetero_fp_ok = _hetero_ok(het_fp_dg, het_fp_tm, qc_params) if (f_seq and p_seq) else True
+        hetero_rp_ok = _hetero_ok(het_rp_dg, het_rp_tm, qc_params) if (r_seq and p_seq) else True
 
         a_dict["QC_HAIRPIN"] = "O" if hairpin_ok else "X"
         a_dict["QC_HOMODIMER"] = "O" if homodimer_ok else "X"

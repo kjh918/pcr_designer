@@ -1,7 +1,7 @@
-// static/js/toggles.js
+// app/static/js/toggles.js
 
 document.addEventListener("DOMContentLoaded", () => {
-  initModeToggle();
+  // initModeToggle();  // ✅ single/multi 제거했으면 호출 안 해도 됨
   initPrimerTypeToggle();
   initReferenceToggle();
   initProbeToggle();
@@ -9,88 +9,128 @@ document.addEventListener("DOMContentLoaded", () => {
   initQcViewToggle();
 });
 
-/* =========================
- * 1) Single / Multi Mode 토글
- * ======================= */
-function initModeToggle() {
-  const modeInput = document.getElementById("mode-input");
-  const singleSection = document.getElementById("single-section");
-  const multiSection = document.getElementById("multi-section");
-  const modeBtns = document.querySelectorAll(".mode-btn");
+function initPrimerTypeToggle() {
+  const tabs = document.querySelectorAll(".primer-tab");
+  const assayInput = document.getElementById("assay-input");
+  const primerTypeInput = document.getElementById("primer-type-input"); // optional
+  const form = document.getElementById("design-form");
 
-  // 결과 영역도 있으면 같이 토글
-  const singleResults = document.getElementById("single-results");
-  const multiResults = document.getElementById("multi-results");
+  if (!tabs.length || !assayInput || !form) return;
 
-  // 필수 요소 없으면 그냥 스킵
-  if (!modeInput || !singleSection || !multiSection || !modeBtns.length) {
-    return;
+  function assayToPrimerType(assay) {
+    if (assay === "methyl") return "methyl";
+    if (assay === "as-pcr") return "as";
+    return "default";
   }
 
-  function applyMode(mode) {
-    modeInput.value = mode;
+  function actionForAssay(assay) {
+    if (assay === "methyl") return form.dataset.actionMethyl;
+    if (assay === "as-pcr") return form.dataset.actionAspcr;
+    return form.dataset.actionQpcr;
+  }
 
-    if (mode === "single") {
-      // 폼 영역
-      singleSection.style.display = "";
-      multiSection.style.display = "none";
+  function setVisibilityAndDisable(activeAssay) {
+    const groups = [
+      { assay: "qpcr",  ids: ["assay-input-qpcr",  "assay-panel-qpcr"] },
+      { assay: "methyl", ids: ["assay-input-methyl", "assay-panel-methyl"] },
+      { assay: "as-pcr", ids: ["assay-input-aspcr", "assay-panel-aspcr"] },
+    ];
 
-      // 결과 영역 (있을 때만)
-      if (singleResults) singleResults.style.display = "";
-      if (multiResults) multiResults.style.display = "none";
-    } else {
-      singleSection.style.display = "none";
-      multiSection.style.display = "";
+    groups.forEach(g => {
+      const isActive = g.assay === activeAssay;
 
-      if (singleResults) singleResults.style.display = "none";
-      if (multiResults) multiResults.style.display = "";
-    }
+      g.ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
 
-    // 버튼 active 토글
-    modeBtns.forEach(btn => {
-      const btnMode = btn.dataset.mode;
-      btn.classList.toggle("active", btnMode === mode);
+        el.style.display = isActive ? "" : "none";
+        el.classList.toggle("hidden", !isActive);
+
+        el.querySelectorAll("input, select, textarea").forEach(node => {
+          node.disabled = !isActive;
+        });
+      });
     });
-
-    console.log("[MODE]", modeInput.value);
   }
 
-  // 초기 모드 적용 (서버에서 내려준 값 기반)
-  const initialMode = modeInput.value || "single";
-  applyMode(initialMode);
+  function applyAssay(assay) {
+    // 1) active 탭 표시
+    tabs.forEach(t => t.classList.toggle("active", t.dataset.assay === assay));
 
-  // 클릭 이벤트 바인딩
-  modeBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const mode = btn.dataset.mode;
-      if (!mode) return;
-      applyMode(mode);
+    // 2) hidden 업데이트
+    assayInput.value = assay;
+    if (primerTypeInput) primerTypeInput.value = assayToPrimerType(assay);
+
+    // 3) form action 변경
+    const nextAction = actionForAssay(assay);
+    if (nextAction) form.action = nextAction;
+
+    // 4) 패널 전환
+    setVisibilityAndDisable(assay);
+
+    console.log("[ASSAY]", assay, "action:", form.action);
+  }
+
+  // 초기 적용(서버 렌더 hidden 값 기준)
+  applyAssay(assayInput.value || "qpcr");
+
+  // 클릭 바인딩
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const assay = tab.dataset.assay;
+      if (!assay) return;
+      applyAssay(assay);
     });
   });
 }
 
-/* =========================
- * 2) Primer Type 토글
- * ======================= */
-function initPrimerTypeToggle() {
-  const primerInput = document.getElementById("primer-type-input");
-  const primerBtns = document.querySelectorAll(".primer-btn");
+  function applyAssayFromPrimer(primerType) {
+    const assay = primerToAssay(primerType);
 
-  if (!primerInput || !primerBtns.length) return;
+    // hidden 업데이트
+    assayInput.value = assay;
+    if (primerInput) primerInput.value = primerType;
 
+    // 버튼 active
+    primerBtns.forEach(b => b.classList.toggle("active", b.dataset.primer === primerType));
+
+    // form action 변경
+    const nextAction = actionForAssay(assay);
+    if (nextAction) form.action = nextAction;
+
+    // 패널 전환
+    setVisibilityAndDisable(assay);
+
+    console.log("[TAB]", primerType, "=>", assay, "action:", form.action);
+  }
+
+  // 초기 상태 결정: hidden assay 기준으로 primerType 역매핑
+  function assayToPrimer(assay) {
+    if (assay === "methyl") return "methyl";
+    if (assay === "as-pcr") return "as";
+    return "default";
+  }
+
+  const initialAssay = assayInput.value || "qpcr";
+  const initialPrimerType =
+    (primerInput && primerInput.value) ||
+    (document.querySelector(".primer-btn.active")?.dataset.primer) ||
+    assayToPrimer(initialAssay);
+
+  applyAssayFromPrimer(initialPrimerType);
+
+  // 클릭 이벤트
   primerBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-      const primerType = btn.getAttribute("data-primer");
-      primerInput.value = primerType;
-
-      primerBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+      const primerType = btn.dataset.primer;
+      if (!primerType) return;
+      applyAssayFromPrimer(primerType);
     });
   });
 }
 
 /* =========================
- * 3) Reference 토글
+ * 2) Reference 토글
  * ======================= */
 function initReferenceToggle() {
   const referenceInput = document.getElementById("reference-input");
@@ -110,7 +150,7 @@ function initReferenceToggle() {
 }
 
 /* =========================
- * 4) Probe 토글
+ * 3) Probe 토글
  * ======================= */
 function initProbeToggle() {
   const probeInput = document.getElementById("probe-input");
@@ -119,36 +159,22 @@ function initProbeToggle() {
 
   if (!probeBtns.length) return;
 
-  // 서버에서 내려준 값이 있으면 사용, 없으면 기본 'no'
   const initialProbe = (probeInput && probeInput.value) ? probeInput.value : "no";
 
   function applyProbeMode(value) {
-    // hidden input 있으면 값 업데이트
-    if (probeInput) {
-      probeInput.value = value;
-    }
+    if (probeInput) probeInput.value = value;
 
-    // 버튼 active 상태
     probeBtns.forEach(btn => {
       btn.classList.toggle("active", btn.dataset.probe === value);
     });
 
-    // 옵션 패널 show/hide
     if (probeOptions) {
-      if (value === "yes") {
-        probeOptions.style.display = "";
-      } else {
-        probeOptions.style.display = "none";
-      }
+      probeOptions.style.display = (value === "yes") ? "" : "none";
     }
-
-    console.log("[PROBE]", value);
   }
 
-  // 초기 상태 반영
   applyProbeMode(initialProbe);
 
-  // 클릭 이벤트 바인딩
   probeBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       const val = btn.dataset.probe;
@@ -159,7 +185,7 @@ function initProbeToggle() {
 }
 
 /* =========================
- * 5) 옵션 패널 토글 (예: QC Threshold)
+ * 4) 옵션 패널 토글
  * ======================= */
 function initPanelToggles() {
   const toggleButtons = document.querySelectorAll("[data-toggle]");
@@ -186,7 +212,7 @@ function initPanelToggles() {
 }
 
 /* =========================
- * 6) 상단 QC 모드 탭 전환 (QC Only vs Design)
+ * 5) QC 모드 탭 전환 (있을 때만)
  * ======================= */
 function initQcViewToggle() {
   const tabs = document.querySelectorAll(".qc-tab-btn");
@@ -209,12 +235,11 @@ function initQcViewToggle() {
     });
   }
 
-  // 초기 모드 (기본 qc_only)
-  applyQcMode("design"); // 또는 서버에서 내려준 값 기준으로 바꿀 수 있음
+  applyQcMode("design");
 
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
-      const mode = tab.dataset.qcMode; // "qc_only" or "design"
+      const mode = tab.dataset.qcMode;
       if (!mode) return;
       applyQcMode(mode);
     });

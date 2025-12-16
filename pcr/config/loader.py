@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 import yaml
 
-from config.schema.root import Settings
+from pcr.config.schema.root import Settings
 
 def _normalize_references(raw: Mapping[str, Any]) -> Dict[str, Any]:
     return dict(raw.get("references") or {})

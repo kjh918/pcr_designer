@@ -1,4 +1,4 @@
-# primer/qc/blast.py
+# pcr/qc/blast.py
 from __future__ import annotations
 
 from typing import Dict, Any, List, Tuple, Optional
@@ -6,15 +6,7 @@ import subprocess
 import tempfile
 import os
 
-from pcr.qc.config import (
-    BLASTN,
-    BLAST_IDENTITY_THRESHOLD,
-    BLAST_LENGTH_THRESHOLD,
-    BLAST_MAX_ALIGNMENTS,
-    MIN_AMP_BP,
-    MAX_AMP_BP,
-    BlastQCConfig,
-)
+from pcr.config.schema.qc import QCParams
 from pcr.qc.types import BlastHit
 
 
@@ -24,7 +16,11 @@ _OUTFMT = (
 )
 
 
-def _parse_hits(stdout: str) -> List[BlastHit]:
+def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
+    """
+    BLAST outfmt 6 결과를 파싱하고,
+    qc_params.BLAST_IDENTITY_THRESHOLD / BLAST_LENGTH_THRESHOLD 기준으로 필터링.
+    """
     hits: List[BlastHit] = []
     for line in stdout.strip().splitlines():
         if not line.strip():
@@ -46,7 +42,8 @@ def _parse_hits(stdout: str) -> List[BlastHit]:
         qseq = cols[12]
         sseq = cols[13]
 
-        if pident < BLAST_IDENTITY_THRESHOLD or length < BLAST_LENGTH_THRESHOLD:
+        # ✅ QCParams 기반 필터
+        if pident < qc_params.BLAST_IDENTITY_THRESHOLD or length < qc_params.BLAST_LENGTH_THRESHOLD:
             continue
 
         hits.append(
@@ -68,7 +65,19 @@ def _parse_hits(stdout: str) -> List[BlastHit]:
     return hits
 
 
-def run_blast_for_single(name: str, seq: str, db: str) -> List[BlastHit]:
+def run_blast_for_single(
+    name: str,
+    seq: str,
+    db: str,
+    *,
+    qc_params: QCParams,
+) -> List[BlastHit]:
+    """
+    단일 서열 BLAST.
+    - 실행파일: qc_params.BLASTN
+    - num_alignments: qc_params.BLAST_MAX_ALIGNMENTS
+    - hit filtering: qc_params.*threshold
+    """
     name = name.strip()
     seq = seq.strip().upper()
 
@@ -80,26 +89,33 @@ def run_blast_for_single(name: str, seq: str, db: str) -> List[BlastHit]:
             f.write(fasta_str)
 
         cmd = [
-            BLASTN,
+            str(qc_params.BLASTN),
             "-task", "blastn-short",
             "-db", db,
             "-query", fasta_path,
             "-outfmt", _OUTFMT,
-            "-num_alignments", str(BLAST_MAX_ALIGNMENTS),
+            "-num_alignments", str(qc_params.BLAST_MAX_ALIGNMENTS),
         ]
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             return []
 
-        return _parse_hits(result.stdout)
+        return _parse_hits(result.stdout, qc_params=qc_params)
 
 
 def run_blast_for_primers(
-    f_name: str, f_seq: str,
-    r_name: str, r_seq: str,
-    db: str
+    f_name: str,
+    f_seq: str,
+    r_name: str,
+    r_seq: str,
+    db: str,
+    *,
+    qc_params: QCParams,
 ) -> Dict[str, List[BlastHit]]:
+    """
+    primer pair를 한 번에 BLAST.
+    """
     f_seq = f_seq.strip().upper()
     r_seq = r_seq.strip().upper()
 
@@ -111,19 +127,19 @@ def run_blast_for_primers(
             f.write(fasta_str)
 
         cmd = [
-            BLASTN,
+            str(qc_params.BLASTN),
             "-task", "blastn-short",
             "-db", db,
             "-query", fasta_path,
             "-outfmt", _OUTFMT,
-            "-num_alignments", str(BLAST_MAX_ALIGNMENTS),
+            "-num_alignments", str(qc_params.BLAST_MAX_ALIGNMENTS),
         ]
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             return {f_name: [], r_name: []}
 
-        all_hits = _parse_hits(result.stdout)
+        all_hits = _parse_hits(result.stdout, qc_params=qc_params)
         hits: Dict[str, List[BlastHit]] = {f_name: [], r_name: []}
         for h in all_hits:
             if h["qseqid"] in hits:
@@ -151,8 +167,8 @@ def find_nearby_amplicons(
     f_hits: List[BlastHit],
     r_hits: List[BlastHit],
     *,
-    min_bp: int = MIN_AMP_BP,
-    max_bp: int = MAX_AMP_BP,
+    min_bp: int,
+    max_bp: int,
     f_len: Optional[int] = None,
     r_len: Optional[int] = None,
 ) -> Tuple[int, Optional[int], List[str]]:
@@ -202,8 +218,8 @@ def find_nearby_amplicons(
 def find_self_amplicons(
     hits: List[BlastHit],
     *,
-    min_bp: int = MIN_AMP_BP,
-    max_bp: int = MAX_AMP_BP,
+    min_bp: int,
+    max_bp: int,
     primer_len: Optional[int] = None,
     label: str = "F",
     primer_name: str = "PRIMER",
@@ -263,8 +279,8 @@ def probe_in_any_amplicon(
     r_hits: List[BlastHit],
     p_hits: List[BlastHit],
     *,
-    min_bp: int = MIN_AMP_BP,
-    max_bp: int = MAX_AMP_BP,
+    min_bp: int,
+    max_bp: int,
     f_len: Optional[int] = None,
     r_len: Optional[int] = None,
     p_len: Optional[int] = None,
@@ -330,14 +346,20 @@ def blast_qc_for_primer_pair(
     r_seq: str,
     db: str,
     *,
+    qc_params: QCParams,
     probe_name: Optional[str] = None,
     probe_seq: Optional[str] = None,
-    config: BlastQCConfig = BlastQCConfig(),
 ) -> Dict[str, Any]:
+    """
+    return dict 키는 기존 웹 템플릿/라우터 호환 유지:
+      - f_hits, r_hits, nearby_count, min_amplicon_size, amplicon_details,
+        qc_blast_hit, qc_blast_amplicon, qc_probe_in_amplicon, probe_in_amplicon, blast_error
+    """
     f_seq = f_seq.strip().upper()
     r_seq = r_seq.strip().upper()
     probe_seq = probe_seq.strip().upper() if probe_seq else None
 
+    # + 포함 시(수정염기 등) BLAST 스킵 처리(원 로직 유지)
     if "+" in f_seq or "+" in r_seq:
         return {
             "f_hits": 0,
@@ -360,8 +382,11 @@ def blast_qc_for_primer_pair(
     probe_in_amp = False
     probe_amp_details: List[str] = []
 
+    min_bp = qc_params.MIN_AMP_BP
+    max_bp = qc_params.MAX_AMP_BP
+
     try:
-        blast_hits = run_blast_for_primers(f_name, f_seq, r_name, r_seq, db)
+        blast_hits = run_blast_for_primers(f_name, f_seq, r_name, r_seq, db, qc_params=qc_params)
         f_hits_list = blast_hits.get(f_name, [])
         r_hits_list = blast_hits.get(r_name, [])
 
@@ -369,23 +394,32 @@ def blast_qc_for_primer_pair(
         r_hits = len(r_hits_list)
 
         c_FR, min_FR, det_FR = find_nearby_amplicons(
-            f_hits_list, r_hits_list,
-            min_bp=config.min_amp_bp, max_bp=config.max_amp_bp,
-            f_len=len(f_seq), r_len=len(r_seq),
+            f_hits_list,
+            r_hits_list,
+            min_bp=min_bp,
+            max_bp=max_bp,
+            f_len=len(f_seq),
+            r_len=len(r_seq),
         )
 
         c_FF, min_FF, det_FF = find_self_amplicons(
             f_hits_list,
-            min_bp=config.min_amp_bp, max_bp=config.max_amp_bp,
+            min_bp=min_bp,
+            max_bp=max_bp,
             primer_len=len(f_seq),
-            label="F", primer_name=f_name, primer_seq=f_seq,
+            label="F",
+            primer_name=f_name,
+            primer_seq=f_seq,
         )
 
         c_RR, min_RR, det_RR = find_self_amplicons(
             r_hits_list,
-            min_bp=config.min_amp_bp, max_bp=config.max_amp_bp,
+            min_bp=min_bp,
+            max_bp=max_bp,
             primer_len=len(r_seq),
-            label="R", primer_name=r_name, primer_seq=r_seq,
+            label="R",
+            primer_name=r_name,
+            primer_seq=r_seq,
         )
 
         nearby_count = c_FR + c_FF + c_RR
@@ -395,11 +429,16 @@ def blast_qc_for_primer_pair(
 
         if probe_seq:
             pname = probe_name or "PROBE"
-            p_hits_list = run_blast_for_single(pname, probe_seq, db)
+            p_hits_list = run_blast_for_single(pname, probe_seq, db, qc_params=qc_params)
             probe_in_amp, probe_amp_details = probe_in_any_amplicon(
-                f_hits_list, r_hits_list, p_hits_list,
-                min_bp=config.min_amp_bp, max_bp=config.max_amp_bp,
-                f_len=len(f_seq), r_len=len(r_seq), p_len=len(probe_seq),
+                f_hits_list,
+                r_hits_list,
+                p_hits_list,
+                min_bp=min_bp,
+                max_bp=max_bp,
+                f_len=len(f_seq),
+                r_len=len(r_seq),
+                p_len=len(probe_seq),
             )
 
     except Exception:
@@ -410,7 +449,11 @@ def blast_qc_for_primer_pair(
         qc_blast_amplicon = "X"
         qc_probe_in_amplicon = "X" if probe_seq else "-"
     else:
-        qc_blast_hit = "O" if (f_hits <= config.max_hits and r_hits <= config.max_hits) else "X"
+        # ✅ 기존 BlastQCConfig.max_hits 대체: qc_params.BLAST_MAX_ALIGNMENTS를 기준으로 동일하게 사용
+        # (원래 의미가 "리포트 align 수"이긴 한데, 기존 코드의 max_hits 용도로 쓰고 있었다면 일단 동일값 사용)
+        max_hits = qc_params.BLAST_MAX_ALIGNMENTS
+
+        qc_blast_hit = "O" if (f_hits <= max_hits and r_hits <= max_hits) else "X"
         qc_blast_amplicon = "O" if nearby_count <= 1 else "X"
         qc_probe_in_amplicon = ("O" if probe_in_amp else "X") if probe_seq else "-"
 

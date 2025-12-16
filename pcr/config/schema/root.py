@@ -1,9 +1,9 @@
 from typing import Dict
 from pydantic import BaseModel, Field, model_validator
 
-from config.schema.references import ReferenceConfig
-from config.schema.pcr import PCRParams
-from config.schema.qc import QCParams
+from pcr.config.schema.references import ReferenceConfig
+from pcr.config.schema.pcr import PCRParams
+from pcr.config.schema.qc import QCParams
 
 class Settings(BaseModel):
     references: Dict[str, ReferenceConfig] = Field(default_factory=dict)

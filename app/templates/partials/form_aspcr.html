@@ -1,0 +1,42 @@
+{# templates/partials/form_single_aspcr.html #}
+
+<div class="section-title">AS-PCR Variant</div>
+
+<div class="form-grid">
+  <div class="form-row">
+    <label for="chrom">Chrom</label>
+    <input id="chrom" name="chrom" type="text" placeholder="e.g. chr12" required>
+  </div>
+
+  <div class="form-row">
+    <label for="pos">Variant Position</label>
+    <input id="pos" name="pos" type="number" placeholder="e.g. 25398285" required>
+  </div>
+
+  <div class="form-row">
+    <label for="ref">REF (1bp)</label>
+    <input id="ref" name="ref" type="text" maxlength="1" placeholder="A" required>
+  </div>
+
+  <div class="form-row">
+    <label for="alt">ALT (1bp)</label>
+    <input id="alt" name="alt" type="text" maxlength="1" placeholder="G" required>
+  </div>
+</div>
+  </div>
+    <div class="primer-form">
+    <div class="form-row">
+        <label for="file">Excel 파일 업로드 (.xlsx / .xls)</label>
+        <input type="file" name="file" id="file" accept=".xlsx,.xls">
+    </div>
+
+    <div class="help-text">
+        · 필수 컬럼: <strong>chrom, start, end</strong><br>
+        · 선택 컬럼: name, sequence<br>
+        · Reference가 hg19/hg38이면 chrom/start/end 기준으로 자동으로 서열을 불러옵니다.
+    </div>
+
+
+<div class="hint">
+  AS-PCR은 Forward 2개(WT/MUT) + Reverse 1개 구성이며, WT는 3' 말단이 REF, MUT는 3' 말단이 ALT에 맞도록 설계합니다.
+</div>

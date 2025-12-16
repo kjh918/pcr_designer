@@ -9,40 +9,31 @@ from Bio.SeqUtils import gc_fraction
 from pcr.utils import get_start_end_index
 from pcr.components.variant import Variant
 
-
 Allele = Literal["ref", "alt"]
 
-
 class Primer:
-    DEFAULT_SALT_MONOVALENT: float = 50.0
-    DEFAULT_SALT_DIVALENT: float = 1.5
-    DEFAULT_DNTP_CONC: float = 0.6
-    DEFAULT_DNA_CONC: float = 50.0
+    # ... (기존 필드들 동일)
 
     def __init__(
         self,
         template_sequence: str,
         sequence: str,
-        strand: str,          # 'forward' or 'reverse'
-        primer_type: str,     # 'forward' / 'reverse' / 'probe'
+        strand: str,
+        primer_type: str,
         target_start_index: int,
         target_end_index: int,
         reference_template_sequence: Optional[str] = None,
         chrom: Optional[str] = None,
         start: Optional[int] = None,
         end: Optional[int] = None,
-        # assay context
-        assay: str = "generic",
-        allele: Allele = "ref",
-        converted: bool = False,
-        # PCR reaction condition
-        salt_monovalent_conc: float = DEFAULT_SALT_MONOVALENT,
-        salt_divalent_conc: float = DEFAULT_SALT_DIVALENT,
-        dntp_conc: float = DEFAULT_DNTP_CONC,
-        dna_conc: float = DEFAULT_DNA_CONC,
-        # 위치를 primer3 좌표로 주입 가능하게
-        start_index: Optional[int] = None,
-        length: Optional[int] = None,
+        # ✅ 추가: mismatch primer는 템플릿에서 검색이 안되므로 바인딩 좌표를 직접 주입
+        binding_start_index: Optional[int] = None,
+        binding_end_index: Optional[int] = None,
+        # ... (salt/dntp/dna_conc 동일)
+        salt_monovalent_conc: float = 50.0,
+        salt_divalent_conc: float = 1.5,
+        dntp_conc: float = 0.6,
+        dna_conc: float = 50.0,
     ) -> None:
         self.template_sequence = template_sequence
         self.reference_template_sequence = reference_template_sequence or template_sequence
@@ -52,27 +43,23 @@ class Primer:
         self.target_start_index = target_start_index
         self.target_end_index = target_end_index
 
+        self.length = len(sequence)
+
+        # ✅ mismatch primer 대응
+        if binding_start_index is not None and binding_end_index is not None:
+            self.start_index = binding_start_index
+            self.end_index = binding_end_index
+        else:
+            self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
+
         self.chrom = chrom
         self.start = start
         self.end = end
-
-        self.assay = assay
-        self.allele = allele
-        self.converted = converted
 
         self.salt_monovalent_conc = salt_monovalent_conc
         self.salt_divalent_conc = salt_divalent_conc
         self.dntp_conc = dntp_conc
         self.dna_conc = dna_conc
-
-        # 위치 결정: primer3 좌표가 있으면 그걸 우선 사용
-        if start_index is not None and length is not None:
-            self.start_index = start_index
-            self.end_index = start_index + length - 1
-            self.length = length
-        else:
-            self.length = len(sequence)
-            self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
 
         self._calc_basic_properties()
         self._calc_hairpin()

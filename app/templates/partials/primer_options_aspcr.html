@@ -1,0 +1,177 @@
+{# app/templates/partials/primer_options.html #}
+
+<div class="section-block">
+  <div class="section-header">
+    <h2 class="section-title">Primer Options</h2>
+    <p class="section-desc">
+      기본 값은 PrimerDesigner 내부 설정을 따르며, 필요시 여기서 세부 조건을 조정할 수 있습니다.
+    </p>
+  </div>
+
+  {# 접기/펴기 토글 버튼 #}
+  <button type="button"
+          class="toggle-btn"
+          data-toggle="primer-panel"
+          data-label="Primer Options">
+      Primer Options ▼
+  </button>
+
+  {# 실제 옵션 패널 #}
+  <div id="primer-panel" class="primer-panel" style="display: none;">
+
+    {# 1) Amplicon size #}
+    <div class="sub-section">
+      <h3 class="sub-section-title">Amplicon Size</h3>
+      <div class="primer-form primer-form-grid">
+        <div class="form-row">
+          <label for="min_amplicon_length">Minimum Amplicon Length (bp)</label>
+          <input type="number"
+                 id="min_amplicon_length"
+                 name="min_amplicon_length"
+                 value="80"
+                 min="30"
+                 max="1000">
+        </div>
+
+        <div class="form-row">
+          <label for="max_amplicon_length">Maximum Amplicon Length (bp)</label>
+          <input type="number"
+                 id="max_amplicon_length"
+                 name="max_amplicon_length"
+                 value="120"
+                 min="50"
+                 max="1500">
+        </div>
+
+        <div class="form-row">
+          <label for="n_primers">Number of Primer Pairs</label>
+          <input type="number"
+                 id="n_primers"
+                 name="n_primers"
+                 value="100"
+                 min="1"
+                 max="500">
+        </div>
+      </div>
+    </div>
+
+    {# 2) Primer length #}
+    <div class="sub-section">
+      <h3 class="sub-section-title">Primer Length</h3>
+      <div class="primer-form primer-form-grid">
+        <div class="form-row">
+          <label for="primer_opt_length">Optimal Primer Length</label>
+          <input type="number"
+                 id="primer_opt_length"
+                 name="primer_opt_length"
+                 value="25"
+                 min="15"
+                 max="40">
+        </div>
+
+        <div class="form-row">
+          <label for="primer_min_length">Minimum Primer Length</label>
+          <input type="number"
+                 id="primer_min_length"
+                 name="primer_min_length"
+                 value="20"
+                 min="10"
+                 max="40">
+        </div>
+
+        <div class="form-row">
+          <label for="primer_max_length">Maximum Primer Length</label>
+          <input type="number"
+                 id="primer_max_length"
+                 name="primer_max_length"
+                 value="30"
+                 min="15"
+                 max="45">
+        </div>
+      </div>
+    </div>
+
+    {# 3) Tm() #}
+    <div class="sub-section">
+    <h3 class="sub-section-title">Melting Temperature (Tm)</h3>
+    <div class="primer-form primer-form-grid">
+
+        <div class="form-row">
+        <label for="primer_opt_tm">Optimal Tm (°C)</label>
+        <input type="number"
+                id="primer_opt_tm"
+                name="primer_opt_tm"
+                value="60"
+                min="45"
+                max="75"
+                step="0.1">
+        </div>
+
+        <div class="form-row">
+        <label for="primer_min_tm">Minimum Tm (°C)</label>
+        <input type="number"
+                id="primer_min_tm"
+                name="primer_min_tm"
+                value="55"
+                min="40"
+                max="75"
+                step="0.1">
+        </div>
+
+        <div class="form-row">
+        <label for="primer_max_tm">Maximum Tm (°C)</label>
+        <input type="number"
+                id="primer_max_tm"
+                name="primer_max_tm"
+                value="65"
+                min="45"
+                max="80"
+                step="0.1">
+        </div>
+      </div>
+    </div>
+    {# 4) GC% #}
+    <div class="sub-section">
+      <h3 class="sub-section-title">GC Content</h3>
+      <div class="primer-form primer-form-grid">
+        <div class="form-row">
+          <label for="primer_opt_gc">Optimal GC (%)</label>
+          <input type="number"
+                 id="primer_opt_gc"
+                 name="primer_opt_gc"
+                 value="50"
+                 min="20"
+                 max="80"
+                 step="1">
+        </div>
+
+        <div class="form-row">
+          <label for="primer_min_gc">Minimum GC (%)</label>
+          <input type="number"
+                 id="primer_min_gc"
+                 name="primer_min_gc"
+                 value="35"
+                 min="10"
+                 max="80"
+                 step="1">
+        </div>
+
+        <div class="form-row">
+          <label for="primer_max_gc">Maximum GC (%)</label>
+          <input type="number"
+                 id="primer_max_gc"
+                 name="primer_max_gc"
+                 value="65"
+                 min="20"
+                 max="90"
+                 step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="help-text">
+      일반적인 qPCR에서는 80–150 bp 사이의 amplicon, 18–30 bp 길이의 primer,
+      약 40–60% GC 범위를 권장합니다. 실험 조건에 맞게 조정해 사용하세요.
+    </div>
+  </div>
+</div>

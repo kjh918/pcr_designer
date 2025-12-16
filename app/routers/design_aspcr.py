@@ -17,7 +17,7 @@ from app.routers.design_common import (
 
 # as-pcr pipeline 함수가 있다고 가정
 # from pcr.pipelines.variant_probe import design_aspcr_for_region
-from pcr.pipelines.qpcr import design_qpcr_for_region  # 임시
+from pcr.pipelines.as_pcr import run_as_pcr_pipeline  # 임시
 
 
 router = APIRouter(prefix="/design", tags=["design"])

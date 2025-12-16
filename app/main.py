@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.routers import  export, qc, pages, design_qpcr #, design_methyl, design_aspcr,
+from app.routers import export, qc, pages, design_qpcr, design_methyl, design_aspcr 
 
 app = FastAPI(
     title="GCX - Primer Design API",
@@ -31,8 +31,8 @@ app.add_middleware(
 #   라우터 등록
 # -----------------------
 app.include_router(design_qpcr.router)
-# app.include_router(design_methyl.router)
-# app.include_router(design_aspcr.router)
+app.include_router(design_methyl.router)
+app.include_router(design_aspcr.router)
 
 app.include_router(export.router)
 app.include_router(qc.router)   # 👈 QC 라우터
