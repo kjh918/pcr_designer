@@ -446,3 +446,26 @@ button[type="submit"]:hover {
 
 /* details 기본 삼각형 제거(브라우저별) */
 .fold-summary::-webkit-details-marker { display: none; }
+
+
+/* variants chip */
+
+.variant-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.variant-chip input {
+  width: 70px;
+  text-align: center;
+}
+
+.variant-chip .arrow {
+  font-weight: 900;
+  opacity: 0.55;
+}

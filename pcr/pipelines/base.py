@@ -29,15 +29,21 @@ def run_pipeline(
     genomic_id: str,
     designer: Designer,
     qc_params: QCParams,   # ✅ QCThresholds → QCParams
+    assay: str = 'qpcr'
 ) -> PipelineResult:
+    
     designer.design()
+    print(genomic_id)
 
-    total_rows, filtered_rows = evaluate_amplicons(
-        genomic_id,
-        designer.amplicon_list,
-        qc_params=qc_params,   # ✅ 인자명 변경
-    )
-
+    if assay == 'qpcr': 
+        total_rows, filtered_rows = evaluate_amplicons(
+            genomic_id,
+            designer.amplicon_list,
+            qc_params=qc_params,   # ✅ 인자명 변경
+        )
+    else:
+        pass
+        
     total_df = pd.DataFrame(total_rows)
     filtered_df = pd.DataFrame(filtered_rows)
 

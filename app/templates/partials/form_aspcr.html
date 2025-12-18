@@ -1,9 +1,13 @@
 {# app/templates/partials/form_aspcr.html #}
-
 <div class="form-block">
-  <div class="section-title">PCR Target</div>
+  <div class="section-title">AS-PCR Target</div>
 
   <div class="form-grid">
+    <div class="form-row">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" placeholder="e.g. Sample1" required>
+    </div>
+
     <div class="form-row">
       <label for="chrom">Chrom</label>
       <input id="chrom" name="chrom" type="text" placeholder="e.g. chr7" required>
@@ -20,17 +24,16 @@
     </div>
 
     <div class="form-row">
-      <label for="variant">Variant (AS)</label>
-      <input id="variant" name="variant" type="text" placeholder="e.g. chr7:... A>G" required>
-      <div class="help-text">AS-PCR용 변이/allele 정보를 입력</div>
-    </div>
-  </div>
+    <label>Variant (AS)</label>
 
-  <div class="sub-section">
-    <div class="sub-section-title">Excel Upload (Optional)</div>
-    <div class="form-row">
-      <label for="excel_file">Excel File</label>
-      <input id="excel_file" name="excel_file" type="file" accept=".xlsx,.xls,.csv">
+    <div class="variant-chip">
+        <input id="ref" name="ref" type="text" maxlength="1" placeholder="REF" required>
+        <span class="arrow">→</span>
+        <input id="alt" name="alt" type="text" maxlength="1" placeholder="ALT" required>
+    </div>
+
+    <div class="help-text">예: A → G</div>
     </div>
   </div>
 </div>
+

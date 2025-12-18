@@ -18,8 +18,13 @@ from app.routers.design_common import (
 from pcr.seq.fetch import GenomicRegion
 from pcr.pipelines.qpcr import run_qpcr
 
-from pcr.config.runtime import settings as get_settings, get_fasta_handle, resolve_pcr_params, merge_dict
-
+from pcr.config.runtime import (
+    get_fasta_handle,
+    build_pcr_params_from_web,
+    build_qc_params_from_web,
+    resolve_pcr_params,
+    merge_dict,
+)
 
 router = APIRouter(prefix="/design", tags=["design"])
 templates = Jinja2Templates(directory="app/templates")
@@ -52,10 +57,6 @@ async def design_qpcr_from_form(
     context = init_context(request, f, assay="qpcr")
 
     try:
-        s = get_settings()
-        pcr_cfg = s.pcr_params
-        qc_cfg = s.qc_params
-
         # FASTA handle (pysam cached)
         fasta = get_fasta_handle(f.reference)
 
@@ -70,8 +71,63 @@ async def design_qpcr_from_form(
         if probe != "yes":
             effective_n_probes = 0
 
-        # settings 기본값 + override 확정
+        # -----------------------------
+        # ✅ 1) 웹 입력 기반 request-scope PCR/QC config 생성
+        # -----------------------------
+        pcr_overrides: Dict[str, Any] = {
+            "primer_kwargs": {
+                # 공통 폼 값 (있으면 덮어씀)
+                "min_amplicon_length": common_kwargs.get("min_amplicon_length"),
+                "max_amplicon_length": common_kwargs.get("max_amplicon_length"),
+                "n_primers": common_kwargs.get("n_primers"),
+                # primer3 args는 (추후 폼 연결되면 여기에 추가)
+                # "primer3_global_args": {...}
+            },
+            "probe_kwargs": {
+                "n_probes": effective_n_probes,
+                "primer3_global_args": {
+                    # probe 관련 입력을 primer3 internal probe 키로 매핑
+                    # (프로젝트에서 쓰는 키 네이밍이 다르면 여기만 조정)
+                    "PRIMER_INTERNAL_OPT_SIZE": probe_opt_length,
+                    "PRIMER_INTERNAL_MIN_SIZE": probe_min_length,
+                    "PRIMER_INTERNAL_MAX_SIZE": probe_max_length,
+                    "PRIMER_INTERNAL_OPT_TM": probe_opt_tm,
+                    "PRIMER_INTERNAL_MIN_TM": probe_min_tm,
+                    "PRIMER_INTERNAL_MAX_TM": probe_max_tm,
+                    "PRIMER_INTERNAL_MIN_GC": probe_min_gc,
+                    "PRIMER_INTERNAL_MAX_GC": probe_max_gc,
+                },
+            },
+            "bisulfite": {"run": False},
+        }
+
+        pcr_cfg = build_pcr_params_from_web(pcr_overrides)
+
+        qc_overrides: Dict[str, Any] = {
+            # diff tm
+            "PROBE_MIN_DIFF_TM": min_primer_probe_tm_diff,
+            "PROBE_MAX_DIFF_TM": max_primer_probe_tm_diff,
+
+            # amplicon QC filter도 동일 범위로 동기화(혼선 방지)
+            "MIN_AMP_BP": common_kwargs.get("min_amplicon_length"),
+            "MAX_AMP_BP": common_kwargs.get("max_amplicon_length"),
+
+            # (CommonDesignForm에 QC input 붙이면 여기로 연결)
+            # "HAIRPIN_MIN_DG": f.hairpin_min_dg,
+            # "HOMODIMER_MIN_DG": f.homodimer_min_dg,
+            # "HETERODIMER_MIN_DG": f.heterodimer_min_dg,
+            # "BLAST_IDENTITY_THRESHOLD": f.blast_identity_threshold,
+            # "BLAST_LENGTH_THRESHOLD": f.blast_length_threshold,
+            # "BLAST_MAX_ALIGNMENTS": f.blast_max_alignments,
+        }
+
+        qc_cfg = build_qc_params_from_web(qc_overrides)
+
+        # -----------------------------
+        # ✅ 2) resolve는 merged pcr_cfg 기준으로!
+        # -----------------------------
         resolved = resolve_pcr_params(
+            pcr_cfg=pcr_cfg,
             min_amplicon_length=common_kwargs.get("min_amplicon_length"),
             max_amplicon_length=common_kwargs.get("max_amplicon_length"),
             n_probes=effective_n_probes,
@@ -79,7 +135,7 @@ async def design_qpcr_from_form(
             bisulfite=False,
         )
 
-        # primer3 args는 config 기본 + (원하면 나중에 form에서 override) merge
+        # primer3 args는 config 기본 + override merge
         primer3_global_args = merge_dict(
             base=pcr_cfg.primer_kwargs.primer3_global_args,
             override=None,
@@ -92,24 +148,21 @@ async def design_qpcr_from_form(
         # 결과 조립
         if f.mode == "single":
             region = regions[0]
-            gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end)
+            gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end, name=region.name)
 
             result = run_qpcr(
                 region=gr,
                 fasta=fasta,
-                pcr_cfg=pcr_cfg,
-                qc_cfg=qc_cfg,
+                pcr_cfg=pcr_cfg,   # ✅ merged
+                qc_params=qc_cfg,     # ✅ merged
                 min_amplicon_length=resolved.min_amplicon_length,
                 max_amplicon_length=resolved.max_amplicon_length,
                 n_probes=resolved.n_probes,
                 n_primers=resolved.n_primers,
                 primer3_global_args=primer3_global_args,
                 probe_primer3_global_args=probe_primer3_global_args,
-                # TODO: 아래 primer/probe override들 연결하려면 run_qpcr 시그니처 확장
-                # primer_opt_length=f.primer_opt_length, ...
             )
 
-            # PipelineResult → 템플릿용 dict
             total_df = result.total_df
             filtered_df = result.filtered_df
 
@@ -124,13 +177,13 @@ async def design_qpcr_from_form(
         else:
             multi_results: List[Dict[str, Any]] = []
             for region in regions:
-                gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end)
-
+                gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end, name=region.name)
+                
                 result = run_qpcr(
                     region=gr,
                     fasta=fasta,
-                    pcr_cfg=pcr_cfg,
-                    qc_cfg=qc_cfg,
+                    pcr_cfg=pcr_cfg,  # ✅ merged
+                    qc_params=qc_cfg,    # ✅ merged
                     min_amplicon_length=resolved.min_amplicon_length,
                     max_amplicon_length=resolved.max_amplicon_length,
                     n_probes=resolved.n_probes,

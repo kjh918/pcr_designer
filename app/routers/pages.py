@@ -17,7 +17,7 @@ def _assay_to_primer_type(assay: str) -> str:
     if assay == "methyl":
         return "methyl"
     if assay == "as-pcr":
-        return "as"
+        return "as-pcr"
     return "default"
 
 
@@ -32,7 +32,7 @@ async def home(request: Request):
             "mode": "single",
             "assay": assay,
             "primer_type": _assay_to_primer_type(assay),
-            "reference": "hg19",
+            "reference": "hg38",
             "probe": "no",
             "single_result": None,
             "multi_results": None,
@@ -52,7 +52,7 @@ async def design_page(request: Request, assay: str = "qpcr"):
             "mode": "single",
             "assay": assay,  # ✅ 이걸로 qpcr/methyl/as-pcr 분기 & active 표시 가능
             "primer_type": _assay_to_primer_type(assay),
-            "reference": "hg19",
+            "reference": "hg38",
             "probe": "no",
             "single_result": None,
             "multi_results": None,

@@ -1,100 +1,96 @@
-# designers/as_pcr.py
+# pcr/designers/as_pcr.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-import primer3
-
-from pcr.components.primer import Primer
-from pcr.components.as_assay import AsPcrAssay
+from pcr.designers.base import BasePrimerDesigner
+from pcr.components import Primer, Amplicon
 
 
-DNA_BASES = ("A", "C", "G", "T")
-
-
-def _mismatch_bases(template_base: str) -> List[str]:
-    b = template_base.upper()
-    return [x for x in DNA_BASES if x != b]
-
-
-def _build_as_forward_variants(
+def _build_left_anchor_excluded_region(
     *,
-    reference_template_sequence: str,
-    template_sequence_for_calc: str,
-    target_start_index: int,
-    ref_allele: str,
-    alt_allele: str,
+    template_len: int,
+    target_index: int,
     min_len: int,
     max_len: int,
-    mismatch_offset_from_3p: int = 3,  # 3'에서 3번째 = offset 3
-) -> List[Tuple[str, str, int, int]]:
+) -> List[List[int]]:
     """
-    반환: (wt_seq, alt_seq, binding_start, binding_end) 후보들
-    - binding_end는 항상 target_start_index
-    - mismatch는 end 기준으로 (end-(offset-1)) 위치에 넣음
-      예: offset=3 => end-2 위치가 mismatch
+    LEFT primer의 3' end == target_index가 되도록
+    LEFT primer start 가능한 범위만 남기고 나머지 start를 제외하는 excluded region 생성.
+
+    LEFT primer는 forward이므로:
+      start = end - L + 1
+      end를 target_index로 고정하면,
+      start ∈ [target_index - max_len + 1, target_index - min_len + 1]
     """
-    ref = reference_template_sequence
-    n = len(ref)
-    end = target_start_index
-    if not (0 <= end < n):
+    t = int(target_index)
+    Lmin = int(min_len)
+    Lmax = int(max_len)
+
+    if template_len <= 0:
         return []
 
-    # 템플릿의 변이 위치 기준 염기(레퍼런스)
-    template_3p_base = ref[end].upper()
-    if template_3p_base != ref_allele.upper():
-        # reference_template_sequence가 ref allele 기준이라는 전제 위반
-        # (너가 말한 규칙과 다르면 여기서 early stop)
-        return []
+    start_min = max(0, t - Lmax + 1)
+    start_max = max(0, t - Lmin + 1)
 
-    out: List[Tuple[str, str, int, int]] = []
+    if start_min > start_max:
+        return [[0, template_len]]
 
-    mismatch_pos = end - (mismatch_offset_from_3p - 1)  # offset=3 => end-2
-    if mismatch_pos < 0:
-        return []
+    excluded: List[List[int]] = []
 
-    template_mismatch_base = ref[mismatch_pos].upper()
-    mismatch_choices = _mismatch_bases(template_mismatch_base)
+    # 앞쪽 제외: [0, start_min)
+    if start_min > 0:
+        excluded.append([0, start_min])
 
-    for L in range(min_len, max_len + 1):
-        start = end - L + 1
-        if start < 0:
-            continue
+    # 뒤쪽 제외: (start_max, end]
+    tail_start = start_max + 1
+    if tail_start < template_len:
+        excluded.append([tail_start, template_len - tail_start])
 
-        # 기본 프라이머 서열(레퍼런스 템플릿에서 뽑음)
-        core = list(ref[start : end + 1].upper())
-        if len(core) != L:
-            continue
-
-        # 3' 말단 고정 (WT=ref, ALT=alt)
-        wt = core[:]
-        alt = core[:]
-        wt[-1] = ref_allele.upper()
-        alt[-1] = alt_allele.upper()
-
-        # -3 mismatch 적용 (모든 가능한 mismatch base로 후보 확장)
-        idx_in_primer = mismatch_pos - start  # primer 내 index
-        if not (0 <= idx_in_primer < L):
-            continue
-
-        for mm in mismatch_choices:
-            wt2 = wt[:]
-            alt2 = alt[:]
-            wt2[idx_in_primer] = mm
-            alt2[idx_in_primer] = mm
-
-            out.append(("".join(wt2), "".join(alt2), start, end))
-
-    return out
+    return excluded
 
 
-class AsPcrDesigner:
+def _build_right_anchor_excluded_region(
+    *,
+    template_len: int,
+    target_index: int,
+    min_len: int,
+    max_len: int,
+) -> List[List[int]]:
     """
-    AS-PCR: forward 2개(wt/alt) + reverse 1개
-    - forward 3' end == target_start_index
-    - WT 3' == ref_allele
-    - ALT 3' == alt_allele
-    - 3'에서 3번째(-3) 염기 mismatch
+    RIGHT primer의 3' end == target_index가 되도록 start 범위를 제한.
+
+    primer3에서 PRIMER_RIGHT의 location(start,len)에서 start는 "leftmost index"로 주어짐.
+    reverse primer의 3' end가 target_index가 되려면, (template 상에서)
+      binding_end == target_index
+      binding_end = start + len - 1
+      => start = target_index - (len - 1)
+
+    len이 [min_len, max_len] 이므로 start 범위는
+      start ∈ [target_index - (max_len - 1), target_index - (min_len - 1)]
+           = [target_index - max_len + 1, target_index - min_len + 1]
+
+    즉 LEFT 앵커와 start 범위는 동일하게 나온다.
+    """
+    # 결과적으로 LEFT와 동일 범위가 된다(길이 가변이면).
+    # 다만 의미는 "RIGHT primer의 end 고정"이다.
+    return _build_left_anchor_excluded_region(
+        template_len=template_len,
+        target_index=target_index,
+        min_len=min_len,
+        max_len=max_len,
+    )
+
+
+class AsPcrDesigner(BasePrimerDesigner):
+    """
+    (1) LEFT anchored run: forward primer 3' end == target_index
+    (2) RIGHT anchored run: reverse primer 3' end == target_index
+
+    입력:
+      - target_start_index/target_end_index: BasePrimerDesigner용 타겟(1bp면 start=end)
+      - target_index: 앵커링 기준 위치(보통 start와 동일하게 넘김)
+      - ref_allele/alt_allele: 이후 WT/ALT 생성 단계에서 사용(지금 단계에서는 저장만)
     """
 
     def __init__(
@@ -104,149 +100,158 @@ class AsPcrDesigner:
         reference_template_sequence: str,
         target_start_index: int,
         target_end_index: int,
+        target_index: int,
         ref_allele: str,
         alt_allele: str,
         min_amplicon_length: int,
         max_amplicon_length: int,
-        n_reverse: int = 50,
-        forward_min_len: int = 18,
-        forward_max_len: int = 28,
+        n_primers: int = 50,
         primer3_global_args: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self.template_sequence = template_sequence
-        self.reference_template_sequence = reference_template_sequence
-        self.target_start_index = target_start_index
-        self.target_end_index = target_end_index
-
-        self.ref_allele = ref_allele
-        self.alt_allele = alt_allele
-
-        self.min_amplicon_length = min_amplicon_length
-        self.max_amplicon_length = max_amplicon_length
-
-        self.n_reverse = n_reverse
-        self.forward_min_len = forward_min_len
-        self.forward_max_len = forward_max_len
-
-        self.primer3_global_args = primer3_global_args or {}
-
-        self.assays: List[AsPcrAssay] = []
-
-    def reset(self) -> None:
-        self.assays = []
-
-    def _design_reverse_primers(self) -> List[Tuple[str, int, int]]:
-        """
-        primer3로 reverse primer 후보를 뽑는다.
-        return: (rev_seq, rev_start, rev_len)
-        """
-        seq_args = {
-            "SEQUENCE_ID": "AS_PCR",
-            "SEQUENCE_TEMPLATE": self.template_sequence,
-            # target은 그대로 두되, reverse primer만 뽑는 용도
-            "SEQUENCE_TARGET": [self.target_start_index, self.target_end_index - self.target_start_index + 1],
-        }
-        global_args = {
-            "PRIMER_TASK": "generic",
-            "PRIMER_NUM_RETURN": self.n_reverse,
-            "PRIMER_PICK_LEFT_PRIMER": 0,
-            "PRIMER_PICK_RIGHT_PRIMER": 1,
-            "PRIMER_PICK_INTERNAL_OLIGO": 0,
-            "PRIMER_PRODUCT_SIZE_RANGE": [self.min_amplicon_length, self.max_amplicon_length],
-        }
-        global_args.update(self.primer3_global_args)
-
-        res = primer3.bindings.designPrimers(seq_args=seq_args, global_args=global_args)
-
-        out: List[Tuple[str, int, int]] = []
-        n = res.get("PRIMER_RIGHT_NUM_RETURNED", 0) or 0
-        for i in range(n):
-            seq = res.get(f"PRIMER_RIGHT_{i}_SEQUENCE")
-            loc = res.get(f"PRIMER_RIGHT_{i}")  # [start, len]
-            if not seq or not loc:
-                continue
-            start, ln = int(loc[0]), int(loc[1])
-            out.append((seq, start, ln))
-        return out
-
-    def design(self) -> List[AsPcrAssay]:
-        self.assays = []
-
-        reverse_candidates = self._design_reverse_primers()
-
-        # forward 후보(서열/좌표) 생성: reference 기준으로 뽑고, WT/ALT 생성
-        fw_variants = _build_as_forward_variants(
-            reference_template_sequence=self.reference_template_sequence,
-            template_sequence_for_calc=self.template_sequence,
-            target_start_index=self.target_start_index,
-            ref_allele=self.ref_allele,
-            alt_allele=self.alt_allele,
-            min_len=self.forward_min_len,
-            max_len=self.forward_max_len,
-            mismatch_offset_from_3p=3,
+        super().__init__(
+            template_sequence=template_sequence,
+            reference_template_sequence=reference_template_sequence,
+            target_start_index=int(target_start_index),
+            target_end_index=int(target_end_index),
+            min_amplicon_length=int(min_amplicon_length),
+            max_amplicon_length=int(max_amplicon_length),
+            n_primers=int(n_primers),
+            forward_primer=True,
+            reverse_primer=True,
+            primer3_global_args=primer3_global_args,
         )
 
-        # reverse 후보와 조합 -> amplicon size 필터
-        for (rev_seq, rev_start, rev_len) in reverse_candidates:
-            # primer3 right primer의 start는 "leftmost index" 기준(라이브러리 표현)
-            rev_binding_start = rev_start
-            rev_binding_end = rev_start + rev_len - 1
+        self.target_index = int(target_index)
+        self.ref_allele = (ref_allele or "").strip().upper()
+        self.alt_allele = (alt_allele or "").strip().upper()
 
-            # forward end는 target_start_index
-            for (wt_seq, alt_seq, fw_start, fw_end) in fw_variants:
-                # amplicon: fw_start ~ rev_binding_end (단, reverse가 forward보다 뒤에 있어야 함)
-                if rev_binding_end <= fw_end:
-                    continue
+        if len(self.ref_allele) != 1 or len(self.alt_allele) != 1:
+            raise ValueError("ref_allele/alt_allele must be 1bp each (e.g. A/G).")
 
-                amp_len = rev_binding_end - fw_start + 1
-                if not (self.min_amplicon_length <= amp_len <= self.max_amplicon_length):
-                    continue
+    # ---------------------------
+    # Anchor 모드 설정
+    # ---------------------------
+    def _apply_left_anchor(self) -> None:
+        """
+        LEFT primer의 3' end가 target_index가 되도록 탐색을 제한.
+        ✅ 여기서는 'LEFT 앵커'만 강제하고 RIGHT는 자유롭게 둔다.
+        """
+        excluded = _build_left_anchor_excluded_region(
+            template_len=len(self.template_sequence),
+            target_index=self.target_index,
+            min_len=self.min_length,
+            max_len=self.max_length,
+        )
 
-                # Primer 객체 생성 (mismatch 때문에 binding index 주입!)
-                wt_fw = Primer(
+        # primer3는 SEQUENCE_EXCLUDED_REGION이 전체 primer 탐색에 영향을 준다.
+        # 따라서 "LEFT만" 완벽히 제한하는 옵션은 없고,
+        # 실전적으로는 2-pass + 사후검증으로 안정화한다.
+        self.update_primer3_seq_args({"SEQUENCE_EXCLUDED_REGION": excluded})
+
+        # pair는 계속 뽑되, left쪽이 앵커 범위 밖이면 나오기 어렵게 된다.
+        self.update_primer3_global_args(
+            {
+                "PRIMER_PICK_LEFT_PRIMER": 1,
+                "PRIMER_PICK_RIGHT_PRIMER": 1,
+                "PRIMER_PICK_INTERNAL_OLIGO": 0,
+            }
+        )
+
+    def _apply_right_anchor(self) -> None:
+        """
+        RIGHT primer의 3' end가 target_index가 되도록 탐색 제한.
+        """
+        excluded = _build_right_anchor_excluded_region(
+            template_len=len(self.template_sequence),
+            target_index=self.target_index,
+            min_len=self.min_length,
+            max_len=self.max_length,
+        )
+        self.update_primer3_seq_args({"SEQUENCE_EXCLUDED_REGION": excluded})
+
+        self.update_primer3_global_args(
+            {
+                "PRIMER_PICK_LEFT_PRIMER": 1,
+                "PRIMER_PICK_RIGHT_PRIMER": 1,
+                "PRIMER_PICK_INTERNAL_OLIGO": 0,
+            }
+        )
+
+    # ---------------------------
+    # primer3 결과 → Amplicon
+    # ---------------------------
+    def _build_amplicons(self) -> List[Amplicon]:
+        assert self.primer3_result is not None
+        res = self.primer3_result
+
+        amplicons: List[Amplicon] = []
+        n_pairs = int(res.get("PRIMER_PAIR_NUM_RETURNED", 0) or 0)
+
+        for i in range(n_pairs):
+            f_loc = res.get(f"PRIMER_LEFT_{i}")
+            r_loc = res.get(f"PRIMER_RIGHT_{i}")
+            f_seq = res.get(f"PRIMER_LEFT_{i}_SEQUENCE")
+            r_seq = res.get(f"PRIMER_RIGHT_{i}_SEQUENCE")
+
+            if not f_loc or not r_loc or not f_seq or not r_seq:
+                continue
+
+            f_start, f_len = int(f_loc[0]), int(f_loc[1])
+            r_start, r_len = int(r_loc[0]), int(r_loc[1])
+
+            forward = Primer(
+                template_sequence=self.template_sequence,
+                reference_template_sequence=self.reference_template_sequence,
+                sequence=f_seq,
+                strand="forward",
+                primer_type="forward",
+                target_start_index=self.target_start_index,
+                target_end_index=self.target_end_index,
+                binding_start_index=f_start,
+                binding_end_index=f_start + f_len - 1,
+            )
+
+            reverse = Primer(
+                template_sequence=self.template_sequence,
+                reference_template_sequence=self.reference_template_sequence,
+                sequence=r_seq,
+                strand="reverse",
+                primer_type="reverse",
+                target_start_index=self.target_start_index,
+                target_end_index=self.target_end_index,
+                binding_start_index=r_start,
+                binding_end_index=r_start + r_len - 1,
+            )
+
+            amplicons.append(
+                Amplicon(
                     template_sequence=self.template_sequence,
                     reference_template_sequence=self.reference_template_sequence,
-                    sequence=wt_seq,
-                    strand="forward",
-                    primer_type="wt_forward",
                     target_start_index=self.target_start_index,
                     target_end_index=self.target_end_index,
-                    binding_start_index=fw_start,
-                    binding_end_index=fw_end,
+                    forward_primer=forward,
+                    reverse_primer=reverse,
                 )
-                alt_fw = Primer(
-                    template_sequence=self.template_sequence,
-                    reference_template_sequence=self.reference_template_sequence,
-                    sequence=alt_seq,
-                    strand="forward",
-                    primer_type="alt_forward",
-                    target_start_index=self.target_start_index,
-                    target_end_index=self.target_end_index,
-                    binding_start_index=fw_start,
-                    binding_end_index=fw_end,
-                )
-                rev = Primer(
-                    template_sequence=self.template_sequence,
-                    reference_template_sequence=self.reference_template_sequence,
-                    sequence=rev_seq,
-                    strand="reverse",
-                    primer_type="reverse",
-                    target_start_index=self.target_start_index,
-                    target_end_index=self.target_end_index,
-                    # reverse는 템플릿에 그대로 존재하므로 binding index 없어도 됨
-                )
+            )
 
-                amplicon_seq = self.template_sequence[fw_start : rev_binding_end + 1]
+        return amplicons
 
-                self.assays.append(
-                    AsPcrAssay(
-                        wt_forward=wt_fw,
-                        alt_forward=alt_fw,
-                        reverse=rev,
-                        amplicon_start_index=fw_start,
-                        amplicon_end_index=rev_binding_end,
-                        amplicon_sequence=amplicon_seq,
-                    )
-                )
+    # ---------------------------
+    # 2-pass design
+    # ---------------------------
+    def design(self) -> Dict[str, List[Amplicon]]:
+        results: Dict[str, List[Amplicon]] = {}
 
-        return self.assays
+        # LEFT anchored
+        self.reset()
+        self._apply_left_anchor()
+        self.run_primer3()
+        results["LEFT_ANCHORED"] = self._build_amplicons()
+
+        # RIGHT anchored
+        self.reset()
+        self._apply_right_anchor()
+        self.run_primer3()
+        results["RIGHT_ANCHORED"] = self._build_amplicons()
+
+        return results

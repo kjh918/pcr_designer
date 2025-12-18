@@ -1,9 +1,15 @@
 {# app/templates/partials/form_aspcr.html #}
 
 <div class="form-block">
-  <div class="section-title">AS-PCR Target</div>
+  <div class="section-title">PCR Target</div>
 
   <div class="form-grid">
+
+    <div class="form-row">
+      <label for="end">Name</label>
+      <input id="end" name="end" type="str" required>
+    </div>
+    
     <div class="form-row">
       <label for="chrom">Chrom</label>
       <input id="chrom" name="chrom" type="text" placeholder="e.g. chr7" required>
@@ -17,12 +23,6 @@
     <div class="form-row">
       <label for="end">End</label>
       <input id="end" name="end" type="number" required>
-    </div>
-
-    <div class="form-row">
-      <label for="variant">Variant (AS)</label>
-      <input id="variant" name="variant" type="text" placeholder="e.g. chr7:... A>G" required>
-      <div class="help-text">AS-PCR용 변이/allele 정보를 입력</div>
     </div>
   </div>
 

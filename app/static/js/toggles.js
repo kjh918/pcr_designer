@@ -103,7 +103,7 @@ function initReferenceToggle() {
   }
 
   // ✅ 초기값 기준으로 active 동기화 (서버 렌더 값 반영)
-  applyRef(referenceInput.value || "hg19");
+  applyRef(referenceInput.value || "hg38");
 
   // 클릭 바인딩
   refBtns.forEach(btn => {

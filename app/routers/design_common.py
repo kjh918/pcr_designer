@@ -48,7 +48,7 @@ class CommonDesignForm:
         cls,
         mode: str = Form("single"),
         primer_type: str = Form("default"),
-        reference: str = Form("hg19"),
+        reference: str = Form("hg38"),
         chrom: str = Form(""),
         start: int | None = Form(None),
         end: int | None = Form(None),
@@ -125,7 +125,7 @@ async def parse_regions_from_form(f: CommonDesignForm) -> List[RegionInput]:
         contents = await f.file.read()
         df = pd.read_excel(BytesIO(contents))
 
-        required_cols = ["chrom", "start", "end"]
+        required_cols = ["chrom", "start", "end", "name"]
         for col in required_cols:
             if col not in df.columns:
                 raise HTTPException(status_code=400, detail=f"필수 컬럼이 없습니다: {col}")

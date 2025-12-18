@@ -3,11 +3,15 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 import pysam
 
+from pcr.components.variant import Variant
+from pcr.seq.variant import apply_variant
+
 @dataclass(frozen=True)
 class GenomicRegion:
     chrom: str
     start: int  # 1-based inclusive
     end: int    # 1-based inclusive
+    name: str
 
 def compute_template_window(
     target_start: int,
@@ -34,6 +38,7 @@ def fetch_template_sequence(
     fasta: pysam.FastaFile,
     region: GenomicRegion,
     *,
+    bisulfite=False,
     max_amplicon_length: Optional[int],
 ) -> Tuple[str, int, int, int, int]:
     """
@@ -59,3 +64,61 @@ def fetch_template_sequence(
     target_end_index = target_start_index + target_len - 1
 
     return template_sequence, template_start, template_end, target_start_index, target_end_index
+
+def build_ref_alt_templates(
+    *,
+    fasta,
+    region: GenomicRegion,
+    ref_allele: str,
+    alt_allele: str,
+    max_amplicon_length: int,
+) -> dict:
+    """
+    Returns:
+      {
+        "reference_template_sequence": str,
+        "ref_template_sequence": str,
+        "alt_template_sequence": str,
+        "target_start_index": int,
+        "target_end_index": int,
+      }
+    """
+    (
+        reference_template_sequence,
+        template_start,
+        template_end,
+        target_start_index,
+        target_end_index,
+    ) = fetch_template_sequence(
+        fasta=fasta,
+        region=region,
+        max_amplicon_length=max_amplicon_length,
+    )
+
+    # Variant 정의 (template 기준)
+    variant = Variant(
+        index=target_start_index,
+        ref=ref_allele,
+        alt=alt_allele,
+    )
+
+    # REF / ALT template 생성
+    ref_template_sequence = apply_variant(
+        reference_template_sequence,
+        variant,
+        allele="ref",
+    )
+
+    alt_template_sequence = apply_variant(
+        reference_template_sequence,
+        variant,
+        allele="alt",
+    )
+
+    return dict(
+        reference_template_sequence=reference_template_sequence,
+        ref_template_sequence=ref_template_sequence,
+        alt_template_sequence=alt_template_sequence,
+        target_start_index=target_start_index,
+        target_end_index=target_end_index,
+    )
