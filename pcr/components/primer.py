@@ -36,7 +36,7 @@ class Primer:
         dna_conc: float = 50.0,
     ) -> None:
         self.template_sequence = template_sequence
-        self.reference_template_sequence = reference_template_sequence or template_sequence
+        self.reference_template_sequence = reference_template_sequence
         self.sequence = sequence
         self.strand = strand
         self.primer_type = primer_type
@@ -45,11 +45,14 @@ class Primer:
 
         self.length = len(sequence)
 
+        print(self.primer_type, self.template_sequence, self.sequence)
+
         # ✅ mismatch primer 대응
         if binding_start_index is not None and binding_end_index is not None:
             self.start_index = binding_start_index
             self.end_index = binding_end_index
         else:
+            print(self.template_sequence, self.sequence)
             self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
 
         self.chrom = chrom

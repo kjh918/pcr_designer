@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Protocol
+from typing import List, Optional, Protocol
 
 import pandas as pd
 
 from pcr.components import Amplicon
-from pcr.qc.thermo import evaluate_amplicons  # ✅ 직접 import (QCParams 기반)
-from pcr.config.schema.qc import QCParams      # ✅ QCParams만 사용
+from pcr.qc.thermo import evaluate_amplicons
+from pcr.config.schema.qc import QCParams
 
 
 class Designer(Protocol):
@@ -24,31 +24,63 @@ class PipelineResult:
     filtered_df: pd.DataFrame
 
 
-def run_pipeline(
+def run_pipeline_from_amplicons(
     *,
     genomic_id: str,
-    designer: Designer,
-    qc_params: QCParams,   # ✅ QCThresholds → QCParams
-    assay: str = 'qpcr'
+    amplicon_list: List[Amplicon],
+    qc_params: QCParams,
+    assay: str = "qpcr",
 ) -> PipelineResult:
-    
-    designer.design()
-    print(genomic_id)
-
-    if assay == 'qpcr': 
+    if assay == "qpcr":
         total_rows, filtered_rows = evaluate_amplicons(
             genomic_id,
-            designer.amplicon_list,
-            qc_params=qc_params,   # ✅ 인자명 변경
+            amplicon_list,
+            qc_params=qc_params,
         )
     else:
-        pass
-        
+        total_rows, filtered_rows = [], []
+
     total_df = pd.DataFrame(total_rows)
     filtered_df = pd.DataFrame(filtered_rows)
 
     total_df.index = [genomic_id] * len(total_df)
     filtered_df.index = [genomic_id] * len(filtered_df)
 
-    designer.reset()
     return PipelineResult(genomic_id, total_df, filtered_df)
+
+
+def run_pipeline(
+        *,
+        genomic_id: str,
+        qc_params: QCParams,
+        assay: str = "qpcr",
+        designer: Optional[Designer] = None,
+        amplicon_list: Optional[List[Amplicon]] = None,
+    ) -> PipelineResult:
+    """
+    호환용 래퍼:
+    - amplicon_list가 주어지면: designer 없이 QC만 수행
+    - amplicon_list가 없으면: designer.design()으로 생성 후 QC 수행
+    """
+    # ✅ 1) amplicon_list가 있으면 그걸 우선 사용
+    if amplicon_list is not None and len(amplicon_list) > 0:
+        return run_pipeline_from_amplicons(
+            genomic_id=genomic_id,
+            amplicon_list=amplicon_list,
+            qc_params=qc_params,
+            assay=assay,
+        )
+
+    # ✅ 2) 없으면 designer로부터 생성
+    if designer is None:
+        raise ValueError("Either 'amplicon_list' must be provided or 'designer' must be provided.")
+
+    designer.design()
+    result = run_pipeline_from_amplicons(
+        genomic_id=genomic_id,
+        amplicon_list=designer.amplicon_list,
+        qc_params=qc_params,
+        assay=assay,
+    )
+    designer.reset()
+    return result

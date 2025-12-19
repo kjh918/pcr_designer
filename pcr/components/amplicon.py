@@ -42,15 +42,18 @@ class Amplicon:
 
         if self.forward_primer is not None:
             self.forward_start_index, self.forward_end_index = get_start_end_index(
-                self.template_sequence, self.forward_primer.sequence
+                self.forward_primer.template_sequence, self.forward_primer.sequence
             )
         if self.reverse_primer is not None:
+            
+            print('reverse')
+            print(self.reverse_primer.sequence)
             self.reverse_start_index, self.reverse_end_index = get_start_end_index(
-                self.template_sequence, self.reverse_primer.sequence
+                self.reverse_primer.template_sequence, self.reverse_primer.sequence
             )
         if self.probe is not None:
             self.probe_start_index, self.probe_end_index = get_start_end_index(
-                self.template_sequence, self.probe.sequence
+                self.probe.template_sequence, self.probe.sequence
             )
 
         self.amplicon_sequence = self._calc_amplicon_sequence()

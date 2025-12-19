@@ -10,6 +10,7 @@ from pcr.seq.fetch import GenomicRegion, fetch_template_sequence, build_ref_alt_
 from pcr.config.schema.qc import QCParams
 from pcr.designers.as_pcr import AsPcrDesigner
 from pcr.pipelines.base import run_pipeline, PipelineResult
+import primer3
 
 def run_as_pcr_pipeline(
     *,
@@ -62,9 +63,13 @@ def run_as_pcr_pipeline(
         n_primers=int(n_reverse) if n_reverse is not None else 50,
         primer3_global_args=None,
     )
+    
+    amplicon_list = designer.design()
+    
     # ✅ QCThresholds 생성 제거 → QCParams 그대로 주입
     return run_pipeline(
         genomic_id=genomic_id,
         designer=designer,
         qc_params=qc_params,
+        amplicon_list=amplicon_list
     )
