@@ -57,7 +57,6 @@ def _qc_bool_flags(amp: Dict[str, Any], qc_params: QCParams) -> Tuple[bool, bool
         amp.get("forward_homodimer_dg", 0.0) >= qc_params.HOMODIMER_MIN_DG
         and amp.get("reverse_homodimer_dg", 0.0) >= qc_params.HOMODIMER_MIN_DG
     )
-    print(amp.get("reverse_homodimer_dg", 0.0), qc_params.HOMODIMER_MIN_DG)
     hetero_fr_ok = amp.get("heterodimer_dg", 0.0) >= qc_params.HETERODIMER_MIN_DG
     return hairpin_ok, homodimer_ok, hetero_fr_ok
 

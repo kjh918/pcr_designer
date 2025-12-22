@@ -44,16 +44,13 @@ class Primer:
         self.target_end_index = target_end_index
 
         self.length = len(sequence)
-
-        print(self.primer_type, self.template_sequence, self.sequence)
-
         # ✅ mismatch primer 대응
-        if binding_start_index is not None and binding_end_index is not None:
-            self.start_index = binding_start_index
-            self.end_index = binding_end_index
-        else:
-            print(self.template_sequence, self.sequence)
-            self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
+        # if binding_start_index is not None and binding_end_index is not None:
+        #     self.start_index = binding_start_index
+        #     self.end_index = binding_end_index
+        # else:
+        self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
+        print(self.primer_type, self.start_index, self.end_index)
 
         self.chrom = chrom
         self.start = start

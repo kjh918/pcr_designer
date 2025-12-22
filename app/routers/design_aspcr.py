@@ -133,7 +133,7 @@ async def design_aspcr_from_form(
 
             total_df = result.total_df
             filtered_df = result.filtered_df
-
+            
             context["single_result"] = {
                 "region": r,
                 "total_count": len(total_df),

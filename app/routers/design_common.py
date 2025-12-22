@@ -105,6 +105,37 @@ async def parse_regions_from_form(f: CommonDesignForm) -> List[RegionInput]:
     mode=single -> 단일 RegionInput 1개 반환
     mode=multi  -> 엑셀에서 여러 RegionInput 반환
     """
+    if f.file is not None and getattr(f.file, "filename", ""):
+        contents = await f.file.read()
+        df = pd.read_excel(BytesIO(contents))
+
+        required_cols = ["chrom", "start", "end", "name"]
+        for col in required_cols:
+            if col not in df.columns:
+                raise HTTPException(status_code=400, detail=f"필수 컬럼이 없습니다: {col}")
+
+        regions: List[RegionInput] = []
+        for _, row in df.iterrows():
+            chrom_val = str(row["chrom"])
+            start_val = int(row["start"])
+            end_val = int(row["end"])
+            name_val = (
+                str(row["name"])
+                if "name" in df.columns and not pd.isna(row["name"])
+                else None
+            )
+            regions.append(
+                RegionInput(
+                    chrom=chrom_val,
+                    start=start_val,
+                    end=end_val,
+                    name=name_val,
+                    sequence="",
+                )
+            )
+        return regions
+
+    # ✅ file이 없으면 mode로 판단
     if f.mode == "single":
         if not f.chrom or f.start is None or f.end is None:
             raise HTTPException(status_code=400, detail="chrom / start / end 가 필요합니다.")

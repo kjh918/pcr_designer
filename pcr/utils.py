@@ -1,3 +1,4 @@
+
 from typing import Tuple
 from Bio.Seq import reverse_complement
 
@@ -12,8 +13,6 @@ def get_start_end_index(template_sequence: str, sequence: str) -> Tuple[int, int
         start_index = template_sequence.index(sequence)
     except ValueError:
         rc = reverse_complement(sequence)
-        print(template_sequence)
-        print(rc)
         try:
             start_index = template_sequence.index(rc)
         except ValueError:

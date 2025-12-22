@@ -148,7 +148,13 @@
        ======================= #}
     {% if single_result %}
       <div class="card" id="results">
-        {% include "partials/results_single.html" %}
+        {% if current_assay == 'qpcr' %}
+            {% include "partials/results_single.html" %}
+        {% elif current_assay == 'methyl' %}
+            {% include "partials/results_single.html" %}
+        {% else %}
+            {% include "partials/results_as_pcr.html" %}
+        {% endif %}
       </div>
     {% endif %}
 

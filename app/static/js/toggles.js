@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   initProbeToggle();      // yes / no + options enable/disable
   initPanelToggles();     // Primer options, QC thresholds 접기/펼치기
   initQcViewToggle();     // QC-only / Design 탭 (있는 페이지에서만)
+  initAsMismatchEnableToggle();
+  initAsMismatchPosToggle();
+  initAsMismatchStrengthToggle();
 });
 
 /* =========================
@@ -213,6 +216,88 @@ function initQcViewToggle() {
       const mode = tab.dataset.qcMode;
       if (!mode) return;
       applyQcMode(mode);
+    });
+  });
+}
+
+/* =========================
+ * 7) AS-PCR Mismatch toggles
+ *  - 버튼 누르면 hidden input 값 반영
+ * ======================= */
+function initAsMismatchPosToggle() {
+  const input = document.getElementById("as-mismatch-pos");
+  const btns = document.querySelectorAll(".asmm-pos-btn");
+  if (!input || !btns.length) return;
+
+  function apply(v) {
+    input.value = v;
+    btns.forEach(b =>
+      b.classList.toggle("active", b.dataset.asmmPos === v)
+    );
+    console.log("[ASMM POS]", input.value);
+  }
+
+  // 초기값 반영
+  apply(input.value || "3");
+
+  // 클릭 바인딩
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const v = btn.dataset.asmmPos;
+      if (!v) return;
+      apply(v);
+    });
+  });
+}
+
+function initAsMismatchEnableToggle() {
+  const input = document.getElementById("as-mismatch-enable");
+  const btns = document.querySelectorAll(".asmm-enable-btn");
+  if (!input || !btns.length) return;
+
+  function apply(v) {
+    input.value = v;
+    btns.forEach(b =>
+      b.classList.toggle("active", b.dataset.asmmPos === v)
+    );
+    console.log("[ASMM POS]", input.value);
+  }
+
+  // 초기값 반영
+  apply(input.value || "yes");
+
+  // 클릭 바인딩
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const v = btn.dataset.asmmPos;
+      if (!v) return;
+      apply(v);
+    });
+  });
+}
+
+function initAsMismatchStrengthToggle() {
+  const input = document.getElementById("as-mismatch-strength");
+  const btns = document.querySelectorAll(".asmm-strength-btn");
+  if (!input || !btns.length) return;
+
+  function apply(v) {
+    input.value = v;
+    btns.forEach(b =>
+      b.classList.toggle("active", b.dataset.asmmStrength === v)
+    );
+    console.log("[ASMM STRENGTH]", input.value);
+  }
+
+  // 초기값 반영
+  apply(input.value || "strong");
+
+  // 클릭 바인딩
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const v = btn.dataset.asmmStrength;
+      if (!v) return;
+      apply(v);
     });
   });
 }

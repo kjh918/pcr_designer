@@ -13,6 +13,45 @@ from pcr.components.primer import Primer
 # ----------------------------------------------------------------------
 # helpers
 # ----------------------------------------------------------------------
+def _apply_as_pcr_logic(primer_5to3: str, target_base: str, strand: str, 
+                        mismatch_pos: int = 2, intensity: str = "strong") -> str:
+    """
+    AS-PCR 프라이머 설계를 위해 3' 끝단 SNP 치환 및 인위적 미스매치를 삽입합니다.
+    
+    :param mismatch_pos: 2 (n-1 위치) 또는 3 (n-2 위치)
+    :param intensity: "strong", "medium", "weak"
+    """
+    complement_dict = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
+    # 강도별 미스매치 변환 테이블 (기존 염기: 새로운 염기)
+    # 아래는 단순화된 예시이며, 실제 실험 설계 시에는 주변 염기 구성을 고려해야 함
+    mismatch_map = {
+        "strong": {'A': 'G', 'T': 'C', 'G': 'A', 'C': 'C'}, # C:C, G:A 등 유도
+        "medium": {'A': 'A', 'T': 'T', 'G': 'G', 'C': 'T'}, 
+        "weak":   {'A': 'C', 'T': 'G', 'G': 'T', 'C': 'A'}
+    }
+    
+    s = list(primer_5to3.upper())
+    b = target_base.upper()
+    
+    # 1. 3' 말단(SNP 위치) 처리
+    if strand == "forward":
+        s[-1] = complement_dict[b]
+    else:
+        s[-1] = b
+        
+    # 2. 인위적 미스매치 삽입 (n-1 또는 n-2)
+    # mismatch_pos가 2이면 뒤에서 두 번째(s[-2]), 3이면 뒤에서 세 번째(s[-3])
+    idx = -mismatch_pos
+    original_base = s[idx]
+    
+    # 선택한 강도에 따라 해당 위치의 염기를 강제로 바꿈
+    s[idx] = mismatch_map[intensity.lower()].get(original_base, 'A')
+    
+    # 만약 바꾼 염기가 원래 염기와 같다면(중복 방지), 다른 염기로 우회
+    if s[idx] == original_base:
+        s[idx] = 'G' if original_base != 'G' else 'C'
+
+    return "".join(s)
 
 
 def _replace_3prime_base(primer_5to3: str, base: str, strand: str = "forward") -> str:
@@ -190,7 +229,7 @@ class AsPcrDesigner(BasePrimerDesigner):
     # ------------------------------------------------------------------
     def design(self) -> List[Amplicon]:
         out: List[Amplicon] = []
-        # out.extend(self._run_mode_and_build("forward_fix"))
+        out.extend(self._run_mode_and_build("forward_fix"))
         out.extend(self._run_mode_and_build("reverse_fix"))
         self.amplicon_list = out
         return out
