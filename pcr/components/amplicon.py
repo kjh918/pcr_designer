@@ -117,6 +117,11 @@ class Amplicon:
     def _calc_amplicon_sequence(self) -> Optional[str]:
         if self.forward_primer is None or self.reverse_primer is None:
             return None
+        print(self.template_sequence[self.forward_start_index : self.reverse_end_index + 1])
+        print(self.reverse_start_index, self.reverse_end_index)
+
+
+        
         return self.template_sequence[self.forward_start_index : self.reverse_end_index + 1]
 
     def _calc_reference_amplicon_sequence(self) -> Optional[str]:
@@ -130,7 +135,6 @@ class Amplicon:
         if self.reverse_end_index >= len(ref) or self.forward_start_index < 0:
             # indel 등으로 길이가 달라져 인덱스가 깨진 경우 방어
             return None
-
         return ref[self.forward_start_index : self.reverse_end_index + 1]
 
     def _calc_amplicon_metrics(self) -> None:

@@ -115,16 +115,17 @@ def fetch_template_sequence(
         template_start - 1,
         template_end,
     ).upper()
-
     # target index within template (0-based)
     target_len = region.end - region.start + 1
     target_start_index = region.start - template_start
     target_end_index = target_start_index + target_len - 1
+    print(template_sequence[target_start_index])
+
 
     # bisulfite는 여기서는 미적용(필요하면 후처리 훅 추가)
     _ = bisulfite
 
-    return template_sequence, template_start, template_end, target_start_index, target_end_index
+    return template_sequence, template_start , template_end, target_start_index, target_end_index
 
 
 def build_ref_alt_templates(
@@ -166,10 +167,10 @@ def build_ref_alt_templates(
         ref=ref_allele,
         alt=alt_allele,
     )
-
+    print(variant)
     ref_template_sequence = apply_variant(reference_template_sequence, variant, allele="ref")
     alt_template_sequence = apply_variant(reference_template_sequence, variant, allele="alt")
-
+    
     # ✅ 서열 변화 확인 (타겟 위치 염기 확인)
     if debug:
         i = target_start_index

@@ -35,9 +35,9 @@ def _apply_as_pcr_logic(primer_5to3: str, target_base: str, strand: str,
     
     # 1. 3' 말단(SNP 위치) 처리
     if strand == "forward":
-        s[-1] = complement_dict[b]
-    else:
         s[-1] = b
+    else:
+        s[-1] = complement_dict[b]
         
     # 2. 인위적 미스매치 삽입 (n-1 또는 n-2)
     # mismatch_pos가 2이면 뒤에서 두 번째(s[-2]), 3이면 뒤에서 세 번째(s[-3])
@@ -53,6 +53,37 @@ def _apply_as_pcr_logic(primer_5to3: str, target_base: str, strand: str,
 
     return "".join(s)
 
+from Bio.Seq import Seq
+
+def _patch_template_for_pair(
+    template_5to3: str,
+    *,
+    left_seq_5to3: str,
+    left_start: int,
+    left_end: int,
+    right_seq_5to3: str,
+    right_start: int,
+    right_end: int,
+) -> str:
+    """
+    template(5'->3')에서 primer binding 구간을 primer 서열대로 '덮어쓴' template 생성.
+    - LEFT primer: template 방향과 같음 → 그대로 덮음
+    - RIGHT primer: primer(5'->3')가 template의 reverse-complement에 붙음
+      → template 방향에서 보이는 서열은 reverse_complement(right_seq_5to3)
+    """
+    t = list(template_5to3.upper())
+
+    left_seq = left_seq_5to3.upper()
+    right_on_template = str(Seq(right_seq_5to3.upper()).reverse_complement())
+
+    if (left_end - left_start + 1) != len(left_seq):
+        raise ValueError("LEFT primer length != binding span")
+    if (right_end - right_start + 1) != len(right_on_template):
+        raise ValueError("RIGHT primer length != binding span")
+
+    t[left_start:left_end+1] = list(left_seq)
+    t[right_start:right_end+1] = list(right_on_template)
+    return "".join(t)
 
 def _replace_3prime_base(primer_5to3: str, base: str, strand: str = "forward") -> str:
     """
@@ -72,7 +103,6 @@ def _replace_3prime_base(primer_5to3: str, base: str, strand: str = "forward") -
     if not s:
         return s
     b = base.upper()
-
     if strand == "forward":
         return s[:-1] + b
     elif strand == "reverse":
@@ -165,7 +195,6 @@ class AsPcrDesigner(BasePrimerDesigner):
         self.target_index = int(target_index)
         self.ref_allele = ref_allele.upper()
         self.alt_allele = alt_allele.upper()
-
         super().__init__(
             template_sequence=template_sequence,  # alt template
             reference_template_sequence=reference_template_sequence,  # ref template
@@ -230,7 +259,7 @@ class AsPcrDesigner(BasePrimerDesigner):
     def design(self) -> List[Amplicon]:
         out: List[Amplicon] = []
         out.extend(self._run_mode_and_build("forward_fix"))
-        out.extend(self._run_mode_and_build("reverse_fix"))
+        # out.extend(self._run_mode_and_build("reverse_fix"))
         self.amplicon_list = out
         return out
 
@@ -287,14 +316,49 @@ class AsPcrDesigner(BasePrimerDesigner):
 
             rv_ref = _replace_3prime_base(right_seq, self.ref_allele, strand="reverse")
             rv_alt = _replace_3prime_base(right_seq, self.alt_allele, strand="reverse")
+            
+            wt_tpl = _patch_template_for_pair(
+                ref_tpl,
+                left_seq_5to3=fw_ref, left_start=left_bind_s, left_end=left_bind_e,
+                right_seq_5to3=right_seq, right_start=right_bind_s, right_end=right_bind_e,
+            )
+            alt_tpl_patched = _patch_template_for_pair(
+                alt_tpl,
+                left_seq_5to3=fw_alt, left_start=left_bind_s, left_end=left_bind_e,
+                right_seq_5to3=right_seq, right_start=right_bind_s, right_end=right_bind_e,
+            )
+            # print(self.target_start_index, self.target_end_index)
+            # print(self.reference_template_sequence[self.target_start_index-10:self.target_start_index])
 
-            # -------------------------
-            # forward_fix: forward가 allele-specific, reverse는 공통
-            # -------------------------
+            fw_ref_mismatch = _apply_as_pcr_logic(left_seq, target_base=self.ref_allele, strand='forward', mismatch_pos = 3, intensity="strong") 
+            fw_alt_mismatch = _apply_as_pcr_logic(left_seq, target_base=self.alt_allele, strand='forward', mismatch_pos = 3, intensity="strong") 
+            rv_ref_mismatch = _apply_as_pcr_logic(right_seq, target_base=self.ref_allele, strand='reverse', mismatch_pos = 3, intensity="strong") 
+            rv_alt_mismatch = _apply_as_pcr_logic(right_seq, target_base=self.alt_allele, strand='reverse', mismatch_pos = 3, intensity="strong")
+
+            wt_fw_mm_tpl = _patch_template_for_pair(ref_tpl,
+                left_seq_5to3=fw_ref_mismatch,left_start=left_bind_s,left_end=left_bind_e,
+                right_seq_5to3=right_seq,right_start=right_bind_s,right_end=right_bind_e,
+            )
+
+            alt_fw_mm_tpl = _patch_template_for_pair(ref_tpl,
+                left_seq_5to3=fw_alt_mismatch,left_start=left_bind_s,left_end=left_bind_e,
+                right_seq_5to3=right_seq,right_start=right_bind_s,right_end=right_bind_e,
+            )
+
+            wt_rv_mm_tpl = _patch_template_for_pair(ref_tpl,
+                left_seq_5to3=fw_ref,left_start=left_bind_s,left_end=left_bind_e,
+                right_seq_5to3=rv_ref_mismatch,right_start=right_bind_s,right_end=right_bind_e,
+            )
+
+            alt_rv_mm_tpl = _patch_template_for_pair(ref_tpl,
+                left_seq_5to3=fw_ref,left_start=left_bind_s,left_end=left_bind_e,
+                right_seq_5to3=rv_alt_mismatch,right_start=right_bind_s,right_end=right_bind_e,
+            )
+
             if mode == "forward_fix":
                 ref_forward_primer = _mk_primer(
-                    template_sequence=ref_tpl,
-                    reference_template_sequence=ref_tpl,
+                    template_sequence=wt_tpl,
+                    reference_template_sequence=wt_tpl,
                     sequence=fw_ref,
                     strand="forward",
                     primer_type="forward",
@@ -304,8 +368,8 @@ class AsPcrDesigner(BasePrimerDesigner):
                     binding_end_index=left_bind_e,
                 )
                 common_reverse_primer_ref = _mk_primer(
-                    template_sequence=ref_tpl,
-                    reference_template_sequence=ref_tpl,
+                    template_sequence=wt_tpl,
+                    reference_template_sequence=wt_tpl,
                     sequence=right_seq,
                     strand="reverse",
                     primer_type="reverse",
@@ -346,7 +410,7 @@ class AsPcrDesigner(BasePrimerDesigner):
                         target_end_index=self.target_end_index,
                         forward_primer=ref_forward_primer,
                         reverse_primer=common_reverse_primer_ref,
-                        assay=f"as_pcr::{mode}",
+                        assay=f"as_pcr::{mode}::set{i}::wt",
                         allele="ref",
                     )
                 )
@@ -358,11 +422,84 @@ class AsPcrDesigner(BasePrimerDesigner):
                         target_end_index=self.target_end_index,
                         forward_primer=alt_forward_primer,
                         reverse_primer=common_reverse_primer_alt,
-                        assay=f"as_pcr::{mode}",
+                        assay=f"as_pcr::{mode}::set{i}::alt",
                         allele="alt",
                     )
                 )
+                
+                ref_forward_primer_mm = _mk_primer(
+                    template_sequence=wt_fw_mm_tpl,              # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=fw_ref_mismatch,                    # ✅ mismatch primer
+                    strand="forward",
+                    primer_type="forward",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=left_bind_s,
+                    binding_end_index=left_bind_e,
+                )
+                
 
+                common_reverse_primer_ref_mm = _mk_primer(
+                    template_sequence=wt_fw_mm_tpl,              # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=right_seq,                          # reverse는 공통
+                    strand="reverse",
+                    primer_type="reverse",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=right_bind_s,
+                    binding_end_index=right_bind_e,
+                )
+
+                alt_forward_primer_mm = _mk_primer(
+                    template_sequence=alt_fw_mm_tpl,             # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=fw_alt_mismatch,                    # ✅ mismatch primer
+                    strand="forward",
+                    primer_type="forward",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=left_bind_s,
+                    binding_end_index=left_bind_e,
+                )
+                common_reverse_primer_alt_mm = _mk_primer(
+                    template_sequence=alt_fw_mm_tpl,             # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=right_seq,
+                    strand="reverse",
+                    primer_type="reverse",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=right_bind_s,
+                    binding_end_index=right_bind_e,
+                )
+
+                # ✅ assay 라벨에 numbering 포함 (pair i 기준)
+                amplicons.append(
+                    Amplicon(
+                        template_sequence=wt_fw_mm_tpl,           # ✅ mismatch template 저장
+                        reference_template_sequence=ref_tpl,
+                        target_start_index=self.target_start_index,
+                        target_end_index=self.target_end_index,
+                        forward_primer=ref_forward_primer_mm,
+                        reverse_primer=common_reverse_primer_ref_mm,
+                        assay=f"as_pcr::{mode}::set{i}::wt_mismatch",
+                        allele="ref",
+                    )
+                )
+                amplicons.append(
+                    Amplicon(
+                        template_sequence=alt_fw_mm_tpl,          # ✅ mismatch template 저장
+                        reference_template_sequence=ref_tpl,
+                        target_start_index=self.target_start_index,
+                        target_end_index=self.target_end_index,
+                        forward_primer=alt_forward_primer_mm,
+                        reverse_primer=common_reverse_primer_alt_mm,
+                        assay=f"as_pcr::{mode}::set{i}::alt_mismatch",
+                        allele="alt",
+                    )
+                )
             # -------------------------
             # reverse_fix: reverse가 allele-specific, forward는 공통
             # -------------------------
@@ -421,8 +558,8 @@ class AsPcrDesigner(BasePrimerDesigner):
                         target_end_index=self.target_end_index,
                         forward_primer=common_forward_primer_ref,
                         reverse_primer=ref_reverse_primer,
-                        assay=f"as_pcr::{mode}",
-                        allele="ref",
+                        assay=f"as_pcr::{mode}::set{i}::wt",
+                        allele="alt",
                     )
                 )
                 amplicons.append(
@@ -433,9 +570,78 @@ class AsPcrDesigner(BasePrimerDesigner):
                         target_end_index=self.target_end_index,
                         forward_primer=common_forward_primer_alt,
                         reverse_primer=alt_reverse_primer,
-                        assay=f"as_pcr::{mode}",
+                        assay=f"as_pcr::{mode}::set{i}::alt",
                         allele="alt",
                     )
                 )
+                common_forward_primer_ref_mm = _mk_primer(
+                    template_sequence=wt_rv_mm_tpl,              # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=left_seq,                           # forward는 공통
+                    strand="forward",
+                    primer_type="forward",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=left_bind_s,
+                    binding_end_index=left_bind_e,
+                )
+                ref_reverse_primer_mm = _mk_primer(
+                    template_sequence=wt_rv_mm_tpl,              # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=rv_ref_mismatch,                    # ✅ mismatch primer
+                    strand="reverse",
+                    primer_type="reverse",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=right_bind_s,
+                    binding_end_index=right_bind_e,
+                )
 
+                common_forward_primer_alt_mm = _mk_primer(
+                    template_sequence=alt_rv_mm_tpl,             # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=left_seq,
+                    strand="forward",
+                    primer_type="forward",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=left_bind_s,
+                    binding_end_index=left_bind_e,
+                )
+                alt_reverse_primer_mm = _mk_primer(
+                    template_sequence=alt_rv_mm_tpl,             # ✅ mismatch template
+                    reference_template_sequence=ref_tpl,
+                    sequence=rv_alt_mismatch,                    # ✅ mismatch primer
+                    strand="reverse",
+                    primer_type="reverse",
+                    target_start_index=self.target_start_index,
+                    target_end_index=self.target_end_index,
+                    binding_start_index=right_bind_s,
+                    binding_end_index=right_bind_e,
+                )
+
+                amplicons.append(
+                    Amplicon(
+                        template_sequence=wt_rv_mm_tpl,           # ✅ mismatch template 저장
+                        reference_template_sequence=ref_tpl,
+                        target_start_index=self.target_start_index,
+                        target_end_index=self.target_end_index,
+                        forward_primer=common_forward_primer_ref_mm,
+                        reverse_primer=ref_reverse_primer_mm,
+                        assay=f"as_pcr::{mode}::set{i}::wt_mismatch",
+                        allele="ref",
+                    )
+                )
+                amplicons.append(
+                    Amplicon(
+                        template_sequence=alt_rv_mm_tpl,          # ✅ mismatch template 저장
+                        reference_template_sequence=ref_tpl,
+                        target_start_index=self.target_start_index,
+                        target_end_index=self.target_end_index,
+                        forward_primer=common_forward_primer_alt_mm,
+                        reverse_primer=alt_reverse_primer_mm,
+                        assay=f"as_pcr::{mode}::set{i}::alt_mismatch",
+                        allele="alt",
+                    )
+                )
         return amplicons

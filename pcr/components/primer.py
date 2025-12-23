@@ -50,8 +50,7 @@ class Primer:
         #     self.end_index = binding_end_index
         # else:
         self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
-        print(self.primer_type, self.start_index, self.end_index)
-
+        
         self.chrom = chrom
         self.start = start
         self.end = end
