@@ -49,6 +49,8 @@ class Amplicon:
             self.reverse_start_index, self.reverse_end_index = get_start_end_index(
                 self.reverse_primer.template_sequence, self.reverse_primer.sequence
             )
+            print(self.assay, self.reverse_start_index, self.reverse_end_index)
+
         if self.probe is not None:
             self.probe_start_index, self.probe_end_index = get_start_end_index(
                 self.probe.template_sequence, self.probe.sequence
@@ -117,11 +119,7 @@ class Amplicon:
     def _calc_amplicon_sequence(self) -> Optional[str]:
         if self.forward_primer is None or self.reverse_primer is None:
             return None
-        print(self.template_sequence[self.forward_start_index : self.reverse_end_index + 1])
-        print(self.reverse_start_index, self.reverse_end_index)
-
-
-        
+        # print(self.template_sequence[self.forward_start_index : self.reverse_end_index + 1])
         return self.template_sequence[self.forward_start_index : self.reverse_end_index + 1]
 
     def _calc_reference_amplicon_sequence(self) -> Optional[str]:

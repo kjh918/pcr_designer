@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import List, Optional, Protocol, Tuple, Any
 
 import pandas as pd
 
@@ -16,6 +16,29 @@ class Designer(Protocol):
     def design(self) -> List[Amplicon]: ...
     def reset(self) -> None: ...
 
+    # ✅ (선택) 디자인 직후 amplicon list를 손볼 수 있는 훅
+    #    (예: as-pcr에서 wt/wt_mm/alt/alt_mm set 만들기, template patch, numbering 정리 등)
+    def postprocess_amplicons(
+        self,
+        amplicon_list: List[Amplicon],
+        *,
+        qc_params: QCParams,
+        assay: str,
+    ) -> List[Amplicon]: ...
+
+    # ✅ (선택) QC 전에 “추가 QC/추가 필터링”을 넣는 훅
+    #    반환: (total_rows 추가컬럼 반영, filtered_rows 재필터링)
+    def extra_qc(
+        self,
+        genomic_id: str,
+        amplicon_list: List[Amplicon],
+        *,
+        qc_params: QCParams,
+        total_rows: List[dict],
+        filtered_rows: List[dict],
+        assay: str,
+    ) -> Tuple[List[dict], List[dict]]: ...
+
 
 @dataclass(frozen=True)
 class PipelineResult:
@@ -24,21 +47,79 @@ class PipelineResult:
     filtered_df: pd.DataFrame
 
 
+def _call_postprocess_if_exists(
+    designer: Optional[Designer],
+    amplicon_list: List[Amplicon],
+    *,
+    qc_params: QCParams,
+    assay: str,
+) -> List[Amplicon]:
+    if designer is None:
+        return amplicon_list
+    fn = getattr(designer, "postprocess_amplicons", None)
+    if callable(fn):
+        return fn(amplicon_list, qc_params=qc_params, assay=assay)
+    return amplicon_list
+
+
+def _call_extra_qc_if_exists(
+    designer: Optional[Designer],
+    genomic_id: str,
+    amplicon_list: List[Amplicon],
+    *,
+    qc_params: QCParams,
+    total_rows: List[dict],
+    filtered_rows: List[dict],
+    assay: str,
+) -> Tuple[List[dict], List[dict]]:
+    if designer is None:
+        return total_rows, filtered_rows
+    fn = getattr(designer, "extra_qc", None)
+    if callable(fn):
+        return fn(
+            genomic_id,
+            amplicon_list,
+            qc_params=qc_params,
+            total_rows=total_rows,
+            filtered_rows=filtered_rows,
+            assay=assay,
+        )
+    return total_rows, filtered_rows
+
+
 def run_pipeline_from_amplicons(
     *,
     genomic_id: str,
     amplicon_list: List[Amplicon],
     qc_params: QCParams,
     assay: str = "qpcr",
+    designer: Optional[Designer] = None,   # ✅ 추가
 ) -> PipelineResult:
-    if assay == "qpcr":
-        total_rows, filtered_rows = evaluate_amplicons(
-            genomic_id,
-            amplicon_list,
-            qc_params=qc_params,
-        )
-    else:
-        total_rows, filtered_rows = [], []
+    # ✅ 0) Designer postprocess hook (design 직후 or 외부에서 amplicon_list 들어와도 적용 가능)
+    amplicon_list = _call_postprocess_if_exists(
+        designer,
+        amplicon_list,
+        qc_params=qc_params,
+        assay=assay,
+    )
+
+    # ✅ 1) 공통 QC (현재는 qpcr만 돌림 -> as_pcr도 여기서 같이 돌리게 바꾸는 게 맞음)
+    total_rows, filtered_rows = evaluate_amplicons(
+        genomic_id,
+        amplicon_list,
+        qc_params=qc_params,
+    )
+
+    # ✅ 2) Designer extra QC hook (AS-PCR 같은 특수 QC는 여기서 추가)
+    total_rows, filtered_rows = _call_extra_qc_if_exists(
+        designer,
+        genomic_id,
+        amplicon_list,
+        qc_params=qc_params,
+        total_rows=total_rows,
+        filtered_rows=filtered_rows,
+        assay=assay,
+    )
 
     total_df = pd.DataFrame(total_rows)
     filtered_df = pd.DataFrame(filtered_rows)
@@ -50,28 +131,26 @@ def run_pipeline_from_amplicons(
 
 
 def run_pipeline(
-        *,
-        genomic_id: str,
-        qc_params: QCParams,
-        assay: str = "qpcr",
-        designer: Optional[Designer] = None,
-        amplicon_list: Optional[List[Amplicon]] = None,
-    ) -> PipelineResult:
+    *,
+    genomic_id: str,
+    qc_params: QCParams,
+    assay: str = "qpcr",
+    designer: Optional[Designer] = None,
+    amplicon_list: Optional[List[Amplicon]] = None,
+) -> PipelineResult:
     """
-    호환용 래퍼:
-    - amplicon_list가 주어지면: designer 없이 QC만 수행
-    - amplicon_list가 없으면: designer.design()으로 생성 후 QC 수행
+    - amplicon_list 있으면 QC만
+    - 없으면 designer.design() 후 QC
     """
-    # ✅ 1) amplicon_list가 있으면 그걸 우선 사용
     if amplicon_list is not None and len(amplicon_list) > 0:
         return run_pipeline_from_amplicons(
             genomic_id=genomic_id,
             amplicon_list=amplicon_list,
             qc_params=qc_params,
             assay=assay,
+            designer=designer,   # ✅ hook 쓰려면 넘겨야 함
         )
 
-    # ✅ 2) 없으면 designer로부터 생성
     if designer is None:
         raise ValueError("Either 'amplicon_list' must be provided or 'designer' must be provided.")
 
@@ -81,6 +160,7 @@ def run_pipeline(
         amplicon_list=designer.amplicon_list,
         qc_params=qc_params,
         assay=assay,
+        designer=designer,       # ✅ 여기 필수
     )
     designer.reset()
     return result

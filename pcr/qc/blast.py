@@ -63,8 +63,7 @@ def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
             }
         )
     return hits
-
-
+    
 def run_blast_for_single(
     name: str,
     seq: str,
@@ -73,36 +72,41 @@ def run_blast_for_single(
     qc_params: QCParams,
 ) -> List[BlastHit]:
     """
-    단일 서열 BLAST.
-    - 실행파일: qc_params.BLASTN
-    - num_alignments: qc_params.BLAST_MAX_ALIGNMENTS
-    - hit filtering: qc_params.*threshold
+    파일 생성 없이 표준 입력(stdin)을 이용한 단일 서열 BLAST.
     """
     name = name.strip()
     seq = seq.strip().upper()
 
+    # 1. FASTA 형식의 문자열 생성
     fasta_str = f">{name}\n{seq}\n"
 
-    with tempfile.TemporaryDirectory() as td:
-        fasta_path = os.path.join(td, "query.fasta")
-        with open(fasta_path, "w") as f:
-            f.write(fasta_str)
+    # 2. BLAST 명령어 구성 (파일 경로 대신 '-'를 입력하여 stdin 사용 명시)
+    cmd = [
+        str(qc_params.BLASTN),
+        "-task", "blastn-short",  # 프라이머와 같은 짧은 서열에 최적화된 옵션
+        "-db", db,
+        "-query", "-",            # 핵심: 표준 입력을 쿼리로 사용하도록 설정
+        "-outfmt", _OUTFMT,
+        "-num_alignments", str(qc_params.BLAST_MAX_ALIGNMENTS),
+    ]
 
-        cmd = [
-            str(qc_params.BLASTN),
-            "-task", "blastn-short",
-            "-db", db,
-            "-query", fasta_path,
-            "-outfmt", _OUTFMT,
-            "-num_alignments", str(qc_params.BLAST_MAX_ALIGNMENTS),
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            return []
-
+    # 3. subprocess 실행 (input 인자에 fasta_str을 직접 전달)
+    try:
+        result = subprocess.run(
+            cmd, 
+            input=fasta_str,      # 서열 데이터를 직접 찔러 넣음
+            capture_output=True, 
+            text=True, 
+            check=True            # 에러 발생 시 예외 발생
+        )
         return _parse_hits(result.stdout, qc_params=qc_params)
-
+    except subprocess.CalledProcessError as e:
+        # 로그 기록 등의 처리를 추가할 수 있습니다.
+        print(f"BLAST 실행 에러: {e.stderr}")
+        return []
+    except FileNotFoundError:
+        print(f"BLAST 실행 파일을 찾을 수 없습니다: {qc_params.BLASTN}")
+        return []
 
 def run_blast_for_primers(
     f_name: str,
