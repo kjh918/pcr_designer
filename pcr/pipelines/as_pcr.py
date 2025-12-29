@@ -65,11 +65,12 @@ def run_as_pcr_pipeline(
     )
     
     amplicon_list = designer.design()
-    
+
     # ✅ QCThresholds 생성 제거 → QCParams 그대로 주입
     return run_pipeline(
         genomic_id=genomic_id,
         designer=designer,
         qc_params=qc_params,
+        assay="aspcr",
         amplicon_list=amplicon_list
     )

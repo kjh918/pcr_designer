@@ -475,3 +475,94 @@ def blast_qc_for_primer_pair(
         "probe_in_amplicon": probe_in_amp,
         "blast_error": blast_error,
     }
+
+def apply_blast_qc_to_rows(
+    genomic_id: str,
+    rows: List[Dict[str, Any]],
+    *,
+    db: str,
+    qc_params: QCParams,
+    include_probe: bool = True,
+    fail_closed: bool = True,   # BLAST 에러 시 fail 처리 (안전)
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    rows(list[dict])에 BLAST QC 결과를 붙여서:
+      - total_enriched: 전체 rows + BLAST 결과 컬럼
+      - filtered: BLAST QC까지 통과한 rows
+
+    BLAST QC PASS 조건(네 blast_qc_for_primer_pair 반환 기반):
+      - qc_blast_hit == 'O'
+      - qc_blast_amplicon == 'O'
+      - probe 있으면 qc_probe_in_amplicon == 'O' (없으면 '-' 허용)
+      - blast_error == False
+    """
+    total_enriched: List[Dict[str, Any]] = []
+    filtered: List[Dict[str, Any]] = []
+
+    for i, row in enumerate(rows, start=1):
+        # 원본 보호 원하면 copy(); 여기선 inplace 피하려고 copy()
+        a = dict(row)
+
+        f_seq = a.get("forward_sequence") or a.get("forward_seq")
+        r_seq = a.get("reverse_sequence") or a.get("reverse_seq")
+        p_seq = a.get("probe_sequence") or a.get("probe_seq")
+
+        # 이름 없으면 자동 생성 (primer pair 별로 구분되게 i 사용)
+        f_name = a.get("forward_name") or f"{genomic_id}_F_{i}"
+        r_name = a.get("reverse_name") or f"{genomic_id}_R_{i}"
+        p_name = a.get("probe_name") or f"{genomic_id}_P_{i}"
+
+        # 기본값(에러/결측 안전)
+        a.setdefault("blast_error", False)
+        a.setdefault("qc_blast_hit", "X")
+        a.setdefault("qc_blast_amplicon", "X")
+        a.setdefault("qc_probe_in_amplicon", "-" if not p_seq else "X")
+        a.setdefault("nearby_count", -1)
+        a.setdefault("min_amplicon_size", None)
+        a.setdefault("f_hits", -1)
+        a.setdefault("r_hits", -1)
+        a.setdefault("amplicon_details", [])
+
+        if not f_seq or not r_seq:
+            # forward/reverse 없으면 BLAST 자체가 불가
+            a["blast_error"] = True
+            a["qc_blast_hit"] = "X"
+            a["qc_blast_amplicon"] = "X"
+            a["qc_probe_in_amplicon"] = "X" if (include_probe and p_seq) else "-"
+        else:
+            try:
+                res = blast_qc_for_primer_pair(
+                    f_name=f_name,
+                    f_seq=str(f_seq),
+                    r_name=r_name,
+                    r_seq=str(r_seq),
+                    db=db,
+                    qc_params=qc_params,
+                    probe_name=p_name if (include_probe and p_seq) else None,
+                    probe_seq=str(p_seq) if (include_probe and p_seq) else None,
+                )
+                print(res)
+                # 반환 키 그대로 merge
+                a.update(res)
+            except Exception:
+                a["blast_error"] = True
+                if fail_closed:
+                    a["qc_blast_hit"] = "X"
+                    a["qc_blast_amplicon"] = "X"
+                    a["qc_probe_in_amplicon"] = "X" if (include_probe and p_seq) else "-"
+
+        # ---- BLAST PASS 판정 ----
+        probe_ok = (a.get("qc_probe_in_amplicon") in ("O", "-"))
+        blast_pass = (
+            (a.get("blast_error") is False)
+            and (a.get("qc_blast_hit") == "O")
+            and (a.get("qc_blast_amplicon") == "O")
+            and probe_ok
+        )
+        a["BLAST_PASS"] = "O" if blast_pass else "X"
+
+        total_enriched.append(a)
+        if blast_pass:
+            filtered.append(a)
+
+    return total_enriched, filtered

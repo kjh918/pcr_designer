@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from pydantic import BaseModel
-
+from typing import Optional
 
 class QCParams(BaseModel):
     # -------------------------------------------------
@@ -28,13 +28,14 @@ class QCParams(BaseModel):
     BLAST_BIN_DIR: Path
     BLASTN: Path
     BLASTDBCMD: Path
+    BLASTN_DB: Optional[str] = None  # 또는 기본값
 
     # -------------------------------------------------
     # BLAST QC thresholds
     # -------------------------------------------------
-    BLAST_IDENTITY_THRESHOLD: float = 80.0
+    BLAST_IDENTITY_THRESHOLD: float = 90.0
     BLAST_LENGTH_THRESHOLD: int = 10
-    BLAST_MAX_ALIGNMENTS: int = 200
+    BLAST_MAX_ALIGNMENTS: int = 50
 
     MIN_AMP_BP: int = 50
     MAX_AMP_BP: int = 300

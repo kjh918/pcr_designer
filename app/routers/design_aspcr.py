@@ -7,6 +7,7 @@ import traceback
 from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from datetime import datetime
 
 from app.routers.design_common import (
     CommonDesignForm,
@@ -141,6 +142,38 @@ async def design_aspcr_from_form(
             }
             context["single_total_amplicons"] = total_df.to_dict(orient="records")
             context["single_filtered_amplicons"] = filtered_df.to_dict(orient="records")
+            context["export_meta"] = {
+                # ---- 기본 정보 ----
+                "assay": "as-pcr",
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+
+                # ---- 입력 정보 ----
+                "reference": f.reference,
+                "region": {
+                    "chrom": r.chrom,
+                    "start": r.start,
+                    "end": r.end,
+                    "name": r.name,
+                },
+                "ref_allele": ref_allele,
+                "alt_allele": alt_allele,
+
+                # ---- 결과 요약 ----
+                "total_count": len(total_df),
+                "filtered_count": len(filtered_df),
+
+                # ---- resolved PCR params (재현성 핵심) ----
+                "pcr_params": {
+                    "min_amplicon_length": resolved.min_amplicon_length,
+                    "max_amplicon_length": resolved.max_amplicon_length,
+                    "n_primers": resolved.n_primers,
+                    "forward_min_len": forward_min_len,
+                    "forward_max_len": forward_max_len,
+                    "n_reverse": n_reverse,
+                }
+            }
+
+
 
         else:
             multi_results: List[Dict[str, Any]] = []

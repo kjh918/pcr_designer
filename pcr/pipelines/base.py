@@ -7,6 +7,7 @@ import pandas as pd
 
 from pcr.components import Amplicon
 from pcr.qc.thermo import evaluate_amplicons
+from pcr.qc.blast import apply_blast_qc_to_rows
 from pcr.config.schema.qc import QCParams
 
 
@@ -111,21 +112,32 @@ def run_pipeline_from_amplicons(
     )
 
     # ✅ 2) Designer extra QC hook (AS-PCR 같은 특수 QC는 여기서 추가)
-    total_rows, filtered_rows = _call_extra_qc_if_exists(
-        designer,
-        genomic_id,
-        amplicon_list,
-        qc_params=qc_params,
-        total_rows=total_rows,
-        filtered_rows=filtered_rows,
-        assay=assay,
-    )
+    print(qc_params)
 
     total_df = pd.DataFrame(total_rows)
     filtered_df = pd.DataFrame(filtered_rows)
 
     total_df.index = [genomic_id] * len(total_df)
     filtered_df.index = [genomic_id] * len(filtered_df)
+    print(total_df)
+    if assay == "aspcr":
+        filtered_list = [] 
+        result_columns = [
+            'ID','QC_PASS','assay','amplicon_sequence','amplicon_gc','amplicon_tm','amplicon_length',
+            'forward_sequence','forward_length','forward_gc_percent','forward_tm','reverse_sequence','rc_reverse_sequence','reverse_length','reverse_gc_percent','reverse_tm',
+        ]
+        for i in range(0, len(total_df.index),4):
+            temp_df = total_df.iloc[i : i + 4]
+            # print(temp_df)
+
+            if 'X' in temp_df['QC_PASS'].values: 
+                pass
+            else:
+                temp_df['set'] = temp_df['assay'].str.split('::').str[2]
+                temp_df['type'] = temp_df['assay'].str.split('::').str[1] # set 컬럼 추가
+                filtered_list.append(temp_df)
+        filtered_df = pd.concat(filtered_list)[result_columns]
+    print(assay)
 
     return PipelineResult(genomic_id, total_df, filtered_df)
 
