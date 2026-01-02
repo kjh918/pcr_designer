@@ -65,6 +65,8 @@ def run_as_pcr_pipeline(
     )
     
     amplicon_list = designer.design()
+    print(amplicon_list)
+    print('NO OF AMPLICONS:', len(amplicon_list))
 
     # ✅ QCThresholds 생성 제거 → QCParams 그대로 주입
     return run_pipeline(
