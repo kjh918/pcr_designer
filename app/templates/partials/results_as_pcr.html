@@ -22,6 +22,76 @@
   <div class="amplicon-list">
     {% for row in single_filtered_amplicons[:5] %}
       {{ render_as_pcr_card(single_result.region, row) }}
+
+      {# ============================
+         ✅ FIX: template(wt/alt/wt_mm/alt_mm)별 정보 출력
+         - row 안에 아래 중 하나가 들어있는 경우를 모두 커버:
+           1) row.amplicons (AspcrSet 스타일)
+           2) row.templates / row.template_map
+           3) row.wt / row.alt / row.wt_mm / row.alt_mm (개별 키)
+         ============================ #}
+
+      {# ✅ FIX-1: AspcrSet 스타일 (row.amplicons['wt']... ) #}
+      {% if row.amplicons is defined %}
+        <div class="card subcard" style="margin-top:10px;">
+          <div class="section-title">Template별 Amplicon (wt/alt/wt_mm/alt_mm)</div>
+
+          {% for t in ['wt', 'alt', 'wt_mm', 'alt_mm'] %}
+            {% set a = row.amplicons.get(t) %}
+            {% if a %}
+              <div class="kv" style="margin-top:6px;">
+                <div><b>{{ t }}</b></div>
+                {% if a.forward_primer is defined %}
+                  <div>F: <code>{{ a.forward_primer.sequence }}</code></div>
+                {% endif %}
+                {% if a.reverse_primer is defined %}
+                  <div>R: <code>{{ a.reverse_primer.sequence }}</code></div>
+                {% endif %}
+                {% if a.amplicon_sequence is defined %}
+                  <div>Amplicon ({{ a.amplicon_length if a.amplicon_length is defined else (a.amplicon_sequence|length) }} bp):
+                    <code style="word-break:break-all;">{{ a.amplicon_sequence }}</code>
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+      {# ✅ FIX-2: row.templates 같은 맵이 있는 경우 (서열만이라도 출력) #}
+      {% elif row.templates is defined or row.template_map is defined %}
+        {% set tm = row.templates if row.templates is defined else row.template_map %}
+        <div class="card subcard" style="margin-top:10px;">
+          <div class="section-title">Template별 서열</div>
+          {% for t in ['wt', 'alt', 'wt_mm', 'alt_mm'] %}
+            {% if tm.get(t) %}
+              <div style="margin-top:6px;">
+                <b>{{ t }}</b>:
+                <code style="word-break:break-all;">{{ tm.get(t) }}</code>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+      {# ✅ FIX-3: row에 개별 키로 박혀있는 경우 #}
+      {% elif row.wt is defined or row.alt is defined or row.wt_mm is defined or row.alt_mm is defined %}
+        <div class="card subcard" style="margin-top:10px;">
+          <div class="section-title">Template별 값</div>
+
+          {% if row.wt is defined %}
+            <div style="margin-top:6px;"><b>wt</b>: <code style="word-break:break-all;">{{ row.wt }}</code></div>
+          {% endif %}
+          {% if row.alt is defined %}
+            <div style="margin-top:6px;"><b>alt</b>: <code style="word-break:break-all;">{{ row.alt }}</code></div>
+          {% endif %}
+          {% if row.wt_mm is defined %}
+            <div style="margin-top:6px;"><b>wt_mm</b>: <code style="word-break:break-all;">{{ row.wt_mm }}</code></div>
+          {% endif %}
+          {% if row.alt_mm is defined %}
+            <div style="margin-top:6px;"><b>alt_mm</b>: <code style="word-break:break-all;">{{ row.alt_mm }}</code></div>
+          {% endif %}
+        </div>
+      {% endif %}
+
     {% endfor %}
   </div>
 

@@ -178,13 +178,17 @@
        ======================= #}
     {% if single_result %}
       <div class="card" id="results">
-        {# ✅ MODIFIED: manual은 qpcr 결과 테이블 재사용 or manual 전용 partial #}
-        {% if current_assay == ['qpcr', 'methyl'] %}
+        {% if current_assay in ['qpcr', 'methyl'] %}
             {% include "partials/results_qpcr.html" %}
+
         {% elif current_assay == 'manual' %}
             {% include "partials/results_manual.html" %}
-        {% else %}
+
+        {# ✅ FIX: as-pcr은 as-pcr partial로 명시 #}
+        {% elif current_assay == 'as-pcr' %}
             {% include "partials/results_as_pcr.html" %}
+        {% else %}
+            {% include "partials/results_qpcr.html" %}
         {% endif %}
       </div>
     {% endif %}

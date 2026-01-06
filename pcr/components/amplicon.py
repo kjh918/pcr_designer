@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional, Literal
 
 from pcr.components.primer import Primer
 from pcr.utils import get_start_end_index
+from primer3
+from Bio.SeqUtils import gc_fraction
 #from pcr.seq.fetch import 
 
 
@@ -71,45 +73,28 @@ class Amplicon:
 	# helpers
 	# -------------------------
 	@staticmethod
-	def _gc_percent(seq: str) -> Optional[float]:
+	def _calc_tm_primer3(seq: str) -> float:
 		s = (seq or "").upper()
 		if not s:
-			return None
-		valid = [b for b in s if b in ("A", "C", "G", "T")]
-		if not valid:
-			return None
-		gc = sum(1 for b in valid if b in ("G", "C"))
-		return (gc / len(valid)) * 100.0
+			raise ValueError("Empty sequence for calcTm")
+		return float(primer3.bindings.calcTm(s))
 
 	@staticmethod
-	def _calc_tm(seq: str) -> Optional[float]:
-		"""
-		가능한 경우 primer3의 calcTm 사용.
-		primer3가 없거나 실패하면 간단 Wallace rule(2*(A+T)+4*(G+C))로 fallback.
-		"""
+	def _calc_gc_primer3(seq: str) -> float:
 		s = (seq or "").upper()
 		if not s:
-			return None
-		# primer3 사용 시도
-		try:
-			import primer3  # type: ignore
+			raise ValueError("Empty sequence for calcGC")
 
-			# primer3-py는 보통 primer3.bindings.calcTm 제공
-			calc = getattr(getattr(primer3, "bindings", primer3), "calcTm", None)
-			if callable(calc):
-				return float(calc(s))
-		except Exception:
-			pass
+		calc_gc = getattr(primer3.bindings, "calcGC", None)
+		if not callable(calc_gc):
+			raise RuntimeError(
+				"primer3.bindings.calcGC is not available in your primer3-py build. "
+				"Upgrade/replace primer3-py or expose calcGC."
+			)
 
-		# fallback (Wallace rule) - 짧은 올리고에만 대략적
-		a = s.count("A")
-		t = s.count("T")
-		g = s.count("G")
-		c = s.count("C")
-		if (a + t + g + c) == 0:
-			return None
-		return float(2 * (a + t) + 4 * (g + c))
-
+		val = float(calc_gc(s))
+		# 어떤 빌드는 0-1로 줄 수도 있어서 보정
+		return val * 100.0 if val <= 1.0 else val
 	# -------------------------
 	# core
 	# -------------------------
@@ -134,15 +119,15 @@ class Amplicon:
 	def _calc_amplicon_metrics(self) -> None:
 		# template 기준
 		if self.amplicon_sequence:
-			self.amplicon_gc = self._gc_percent(self.amplicon_sequence)
-			self.amplicon_tm = self._calc_tm(self.amplicon_sequence)
+			self.amplicon_gc = self._calc_gc_primer3(self.amplicon_sequence)
+			self.amplicon_tm = self._calc_tm_primer3(self.amplicon_sequence)
 
 		# reference 고려 (reference != template 인 경우)
 		if self.reference_template_sequence != self.template_sequence:
 			self.reference_amplicon_sequence = self._calc_reference_amplicon_sequence()
 			if self.reference_amplicon_sequence:
-				self.reference_amplicon_gc = self._gc_percent(self.reference_amplicon_sequence)
-				self.reference_amplicon_tm = self._calc_tm(self.reference_amplicon_sequence)
+				self.reference_amplicon_gc = self._calc_gc_primer3(self.reference_amplicon_sequence)
+				self.reference_amplicon_tm = self._calc_tm_primer3(self.reference_amplicon_sequence)
 
 	def to_dict(self) -> Dict[str, Any]:
 		d: Dict[str, Any] = {
