@@ -1,22 +1,24 @@
-
 from typing import Tuple
 from Bio.Seq import reverse_complement
 
 def get_start_end_index(template_sequence: str, sequence: str) -> Tuple[int, int]:
     """
-    template_sequence에서 sequence(또는 reverse complement)의 시작/끝 인덱스를 반환 (0-based, end inclusive)
-
-    NOTE: 반복 서열이 있으면 index()는 첫 매치로 잡힘.
-          primer3가 준 start/length가 있으면 그걸 우선 쓰는 설계를 권장.
+    반복 서열 대응:
+    - 정방향은 첫 매치
+    - 역방향(RC)은 마지막 매치 사용
     """
-    try:
-        start_index = template_sequence.index(sequence)
-    except ValueError:
-        rc = reverse_complement(sequence)
-        try:
-            start_index = template_sequence.index(rc)
-        except ValueError:
-            raise ValueError(f"{sequence} or its reverse complement not found in template.")
+    tpl = template_sequence.upper()
+    seq = sequence.upper()
 
-    end_index = start_index + len(sequence) - 1
-    return start_index, end_index
+    # 1) forward 그대로
+    idx = tpl.find(seq)
+    if idx != -1:
+        return idx, idx + len(seq) - 1
+
+    # 2) reverse primer → RC를 마지막 매치로
+    rc = reverse_complement(seq).upper()
+    idx = tpl.rfind(rc)   # ⭐ 핵심 변경
+    if idx != -1:
+        return idx, idx + len(seq) - 1
+
+    raise ValueError(f"{sequence} or its reverse complement not found in template.")

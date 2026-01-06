@@ -11,9 +11,9 @@ pcr_params:
     min_amplicon_length: 80
     max_amplicon_length: 120
     n_primers: 100
-    opt_length: 25
-    min_length: 20
-    max_length: 30
+    opt_length: 20
+    min_length: 18
+    max_length: 27
     opt_tm: 60
     min_tm: 55
     max_tm: 65

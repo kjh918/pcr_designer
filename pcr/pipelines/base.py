@@ -116,18 +116,56 @@ def run_pipeline_from_amplicons(
 	total_df = pd.DataFrame(total_rows)
 	filtered_df = pd.DataFrame(filtered_rows)
 
-	total_df.index = [genomic_id] * len(total_df)
-	filtered_df.index = [genomic_id] * len(filtered_df)
+
 	if assay == "aspcr":
 		filtered_list = [] 
+		total_list = [] 
 		result_columns = [
-			'ID','QC_PASS','set','type','assay','amplicon_sequence','amplicon_gc','amplicon_tm','amplicon_length',
+			'ID','FORWARD_ID','REVERSE_ID','QC_PASS','set','type','assay','amplicon_sequence','amplicon_gc','amplicon_tm','amplicon_length',
 			'forward_sequence','forward_length','forward_gc_percent','forward_tm','reverse_sequence','rc_reverse_sequence','reverse_length','reverse_gc_percent','reverse_tm',
 		]
 		for i in range(0, len(total_df.index),4):
 			temp_df = total_df.iloc[i : i + 4]
 			# print(temp_df)
+			
+			idx = (i // 4) + 1
+			group_id = genomic_id
+			id_dict = {
+				"REF": {
+					"F": f"{group_id}_REF_{idx}_F",
+					"R": f"{group_id}_REF_{idx}_R",
+					"MM": {
+						"F": f"{group_id}_REF_MM_{idx}_F",
+						"R": f"{group_id}_REF_MM_{idx}_R",
+					}
+				},
+				"ALT": {
+					"F": f"{group_id}_ALT_{idx}_F",
+					"R": f"{group_id}_ALT_{idx}_R",
+					"MM": {
+						"F": f"{group_id}_ALT_MM_{idx}_F",
+						"R": f"{group_id}_ALT_MM_{idx}_R",
+					}
+				}
+			}
 
+			df = pd.DataFrame({
+				"FORWARD_ID": [
+					id_dict["REF"]["F"],
+					id_dict["ALT"]["F"],
+					id_dict["REF"]["MM"]["F"],
+					id_dict["ALT"]["MM"]["F"],
+				],
+				"REVERSE_ID": [
+					id_dict["REF"]["R"],
+					id_dict["ALT"]["R"],
+					id_dict["REF"]["MM"]["R"],
+					id_dict["ALT"]["MM"]["R"],
+				]
+			})
+			df.index = temp_df.index
+			temp_df = pd.concat([temp_df, df], axis=1)
+			total_list.append(temp_df)
 			if 'X' in temp_df['QC_PASS'].values: 
 				pass
 			else:
@@ -138,9 +176,7 @@ def run_pipeline_from_amplicons(
 			filtered_df = pd.DataFrame(columns=result_columns)
 		else:
 			filtered_df = pd.concat(filtered_list)[result_columns]
-	print(total_df)
 	total_df.to_csv(f'{genomic_id}_total_df.csv',sep='\t')
-	print()
 	return PipelineResult(genomic_id, total_df, filtered_df)
 
 
