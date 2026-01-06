@@ -1,248 +1,328 @@
 from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Dict, List, Literal, Optional, Tuple
+
 import primer3
-from typing import Any, Dict, List, Optional, Tuple
 from Bio.Seq import Seq
 
 from pcr.designers.base import BasePrimerDesigner
 from pcr.components import Amplicon
 from pcr.components.primer import Primer
 
-# ----------------------------------------------------------------------
-# Helper Functions for AS-PCR Logic
-# ----------------------------------------------------------------------
 
-def _replace_3prime_base(primer_5to3: str, base: str, strand: str = "forward") -> str:
-	"""Replaces the 3' end of the primer with the target allele."""
-	s = list(primer_5to3.upper())
-	if not s: return ""
-	if strand == "forward":
-		s[-1] = base.upper()
-	else:
-		# Reverse primer binds to the sense strand, so it needs the complement
-		s[-1] = str(Seq(base).complement()).upper()
-	return "".join(s)
+# =============================================================================
+# Types / Constants
+# =============================================================================
 
-def _apply_as_pcr_logic(
-	primer_5to3: str,
-	target_base: str,
-	strand: str,
-	mismatch_pos: int = 3,
-	intensity: str = "strong",
-) -> str:
-	"""Applies the 3' allele and an internal artificial mismatch."""
-	mismatch_map = {
-		"strong": {'A': 'G', 'T': 'C', 'G': 'A', 'C': 'T'},
-		"medium": {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'},
-		"weak":   {'A': 'C', 'T': 'G', 'G': 'T', 'C': 'A'},
-	}
-	primer_seq = _replace_3prime_base(primer_5to3, target_base, strand)
-	s = list(primer_seq)
-		
-	idx = -int(mismatch_pos) # Position from 3' end
-	if abs(idx) <= len(s):
-		original = s[idx]
-		new_base = mismatch_map.get(intensity.lower(), mismatch_map["strong"]).get(original, "A")
-		if new_base == original:
-			for cand in ("A", "C", "G", "T"):
-				if cand != original:
-					new_base = cand
-					break
-		s[idx] = new_base
-	return "".join(s)
+TemplateType = Literal["wt", "alt", "wt_mm", "alt_mm"]
+FixedPrime = Literal["forward", "reverse"]
+Strand = Literal["forward", "reverse"]
 
-def _patch_template_for_pair(
+
+# =============================================================================
+# Helpers (coordinate-safe, template-slice based)
+# =============================================================================
+
+def _rc(seq: str) -> str:
+	return str(Seq(seq).reverse_complement())
+
+
+def parse_primer_from_template(
 	template_5to3: str,
-	reference_template_5to3: str,
+	start: int,
+	end: int,
+	strand: Strand,
+) -> str:
+	"""
+	Parse primer sequence from template by coordinates.
+
+	template_5to3: sense strand 5'->3'
+	start/end: 0-based inclusive
+	strand:
+	  - "forward": primer sequence is the slice itself
+	  - "reverse": primer sequence is reverse-complement of slice
+	"""
+	if start < 0 or end < 0 or end < start or end >= len(template_5to3):
+		raise ValueError(f"Invalid slice: start={start}, end={end}, len={len(template_5to3)}")
+
+	seg = template_5to3[start:end + 1].upper()
+	if strand == "forward":
+		return seg
+	return seg
+
+
+def primer3_left_pos_to_span(pos: Any) -> Tuple[int, int]:
+	"""
+	primer3 LEFT position is typically: (start, length)
+	-> span: (start, end inclusive)
+	"""
+	if not pos or len(pos) != 2:
+		raise ValueError(f"Invalid LEFT position: {pos}")
+	start, length = int(pos[0]), int(pos[1])
+	end = start + length - 1
+	return start, end
+
+
+def primer3_right_pos_to_span(pos: Any) -> Tuple[int, int]:
+	"""
+	primer3 RIGHT position in primer3-py is commonly: (3' end index, length)
+	In your convention (as discussed), template binding span is:
+	  start = three_prime_index
+	  end   = three_prime_index + length - 1
+	"""
+	if not pos or len(pos) != 2:
+		raise ValueError(f"Invalid RIGHT position: {pos}")
+	three_prime, length = int(pos[0]), int(pos[1])
+	start = three_prime
+	end = three_prime + length - 1
+	return start, end
+
+
+def validate_fixed_prime_anchor(
 	*,
-	left_seq_5to3: str,
-	left_start: int,
-	left_end: int,
-	right_seq_5to3: str,
-	right_start: int,
-	right_end: int,
-) -> Tuple[str, List[Dict[str, Any]]]:
-	"""Overwrites template with primers and records diffs from reference."""
-	t_list = list(template_5to3.upper())
-	ref_list = list(reference_template_5to3.upper())
-		
-	left_seq = left_seq_5to3.upper()
-	right_rc = str(Seq(right_seq_5to3.upper()).reverse_complement())
+	fixed_prime: FixedPrime,
+	left_span: Tuple[int, int],
+	right_span: Tuple[int, int],
+	target_index: int,
+) -> bool:
+	"""
+	Enforce:
+	  - forward fixed: LEFT 3' end must be target_index -> left_end == target_index
+	  - reverse fixed: RIGHT 3' end must be target_index -> right_start == target_index
+	"""
+	l_s, l_e = left_span
+	r_s, r_e = right_span
 
-	# Apply primer sequences to the template array
-	t_list[left_start : left_end + 1] = list(left_seq)
-	t_list[right_start : right_end + 1] = list(right_rc)
-	patched_template = "".join(t_list)
+	if fixed_prime == "forward":
+		return l_e == target_index
+	else:
+		return r_s == target_index
 
-	# Compare base-by-base to identify SNP vs Artificial Mismatches
-	diffs = []
-	for idx in range(min(len(t_list), len(ref_list))):
-		if t_list[idx] != ref_list[idx]:
-			source = "GENOMIC_VARIANT" # Default: the SNP itself
-			if left_start <= idx <= left_end:
-				source = "FORWARD_PRIMER_PATCH"
-			elif right_start <= idx <= right_end:
-				source = "REVERSE_PRIMER_PATCH"
-			
-			diffs.append({
-				"index": idx,
-				"ref": ref_list[idx],
-				"patched": t_list[idx],
-				"source": source
-			})
-	return patched_template, diffs
 
-# ----------------------------------------------------------------------
-# Main AS-PCR Designer Class
-# ----------------------------------------------------------------------
+# =============================================================================
+# Grouping (wt/alt/wt_mm/alt_mm as a set)
+# =============================================================================
+
+@dataclass
+class AspcrSet:
+	set_id: str				  # e.g. "set0"
+	fixed_prime: FixedPrime	  # "forward" or "reverse"
+	left_span: Tuple[int, int]   # (start,end)
+	right_span: Tuple[int, int]  # (start,end)
+	amplicons: Dict[TemplateType, Amplicon]  # keys: wt, alt, wt_mm, alt_mm
+
+
+# =============================================================================
+# AsPcrDesigner (single run of primer3 + parse primers from templates)
+# =============================================================================
 
 class AsPcrDesigner(BasePrimerDesigner):
+	"""
+	Concept:
+	  - Run primer3 ONLY on reference_template_sequence ("wt")
+	  - Use primer3 coordinates to parse primers from:
+		wt / alt / wt_mm / alt_mm templates
+	  - Build a 4-amplicon set per primer pair (if anchor constraint satisfied)
+	"""
+
 	def __init__(
 		self,
-		template_sequence: str,
-		reference_template_sequence: str,
+		*,
+		reference_template_sequence: str,   # wt
+		alt_template_sequence: str,		 # alt
+		ref_mm_template_sequence: str,	  # wt_mm
+		alt_mm_template_sequence: str,	  # alt_mm
+
 		target_start_index: int,
 		target_end_index: int,
 		target_index: int,
+
 		ref_allele: str,
 		alt_allele: str,
-		**kwargs
+
+		chrom: str,
+		start: int,
+		end: int,
+
+		mismatch_pos: int = 3,			  # kept for metadata; templates already include it
+		fixed_prime: FixedPrime = "forward",# forward / reverse
+
+		# BasePrimerDesigner kwargs
+		**kwargs: Any,
 	) -> None:
-		self.target_index = int(target_index) 
+		self.templates: Dict[TemplateType, str] = {
+			"wt": reference_template_sequence,
+			"alt": alt_template_sequence,
+			"wt_mm": ref_mm_template_sequence,
+			"alt_mm": alt_mm_template_sequence,
+		}
+
+		self.target_index = int(target_index)
 		self.ref_allele = ref_allele.upper()
 		self.alt_allele = alt_allele.upper()
+
+		self.chrom = chrom
+		self.start = int(start)
+		self.end = int(end)
+
+		self.mismatch_pos = int(mismatch_pos)
+		self.fixed_prime: FixedPrime = fixed_prime
+
+		# IMPORTANT: primer3 must run on WT reference template only
 		super().__init__(
-			template_sequence=template_sequence,
+			template_sequence=reference_template_sequence,
 			reference_template_sequence=reference_template_sequence,
-			target_start_index=target_start_index,
-			target_end_index=target_end_index,
-			**kwargs
+			target_start_index=int(target_start_index),
+			target_end_index=int(target_end_index),
+			**kwargs,
 		)
 
-	def _configure_primer_forward_fix(self) -> None:
-		"""Forces the Forward primer to end (3') at the target SNP."""
+	# ------------------------------------------------------------------
+	# primer3 configuration
+	# ------------------------------------------------------------------
+	def _configure_force_anchor(self) -> None:
+		"""
+		Enforce 3' anchor at target_index.
+		- forward fixed => force LEFT_END = target_index
+		- reverse fixed => force RIGHT_END = target_index (commonly 3' end)
+		  But in your later logic, you validated RIGHT_START == target_index (3' index).
+		  So here we must align primer3 forcing with your interpretation.
+
+		For primer3:
+		  - SEQUENCE_FORCE_LEFT_END forces left primer 3' end (OK)
+		  - For right primer, depending on primer3 build, use:
+			  SEQUENCE_FORCE_RIGHT_START  (if primer3-py treats RIGHT pos[0] as 3' end)
+			or
+			  SEQUENCE_FORCE_RIGHT_END	(if primer3 expects end coordinate)
+		You have been using pos[0] as 3' end and binding span as [pos[0] : pos[0]+len-1],
+		therefore we should force RIGHT_START to be target_index.
+
+		If your primer3 build only supports RIGHT_END, switch accordingly.
+		"""
 		super()._configure_primer_common()
+
+		# AS-PCR must not avoid target
 		self.primer3_seq_args.pop("SEQUENCE_TARGET", None)
-		# 3' end of the Forward primer = target_index
-		self.update_primer3_seq_args({"SEQUENCE_FORCE_LEFT_END": self.target_index})
-		self.update_primer3_global_args({
-			"PRIMER_PICK_LEFT_PRIMER": 1,
-			"PRIMER_PICK_RIGHT_PRIMER": 1,
-			"PRIMER_PRODUCT_SIZE_RANGE": [[self.min_amplicon_length, self.max_amplicon_length]],
-		})
 
-	def _configure_primer_reverse_fix(self) -> None:
-		"""Forces the Reverse primer to start (3') at the target SNP."""
-		super()._configure_primer_common()
-		self.primer3_seq_args.pop("SEQUENCE_TARGET", None)
-		# In Primer3, 'FORCE_RIGHT_END' defines the 3' end of the Reverse primer
-		self.update_primer3_seq_args({"SEQUENCE_FORCE_RIGHT_END": self.target_index})
-		self.update_primer3_global_args({
-			"PRIMER_PICK_LEFT_PRIMER": 1,
-			"PRIMER_PICK_RIGHT_PRIMER": 1,
-			"PRIMER_PRODUCT_SIZE_RANGE": [[self.min_amplicon_length, self.max_amplicon_length]],
-		})
-
-	def design(self) -> List[Amplicon]:
-		results = []
-		# Run design for both orientations
-		results.extend(self._run_mode_and_build("forward_fix"))
-		results.extend(self._run_mode_and_build("reverse_fix"))
-		self.amplicon_list = results
-		return results
-
-	def _run_mode_and_build(self, mode: str) -> List[Amplicon]:
-		self.reset()
-		if mode == "forward_fix":
-			self._configure_primer_forward_fix()
+		if self.fixed_prime == "forward":
+			self.update_primer3_seq_args({"SEQUENCE_FORCE_LEFT_END": self.target_index})
+			# clear possible conflicting right constraints
+			self.primer3_seq_args.pop("SEQUENCE_FORCE_RIGHT_START", None)
+			self.primer3_seq_args.pop("SEQUENCE_FORCE_RIGHT_END", None)
 		else:
-			self._configure_primer_reverse_fix()
+			# IMPORTANT: aligns with our RIGHT span convention (pos[0] == 3' end)
+			self.update_primer3_seq_args({"SEQUENCE_FORCE_RIGHT_START": self.target_index})
+			self.primer3_seq_args.pop("SEQUENCE_FORCE_LEFT_END", None)
+			self.primer3_seq_args.pop("SEQUENCE_FORCE_LEFT_START", None)
 
-		res = primer3.bindings.designPrimers(self.primer3_seq_args, self.primer3_global_args)
-		return self._build_amplicons_from_result(res or {}, mode=mode)
+		# Ensure both primers are picked
+		self.update_primer3_global_args(
+			{
+				"PRIMER_PICK_LEFT_PRIMER": 1,
+				"PRIMER_PICK_RIGHT_PRIMER": 1,
+				"PRIMER_NUM_RETURN": int(self.n_primers),
+				"PRIMER_PRODUCT_SIZE_RANGE": [[self.min_amplicon_length, self.max_amplicon_length]],
+				"PRIMER_EXPLAIN_FLAG": 1,
+			}
+		)
 
-	def _build_amplicons_from_result(self, res: Dict[str, Any], mode: str) -> List[Amplicon]:
-		num_returned = res.get("PRIMER_PAIR_NUM_RETURNED", 0)
-		amplicons = []
-		
-		for i in range(num_returned):
-			# 1. Extract raw Primer3 data
-			l_seq = res[f"PRIMER_LEFT_{i}_SEQUENCE"]
-			r_seq = res[f"PRIMER_RIGHT_{i}_SEQUENCE"]
-			l_pos = res[f"PRIMER_LEFT_{i}"] # (start_index, length)
-			r_pos = res[f"PRIMER_RIGHT_{i}"] # (3_prime_index, length)
-			
-			# 2. COORDINATE FIX
-			# Forward: Starts at index, ends at index + len - 1
-			l_s, l_e = l_pos[0], l_pos[0] + l_pos[1] - 1
-			
-			# Reverse: r_pos[0] IS the 3' end (the lowest index on the sense strand).
-			# The binding site spans from r_pos[0] to r_pos[0] + length - 1.
-			r_len = r_pos[1]
-			r_binding_start = r_pos[0]
-			r_binding_end = r_pos[0] + r_len - 1
+	# ------------------------------------------------------------------
+	# main design entry
+	# ------------------------------------------------------------------
+	def design_sets(self) -> List[AspcrSet]:
+		"""
+		Returns list of AspcrSet (each contains wt/alt/wt_mm/alt_mm amplicons).
+		Also populates self.amplicon_list as a flat list (all amplicons).
+		"""
+		self.reset()
+		self._configure_force_anchor()
 
-			# 3. Define configurations based on the fixed primer orientation
-			if mode == "forward_fix":
-				# In this mode, only the Forward primer 3' end is at target_index
-				configs = [
-					("wt", _replace_3prime_base(l_seq, self.ref_allele, "forward"), r_seq, self.reference_template_sequence, "ref"),
-					("alt", _replace_3prime_base(l_seq, self.alt_allele, "forward"), r_seq, self.template_sequence, "alt"),
-					("wt_mm", _apply_as_pcr_logic(l_seq, self.ref_allele, "forward"), r_seq, self.reference_template_sequence, "ref"),
-					("alt_mm", _apply_as_pcr_logic(l_seq, self.alt_allele, "forward"), r_seq, self.template_sequence, "alt")
-				]
-			else: # reverse_fix
-				# In this mode, only the Reverse primer 3' end is at target_index
-				configs = [
-					("wt", l_seq, _replace_3prime_base(r_seq, self.ref_allele, "reverse"), self.reference_template_sequence, "ref"),
-					("alt", l_seq, _replace_3prime_base(r_seq, self.alt_allele, "reverse"), self.template_sequence, "alt"),
-					("wt_mm", l_seq, _apply_as_pcr_logic(r_seq, self.ref_allele, "reverse"), self.reference_template_sequence, "ref"),
-					("alt_mm", l_seq, _apply_as_pcr_logic(r_seq, self.alt_allele, "reverse"), self.template_sequence, "alt")
-				]
+		res = primer3.bindings.designPrimers(self.primer3_seq_args, self.primer3_global_args) or {}
+		n_pairs = int(res.get("PRIMER_PAIR_NUM_RETURNED", 0))
 
-			for label, f_seq, r_seq_final, base_tpl, allele_type in configs:
-				# 4. Patch template and identify differences
-				# The Reverse primer sequence (r_seq_final) is 5'->3'.
-				# _patch_template_for_pair will RC it and place it at [r_binding_start : r_binding_end + 1]
-				patched_tpl, diffs = _patch_template_for_pair(
-					base_tpl, self.reference_template_sequence,
-					left_seq_5to3=f_seq, left_start=l_s, left_end=l_e,
-					right_seq_5to3=r_seq_final, right_start=r_binding_start, right_end=r_binding_end
-				)
+		if n_pairs == 0:
+			# keep explain for debugging
+			print("[Primer3 Explain]",
+				  res.get("PRIMER_LEFT_EXPLAIN"),
+				  res.get("PRIMER_RIGHT_EXPLAIN"),
+				  res.get("PRIMER_PAIR_EXPLAIN"))
+			self.amplicon_list = []
+			return []
 
-				# 5. Correctly initialize Primer objects
+		sets: List[AspcrSet] = []
+		flat: List[Amplicon] = []
+		for i in range(n_pairs):
+			left_pos = res.get(f"PRIMER_LEFT_{i}")
+			right_pos = res.get(f"PRIMER_RIGHT_{i}")
+			if left_pos is None or right_pos is None:
+				continue
+
+			left_span = primer3_left_pos_to_span(left_pos)
+			right_span = primer3_right_pos_to_span(right_pos)
+
+			# (optional) anchor check
+			if not validate_fixed_prime_anchor(
+				fixed_prime=self.fixed_prime,
+				left_span=left_span,
+				right_span=right_span,
+				target_index=self.target_index,
+			):
+				continue
+
+			set_id = f"set{i}"
+			amplicons_by_type = {}
+
+			for ttype in ("wt", "alt", "wt_mm", "alt_mm"):
+				tpl = self.templates[ttype]
+
+				# ✅ primer sequence는 primer3 output 말고 "index로 template에서" 가져온다
+				f_seq = parse_primer_from_template(tpl, left_span[0], left_span[1], "forward")
+				r_seq = parse_primer_from_template(tpl, right_span[0], right_span[1], "reverse")
+
 				f_primer = Primer(
-					template_sequence=patched_tpl,
-					primer_type="forward",
-					target_start_index=self.target_start_index,
-					target_end_index=self.target_end_index,
+					template_sequence=tpl,
+					reference_template_sequence=self.reference_template_sequence,  # genome ref 쓰고 싶으면 그걸로
 					sequence=f_seq,
-					strand="forward",
-					binding_start_index=l_s,
-					binding_end_index=l_e
-				)
-
-				r_primer = Primer(
-					template_sequence=patched_tpl,
-					primer_type="reverse",
 					target_start_index=self.target_start_index,
 					target_end_index=self.target_end_index,
-					sequence=r_seq_final,
+					strand="forward",
+					primer_type="forward",
+					binding_start_index=left_span[0],
+					binding_end_index=left_span[1],
+				)
+				r_primer = Primer(
+					template_sequence=tpl,
+					reference_template_sequence=self.reference_template_sequence,
+					sequence=r_seq,
+					target_start_index=self.target_start_index,
+					target_end_index=self.target_end_index,
 					strand="reverse",
-					binding_start_index=r_binding_start,
-					binding_end_index=r_binding_end
+					primer_type="reverse",
+					binding_start_index=right_span[0],
+					binding_end_index=right_span[1],
 				)
 
-				# 6. Build and collect the Amplicon
 				amp = Amplicon(
-					template_sequence=patched_tpl,
+					template_sequence=tpl,
 					reference_template_sequence=self.reference_template_sequence,
 					target_start_index=self.target_start_index,
 					target_end_index=self.target_end_index,
 					forward_primer=f_primer,
 					reverse_primer=r_primer,
-					assay=f"AS-PCR::{mode}::{label}",
-					allele=allele_type
+					assay=f"as_pcr::{self.fixed_prime}::{set_id}::{ttype}",
+					allele=ttype,
 				)
-				amplicons.append(amp)
-				
-		return amplicons
+				amplicons_by_type[ttype] = amp
+				flat.append(amp)
+
+
+		self.amplicon_list = flat
+		return sets
+
+	def design(self) -> List[Amplicon]:
+		"""
+		Compatibility: returns flat list (like other designers).
+		"""
+		self.design_sets()
+		return self.amplicon_list

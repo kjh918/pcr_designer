@@ -3,7 +3,7 @@
 {% block title %}Primer Design | GCX{% endblock %}
 
 {% block content %}
-{% set current_assay = assay if assay is defined and assay in ['qpcr','methyl','as-pcr'] else 'qpcr' %}
+{% set current_assay = assay if assay is defined and assay in ['qpcr','methyl','as-pcr','manual'] else 'qpcr' %}
 
 <div class="layout">
   {% include "partials/sidebar_tabs.html" %}
@@ -28,7 +28,10 @@
       {% set primer_type_value = 'methyl' %}
     {% elif current_assay == 'as-pcr' %}
       {% set submit_endpoint = 'design_aspcr_from_form' %}
-      {% set primer_type_value = 'as' %}
+      {% set primer_type_value = 'as-pcr' %}
+    {% elif current_assay == 'manual' %}
+      {% set submit_endpoint = 'design_manual_from_form' %}
+      {% set primer_type_value = 'manual' %}
     {% else %}
       {% set submit_endpoint = 'design_qpcr_from_form' %}
       {% set primer_type_value = 'default' %}
@@ -49,7 +52,11 @@
           <p class="section-desc">Single 입력(필수) + Excel 업로드(옵션)</p>
         </div>
 
-        {% if current_assay == 'qpcr' %}
+        {# ✅ MODIFIED: manual include 추가 #}
+        {% if current_assay == 'manual' %}
+          {# manual.html 따로 안 만들고 design.html에 끼우는 방식이라면 이 partial이 필요 #}
+          {% include "partials/form_manual.html" %}
+        {% elif current_assay == 'qpcr' %}
           {% include "partials/form_qpcr.html" %}
         {% elif current_assay == 'methyl' %}
           {% include "partials/form_methyl.html" %}
@@ -61,6 +68,12 @@
       {# =======================
          2) Common (Reference / Probe)
          ======================= #}
+
+      {# ✅ MODIFIED:
+         manual에서는 template 기반이라 reference 섹션을 숨기거나 disabled 처리하는게 자연스러움
+         - 만약 manual에서도 reference 선택이 필요하면 아래 if를 제거하면 됨
+      #}
+      {% if current_assay != 'manual' %}
       <section class="section-block" id="reference">
         <details class="fold-card">
           <summary class="fold-summary">
@@ -72,6 +85,7 @@
           </div>
         </details>
       </section>
+      {% endif %}
 
       <section class="section-block" id="probe">
         <details class="fold-card">
@@ -80,8 +94,8 @@
             <span class="fold-hint">열기/닫기</span>
           </summary>
           <div class="fold-body">
-            {# probe는 qpcr/methyl에서만 #}
-            {% if current_assay in ['qpcr', 'methyl'] %}
+            {# ✅ MODIFIED: manual은 qpcr처럼 probe 쓸 수 있게 허용하거나, 필요시 제한 #}
+            {% if current_assay in ['qpcr', 'methyl', 'manual'] %}
               {% include "partials/probe.html" %}
             {% else %}
               <p class="section-desc">AS-PCR에서는 Probe 옵션을 사용하지 않습니다.</p>
@@ -94,13 +108,16 @@
          3) Options
          ======================= #}
       <section class="section-block" id="options">
-        <details class="fold-card" {% if current_assay == 'as-pcr' %}open{% endif %}>
+        <details class="fold-card" {% if current_assay in ['as-pcr','manual'] %}open{% endif %}>
           <summary class="fold-summary">
             <span>Primer Options</span>
             <span class="fold-hint">열기/닫기</span>
           </summary>
           <div class="fold-body">
-            {% if current_assay == 'qpcr' %}
+            {# ✅ MODIFIED: manual options partial 추가 (없으면 primer_options.html 재사용 가능) #}
+            {% if current_assay == 'manual' %}
+              {% include "partials/primer_options_manual.html" %}
+            {% elif current_assay == 'qpcr' %}
               {% include "partials/primer_options.html" %}
             {% elif current_assay == 'methyl' %}
               {% include "partials/primer_options_methyl.html" %}
@@ -115,13 +132,16 @@
          4) QC Threshold
          ======================= #}
       <section class="section-block" id="qc">
-        <details class="fold-card" {% if current_assay == 'as-pcr' %}open{% endif %}>
+        <details class="fold-card" {% if current_assay in ['as-pcr','manual'] %}open{% endif %}>
           <summary class="fold-summary">
             <span>QC Thresholds</span>
             <span class="fold-hint">열기/닫기</span>
           </summary>
           <div class="fold-body">
-            {% if current_assay == 'qpcr' %}
+            {# ✅ MODIFIED: manual qc partial 추가 (없으면 qpcr qc 재사용 가능) #}
+            {% if current_assay == 'manual' %}
+              {% include "partials/qc_threshold_manual.html" %}
+            {% elif current_assay == 'qpcr' %}
               {% include "partials/qc_threshold.html" %}
             {% elif current_assay == 'methyl' %}
               {% include "partials/qc_threshold_methyl.html" %}
@@ -135,7 +155,17 @@
       {# hidden values to server #}
       <input type="hidden" name="assay" value="{{ current_assay }}">
       <input type="hidden" name="primer_type" value="{{ primer_type_value }}">
-      <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg38' }}">
+
+      {# ✅ MODIFIED:
+         manual에서는 reference가 의미 없을 수 있어 default를 다르게 처리
+         - 서버에서 reference 필수로 받으면 manual에도 더미값(hg38)을 넣어줘야 함
+      #}
+      {% if current_assay == 'manual' %}
+        <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg38' }}">
+      {% else %}
+        <input type="hidden" name="reference" id="reference-input" value="{{ reference or 'hg38' }}">
+      {% endif %}
+
       <input type="hidden" name="probe" id="probe-input" value="{{ probe or 'no' }}">
 
       <div class="actions">
@@ -148,10 +178,11 @@
        ======================= #}
     {% if single_result %}
       <div class="card" id="results">
-        {% if current_assay == 'qpcr' %}
-            {% include "partials/results_single.html" %}
-        {% elif current_assay == 'methyl' %}
-            {% include "partials/results_single.html" %}
+        {# ✅ MODIFIED: manual은 qpcr 결과 테이블 재사용 or manual 전용 partial #}
+        {% if current_assay == ['qpcr', 'methyl'] %}
+            {% include "partials/results_qpcr.html" %}
+        {% elif current_assay == 'manual' %}
+            {% include "partials/results_manual.html" %}
         {% else %}
             {% include "partials/results_as_pcr.html" %}
         {% endif %}

@@ -69,7 +69,6 @@ async def export_excel(
 			def flatten(prefix: str, obj: Any):
 				if isinstance(obj, dict):
 					for k, v in obj.items():
-						print(k,v)
 						new_prefix = f"{prefix}.{k}" if prefix else k
 						flatten(new_prefix, v)
 				else:

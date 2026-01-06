@@ -12,12 +12,12 @@ def make_amplicon_for_qc(
     probe_seq: str | None = None,
     template_seq: str | None = None,
 ) -> Amplicon:
-    forward_seq = forward_seq.strip().upper()
-    reverse_seq = reverse_seq.strip().upper()
-    probe_seq = probe_seq.strip().upper() if probe_seq else None
+    forward_seq = forward_seq.replace(' ','').strip().upper()
+    reverse_seq = reverse_seq.replace(' ','').strip().upper()
+    probe_seq = probe_seq.replace(' ','').strip().upper() if probe_seq else None
 
     if template_seq and template_seq.strip():
-        template = template_seq.strip().upper()
+        template = template_seq.strip().upper().replace(' ','')
     else:
         template = forward_seq + ("N" * 10) + reverse_seq
 

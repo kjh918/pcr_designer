@@ -27,12 +27,24 @@
   {{ render_seq_legend() }}
 {% endif %}
 
-{% if single_total_amplicons %}
+{% if single_total_amplicons and single_filtered_amplicons %}
   <form method="post" action="/export/excel" class="export-form">
-    <input type="hidden" name="kind" value="single_total">
-    <textarea name="data_json" style="display:none;">
-      {{ single_total_amplicons | tojson }}
+    <input type="hidden" name="kind" value="qpcr_single">
+
+    <textarea name="total_json" style="display:none;">
+		{{ single_total_amplicons | tojson }}
+	</textarea>
+    <textarea name="filtered_json" style="display:none;">
+      {{ (single_filtered_amplicons or []) | tojson }}
     </textarea>
-    <button type="submit">Export All (Excel)</button>
+
+    {# meta는 context에 있으면 같이 보내고, 없으면 빼도 됨 #}
+    {% if export_meta %}
+      <textarea name="meta_json" style="display:none;">
+        {{ export_meta | tojson }}
+      </textarea>
+    {% endif %}
+
+    <button type="submit">Export Excel (total/filtered/meta)</button>
   </form>
 {% endif %}

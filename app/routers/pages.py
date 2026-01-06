@@ -8,7 +8,7 @@ router = APIRouter(tags=["pages"])
 
 
 def _normalize_assay(assay: str) -> str:
-    if assay in ("qpcr", "methyl", "as-pcr"):
+    if assay in ("qpcr", "methyl", "as-pcr","manual"):
         return assay
     return "qpcr"
 
@@ -18,6 +18,8 @@ def _assay_to_primer_type(assay: str) -> str:
         return "methyl"
     if assay == "as-pcr":
         return "as-pcr"
+    if assay == "manual":
+        return "manual"
     return "default"
 
 

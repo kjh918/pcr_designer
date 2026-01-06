@@ -482,5 +482,5 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 					amplicons.append(amplicon)
 			else:
 				amplicons.append(amplicon)
-		print(amplicons)
+				
 		return amplicons

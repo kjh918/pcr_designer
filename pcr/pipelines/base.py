@@ -115,7 +115,7 @@ def run_pipeline_from_amplicons(
 
 	total_df = pd.DataFrame(total_rows)
 	filtered_df = pd.DataFrame(filtered_rows)
-
+	total_df.to_csv('temp.csv',sep='\t',index=False)
 
 	if assay == "aspcr":
 		filtered_list = [] 
@@ -163,6 +163,7 @@ def run_pipeline_from_amplicons(
 					id_dict["ALT"]["MM"]["R"],
 				]
 			})
+			#print(temp_df)
 			df.index = temp_df.index
 			temp_df = pd.concat([temp_df, df], axis=1)
 			total_list.append(temp_df)

@@ -60,7 +60,7 @@ qc_params:
 
   # BLAST 필터 기준
   BLAST_IDENTITY_THRESHOLD: 90.0   # %
-  BLAST_LENGTH_THRESHOLD: 10       # 최소 매칭 길이 (nt)
+  BLAST_LENGTH_THRESHOLD: 13       # 최소 매칭 길이 (nt)
   BLAST_MAX_ALIGNMENTS: 50        # 최대 리포트 align 수  
   MIN_AMP_BP: 50
   MAX_AMP_BP: 300

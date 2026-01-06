@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 import traceback
+from datetime import datetime
 
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse
@@ -111,14 +112,6 @@ async def design_qpcr_from_form(
             # amplicon QC filter도 동일 범위로 동기화(혼선 방지)
             "MIN_AMP_BP": common_kwargs.get("min_amplicon_length"),
             "MAX_AMP_BP": common_kwargs.get("max_amplicon_length"),
-
-            # (CommonDesignForm에 QC input 붙이면 여기로 연결)
-            # "HAIRPIN_MIN_DG": f.hairpin_min_dg,
-            # "HOMODIMER_MIN_DG": f.homodimer_min_dg,
-            # "HETERODIMER_MIN_DG": f.heterodimer_min_dg,
-            # "BLAST_IDENTITY_THRESHOLD": f.blast_identity_threshold,
-            # "BLAST_LENGTH_THRESHOLD": f.blast_length_threshold,
-            # "BLAST_MAX_ALIGNMENTS": f.blast_max_alignments,
         }
 
         qc_cfg = build_qc_params_from_web(qc_overrides)
@@ -148,6 +141,7 @@ async def design_qpcr_from_form(
         # 결과 조립
         if f.mode == "single":
             region = regions[0]
+            r = regions[0]
             gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end, name=region.name)
 
             result = run_qpcr(
@@ -167,12 +161,36 @@ async def design_qpcr_from_form(
             filtered_df = result.filtered_df
 
             context["single_result"] = {
-                "region": region,
+                "region": r,
                 "total_count": len(total_df),
                 "filtered_count": len(filtered_df),
             }
             context["single_total_amplicons"] = total_df.to_dict(orient="records")
             context["single_filtered_amplicons"] = filtered_df.to_dict(orient="records")
+            context["export_meta"] = {
+                # ---- 기본 정보 ----
+                "assay": "qpcr",
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+
+                # ---- 입력 정보 ----
+                "reference": f.reference,
+                "region": {
+                    "chrom": r.chrom,
+                    "start": r.start,
+                    "end": r.end,
+                    "name": r.name,
+                },
+                # ---- 결과 요약 ----
+                "total_count": len(total_df),
+                "filtered_count": len(filtered_df),
+
+                # ---- resolved PCR params (재현성 핵심) ----
+                "pcr_params": {
+                    "min_amplicon_length": resolved.min_amplicon_length,
+                    "max_amplicon_length": resolved.max_amplicon_length,
+                    "n_primers": resolved.n_primers,
+                }
+            }
 
         else:
             multi_results: List[Dict[str, Any]] = []
