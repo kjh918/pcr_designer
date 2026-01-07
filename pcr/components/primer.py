@@ -45,11 +45,11 @@ class Primer:
 
 		self.length = len(sequence)
 		# ✅ mismatch primer 대응
-		# if binding_start_index is not None and binding_end_index is not None:
-		#  	  self.start_index = binding_start_index
-		#  	  self.end_index = binding_end_index
-		# else:
-		self.start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
+		if binding_start_index is not None and binding_end_index is not None:
+			self.binding_start_index = binding_start_index
+			self.binding_end_index = binding_end_index
+		else:
+			self.binding_start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
 		
 		self.chrom = chrom
 		self.start = start
@@ -117,8 +117,8 @@ class Primer:
 			start = max(end - seq_len, 0)
 			three_prime_seq = ref[start:end]
 		elif self.strand == "reverse":
-			start = self.start_index
-			end = min(self.start_index + seq_len, len(ref))
+			start = self.binding_start_index
+			end = min(self.binding_start_index + seq_len, len(ref))
 			three_prime_seq = reverse_complement(ref[start:end])
 		else:
 			raise ValueError(f"Unknown strand type: {self.strand}")
@@ -130,12 +130,12 @@ class Primer:
 		n = len(ref)
 
 		if self.strand == "forward":
-			start = max(self.start_index, 0)
+			start = max(self.binding_start_index, 0)
 			end = min(self.end_index + 2, n)
 			return ref[start:end].count("CG")
 
 		if self.strand == "reverse":
-			start = max(self.start_index - 1, 0)
+			start = max(self.binding_start_index - 1, 0)
 			end = min(self.end_index + 1, n)
 			window = reverse_complement(ref[start:end])
 			return window.count("CG")
@@ -146,9 +146,9 @@ class Primer:
 		ref = self.reference_template_sequence if use_reference else self.template_sequence
 
 		if self.strand == "forward":
-			window = ref[self.start_index : self.end_index + 1]
+			window = ref[self.binding_start_index : self.end_index + 1]
 		elif self.strand == "reverse":
-			window = reverse_complement(ref[self.start_index : self.end_index + 1])
+			window = reverse_complement(ref[self.binding_start_index : self.end_index + 1])
 		else:
 			raise ValueError(f"Unknown strand type: {self.strand}")
 
@@ -186,7 +186,7 @@ class Probe(Primer):
 		self.variant = variant
 
 	def covers_variant(self) -> bool:
-		return self.start_index <= self.variant.index <= self.end_index
+		return self.binding_start_index <= self.variant.index <= self.end_index
 
 	def allele_base_at_variant(self, *, use_reference: bool = False) -> str:
 		seq = self.reference_template_sequence if use_reference else self.template_sequence

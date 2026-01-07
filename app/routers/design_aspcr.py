@@ -129,7 +129,7 @@ async def design_aspcr_from_form(
 				forward_min_len=15,
 				mismatch_pos=3,
 				n_primers=resolved.n_primers,
-				n_reverse=resolved.n_primers,
+				n_reverse=100,
 				primer3_global_args=primer3_global_args,
 			)
 

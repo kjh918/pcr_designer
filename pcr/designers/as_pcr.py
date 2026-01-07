@@ -27,6 +27,23 @@ Strand = Literal["forward", "reverse"]
 def _rc(seq: str) -> str:
 	return str(Seq(seq).reverse_complement())
 
+def verify_wt_primer_parsing_match(
+	*,
+	wt_template: str,
+	reference_template: str,
+	left_span: Tuple[int, int],
+	right_span: Tuple[int, int],
+) -> bool:
+	"""
+	wt_template에서 좌표로 파싱한 primer 서열과
+	reference_template에서 동일 좌표로 파싱한 primer 서열이
+	forward/reverse 모두 일치하면 True, 하나라도 다르면 False
+	"""
+	wt = wt_template[left_span[0]:right_span[1]]
+	ref = reference_template[left_span[0]:right_span[1]]
+	#print(wt)
+	#print(ref)
+	return (wt == ref)
 
 def parse_primer_from_template(
 	template_5to3: str,
@@ -93,13 +110,13 @@ def validate_fixed_prime_anchor(
 	  - reverse fixed: RIGHT 3' end must be target_index -> right_end == target_index
 	"""
 	_, l_e = left_span
-	_, r_e = right_span
+	r_s, r_e = right_span
 
 	if fixed_prime == "forward":
 		return l_e == target_index
 	else:
 		# ✅ FIX: right 3' end is right_end (inclusive)
-		return r_e == target_index
+		return r_s == target_index
 
 
 # =============================================================================
@@ -181,7 +198,6 @@ class AsPcrDesigner(BasePrimerDesigner):
 	def _configure_force_anchor(self) -> None:
 		"""
 		Enforce 3' anchor at target_index.
-
 		- forward fixed => force LEFT_END = target_index
 		- reverse fixed => force RIGHT_END = target_index  (✅ 수정: 3' end를 end로 일치)
 		"""
@@ -191,16 +207,19 @@ class AsPcrDesigner(BasePrimerDesigner):
 		self.primer3_seq_args.pop("SEQUENCE_TARGET", None)
 
 		if self.fixed_prime == "forward":
-			self.update_primer3_seq_args({"SEQUENCE_FORCE_LEFT_END": self.target_index})
+			self.update_primer3_seq_args({
+				"SEQUENCE_FORCE_LEFT_END": self.target_index
+				})
 			self.primer3_seq_args.pop("SEQUENCE_FORCE_RIGHT_START", None)
 			self.primer3_seq_args.pop("SEQUENCE_FORCE_RIGHT_END", None)
 		else:
 			# ✅ FIX: right primer 3' end anchor
-			self.update_primer3_seq_args({"SEQUENCE_FORCE_RIGHT_END": self.target_index})
+			self.update_primer3_seq_args({
+				"SEQUENCE_FORCE_RIGHT_END": self.target_index
+				})
 			self.primer3_seq_args.pop("SEQUENCE_FORCE_RIGHT_START", None)
 			self.primer3_seq_args.pop("SEQUENCE_FORCE_LEFT_END", None)
 			self.primer3_seq_args.pop("SEQUENCE_FORCE_LEFT_START", None)
-
 		self.update_primer3_global_args(
 			{
 				"PRIMER_PICK_LEFT_PRIMER": 1,
@@ -216,12 +235,12 @@ class AsPcrDesigner(BasePrimerDesigner):
 		Returns list of AspcrSet (each contains wt/alt/wt_mm/alt_mm amplicons).
 		Also populates self.amplicon_list as a flat list (all amplicons).
 		"""
-		self.reset()
+		#self.reset()
 		self._configure_force_anchor()
 
 		res = primer3.bindings.designPrimers(self.primer3_seq_args, self.primer3_global_args) or {}
 		n_pairs = int(res.get("PRIMER_PAIR_NUM_RETURNED", 0))
-
+		
 		if n_pairs == 0:
 			print(
 				"[Primer3 Explain]",
@@ -251,7 +270,17 @@ class AsPcrDesigner(BasePrimerDesigner):
 				target_index=self.target_index,
 			):
 				continue
-
+							
+			ok = verify_wt_primer_parsing_match(
+				wt_template=self.templates["wt"],
+				reference_template=self.reference_template_sequence,
+				left_span=left_span,
+				right_span=right_span,
+			)
+			if not ok:
+				# 여기서 continue 하거나, 그냥 표시만 하고 진행할지 선택
+				print(f"[WT PARSE MISMATCH] set{i} left={left_span} right={right_span}")
+				continue
 			set_id = f"set{i}"
 			amplicons_by_type: Dict[TemplateType, Amplicon] = {}
 

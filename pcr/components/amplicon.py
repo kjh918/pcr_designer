@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Literal
 
 from pcr.components.primer import Primer
 from pcr.utils import get_start_end_index
-from primer3
+import primer3
 from Bio.SeqUtils import gc_fraction
 #from pcr.seq.fetch import 
 
@@ -43,18 +43,27 @@ class Amplicon:
 		self.allele = allele
 
 		if self.forward_primer is not None:
-			self.forward_start_index, self.forward_end_index = get_start_end_index(
-				self.forward_primer.template_sequence, self.forward_primer.sequence
-			)
+			if self.forward_primer.binding_start_index is not None and self.forward_primer.binding_end_index is not None:
+				self.forward_start_index, self.forward_end_index = self.forward_primer.binding_start_index, self.forward_primer.binding_end_index
+			else:
+				self.forward_start_index, self.forward_end_index = get_start_end_index(
+					self.forward_primer.template_sequence, self.forward_primer.sequence
+				)
 		if self.reverse_primer is not None:
-			self.reverse_start_index, self.reverse_end_index = get_start_end_index(
-				self.reverse_primer.template_sequence, self.reverse_primer.sequence
-			)
+			if self.reverse_primer.binding_start_index is not None and self.reverse_primer.binding_end_index is not None:
+				self.reverse_start_index, self.reverse_end_index = self.reverse_primer.binding_start_index, self.reverse_primer.binding_end_index
+			else:
+				self.reverse_start_index, self.reverse_end_index = get_start_end_index(
+					self.reverse_primer.template_sequence, self.reverse_primer.sequence
+				)
 		if self.probe is not None:		
-			self.probe_start_index, self.probe_end_index = get_start_end_index(
-				self.probe.template_sequence, self.probe.sequence
-			)
-
+			if self.probe.binding_start_index is not None and self.probe.binding_end_index is not None:
+				self.probe_start_index, self.probe_end_index = self.probe.binding_start_index, self.probe.binding_end_index
+			else:
+				self.probe_start_index, self.probe_end_index = get_start_end_index(
+					self.probe.template_sequence, self.probe.sequence
+				)
+			
 		# Amplicon sequence (template 기준)
 		self.amplicon_sequence: Optional[str] = self._calc_amplicon_sequence()
 
@@ -77,24 +86,12 @@ class Amplicon:
 		s = (seq or "").upper()
 		if not s:
 			raise ValueError("Empty sequence for calcTm")
-		return float(primer3.bindings.calcTm(s))
+		return float(primer3.calc_tm(s))
 
 	@staticmethod
 	def _calc_gc_primer3(seq: str) -> float:
 		s = (seq or "").upper()
-		if not s:
-			raise ValueError("Empty sequence for calcGC")
-
-		calc_gc = getattr(primer3.bindings, "calcGC", None)
-		if not callable(calc_gc):
-			raise RuntimeError(
-				"primer3.bindings.calcGC is not available in your primer3-py build. "
-				"Upgrade/replace primer3-py or expose calcGC."
-			)
-
-		val = float(calc_gc(s))
-		# 어떤 빌드는 0-1로 줄 수도 있어서 보정
-		return val * 100.0 if val <= 1.0 else val
+		return gc_fraction(s, ambiguous="ignore") * 100.0
 	# -------------------------
 	# core
 	# -------------------------
