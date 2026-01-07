@@ -61,6 +61,8 @@
 
 /* 시퀀스 색상 */
 .seq-segment {
+  display: inline-block;
+  white-space: nowrap;
   font-family: "Fira Code", monospace;
   font-size: 0.8rem;
   white-space: nowrap;
@@ -87,6 +89,11 @@
 
 /* Probe */
 .seq-probe {
+  color: #1e5ab6;
+  font-weight: 600;
+  background: #e3f0ff;
+}
+.seq-mismatch {
   color: #1e5ab6;
   font-weight: 600;
   background: #e3f0ff;

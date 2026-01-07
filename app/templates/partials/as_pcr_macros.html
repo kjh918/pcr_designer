@@ -5,116 +5,109 @@
   - target / primer 구간 색칠
   - AS-PCR은 forward가 3종(WT/ALT/ALT+MM)이라 primer 영역을 모드별로 바꿔서 칠함
 --------- #}
-{% macro render_colored_template_as(row, mode="wt") %}
-  {% set seq = row.template_sequence %}
-  {% if not seq %}
+{# app/templates/partials/as_pcr_macros.html #}
+
+{% macro render_colored_template_as(row, mode="WT") %}
+  {%- set seq = row.template_sequence -%}
+  {%- if not seq -%}
     -
-  {% else %}
-    {% set length = seq|length %}
+  {%- else -%}
+    {%- set m = mode | upper -%}
+    {%- set f_start = row.forward_binding_start_index -%}
+    {%- set f_end   = row.forward_binding_end_index -%}
+    {%- set r_start = row.reverse_binding_start_index -%}
+    {%- set r_end   = row.reverse_binding_end_index -%}
+    {%- set f_mm_idx = (row.target_start_index - 2) if row.target_start_index is not none else none -%}
+    {%- set r_mm_idx = (row.target_end_index + 2) if row.target_end_index is not none else none -%}
+    
+    {# 출력 범위 설정 #}
+    {%- set d_start = f_start if f_start is not none else 0 -%}
+    {%- set d_end = r_end if r_end is not none else (seq|length - 1) -%}
 
-    {# mode에 따라 forward primer index key 선택 #}
-    {% if mode == "wt" %}
-      {% set f_start = row.wt_forward_start_index if row.wt_forward_start_index is defined else none %}
-      {% set f_end   = row.wt_forward_end_index   if row.wt_forward_end_index is defined else none %}
-    {% elif mode == "alt" %}
-      {% set f_start = row.alt_forward_start_index if row.alt_forward_start_index is defined else none %}
-      {% set f_end   = row.alt_forward_end_index   if row.alt_forward_end_index is defined else none %}
-    {% else %}
-      {% set f_start = row.alt_mm_forward_start_index if row.alt_mm_forward_start_index is defined else none %}
-      {% set f_end   = row.alt_mm_forward_end_index   if row.alt_mm_forward_end_index is defined else none %}
-    {% endif %}
-
-    {# reverse primer index (공통) #}
-    {% set r_start = row.reverse_start_index if row.reverse_start_index is defined else none %}
-    {% set r_end   = row.reverse_end_index   if row.reverse_end_index is defined else none %}
-
-    <span class="seq-segment">
-      {%- for i in range(length) -%}
+    <span class="seq-segment" style="font-family: 'Courier New', monospace; letter-spacing: 0px;">
+      {%- for i in range(d_start, d_end + 1) -%}
         {%- set ch = seq[i] -%}
-
-        {%- if row.target_start_index is not none
-               and row.target_end_index is not none
-               and i >= row.target_start_index
-               and i <= row.target_end_index -%}
+        {%- if m.endswith('MM') and ((f_mm_idx is not none and i == f_mm_idx) or (r_mm_idx is not none and i == r_mm_idx)) -%}
+          <span class="seq-mismatch">{{ ch }}</span>
+        {%- elif row.target_start_index is not none and i >= row.target_start_index and i <= row.target_end_index -%}
           <span class="seq-target">{{ ch }}</span>
-
-        {%- elif f_start is not none and f_end is not none and i >= f_start and i <= f_end -%}
+        {%- elif f_start is not none and i >= f_start and i <= f_end -%}
           <span class="seq-forward">{{ ch }}</span>
-
-        {%- elif r_start is not none and r_end is not none and i >= r_start and i <= r_end -%}
+        {%- elif r_start is not none and i >= r_start and i <= r_end -%}
           <span class="seq-reverse">{{ ch }}</span>
-
         {%- else -%}
-          <span class="seq-normal">{{ ch }}</span>
+          {{ ch }}
         {%- endif -%}
       {%- endfor -%}
     </span>
-  {% endif %}
+  {%- endif -%}
 {% endmacro %}
-
 
 {# ---------
   AS-PCR 카드 렌더러
 --------- #}
 {% macro render_as_pcr_card(region, row) %}
   <div class="amplicon-card">
-    <div class="amplicon-header">
-      ID: {{ row.ID }}
-      {% if row.ASSAY_ID is defined and row.ASSAY_ID %}
-        <span class="len">({{ row.ASSAY_ID }})</span>
-      {% endif %}
-      {% if row.amplicon_length is defined and row.amplicon_length %}
-        <span class="len"> / {{ row.amplicon_length }} bp</span>
-      {% endif %}
-    </div>
+	<div class="amplicon-header">
+	  ID: {{ row.ID }}
+	  {% if row.ASSAY_ID is defined and row.ASSAY_ID %}
+		<span class="len">({{ row.ASSAY_ID }})</span>
+	  {% endif %}
+	  {% if row.amplicon_length is defined and row.amplicon_length %}
+		<span class="len"> / {{ row.amplicon_length }} bp</span>
+	  {% endif %}
+	</div>
 
-    <table class="amplicon-meta">
-      <tr>
-        <th>WT Forward</th>
-        <td class="mono">{{ row.wt_forward_sequence or '-' }}</td>
-      </tr>
-      <tr>
-        <th>ALT Forward</th>
-        <td class="mono">{{ row.alt_forward_sequence or '-' }}</td>
-      </tr>
-      <tr>
-        <th>ALT + Mismatch</th>
-        <td class="mono">{{ row.alt_mismatch_forward_sequence or '-' }}</td>
-      </tr>
-      <tr>
-        <th>Reverse (common)</th>
-        <td class="mono">{{ row.reverse_sequence or '-' }}</td>
-      </tr>
-    </table>
+	<table class="amplicon-meta">
+	  <tr>
+		<th>WT Forward</th>
+		<td class="mono">{{ row.wt_forward_sequence or '-' }}</td>
+	  </tr>
+	  <tr>
+		<th>ALT Forward</th>
+		<td class="mono">{{ row.alt_forward_sequence or '-' }}</td>
+	  </tr>
+	  <tr>
+		<th>ALT + Mismatch</th>
+		<td class="mono">{{ row.alt_mismatch_forward_sequence or '-' }}</td>
+	  </tr>
+	  <tr>
+		<th>Reverse (common)</th>
+		<td class="mono">{{ row.reverse_sequence or '-' }}</td>
+	  </tr>
+	</table>
 
-    <div class="template-view">
-      <strong>Template View</strong>
+	<div class="template-view">
+	  <strong>Template View</strong>
 
-      <div class="as-template-tabs">
-        <div class="as-tlab">WT</div>
-        <div class="template-seq">{{ render_colored_template_as(row, "wt") }}</div>
+	  <div class="as-template-tabs">
+		<div class="as-tlab">WT</div>
+		<div class="template-seq">{{ render_colored_template_as(row, "wt") }}</div>
 
-        <div class="as-tlab">ALT</div>
-        <div class="template-seq">{{ render_colored_template_as(row, "alt") }}</div>
+		<div class="as-tlab">ALT</div>
+		<div class="template-seq">{{ render_colored_template_as(row, "alt") }}</div>
 
-        <div class="as-tlab">ALT+MM</div>
-        <div class="template-seq">{{ render_colored_template_as(row, "altmm") }}</div>
-      </div>
-    </div>
+		<div class="as-tlab">ALT+MM</div>
+		<div class="template-seq">{{ render_colored_template_as(row, "altmm") }}</div>
+	  </div>
+	</div>
   </div>
 {% endmacro %}
 
 
 {% macro render_as_seq_legend() %}
   <div class="legend-box">
-    <div class="legend-item">
-      <span class="seq-target">TARGET</span> : 타깃 영역 (index 기반)
-    </div>
-    <div class="legend-item">
-      <span class="seq-forward">FORWARD</span> : forward primer 영역 (WT/ALT/ALT+MM 모드별)
-    </div>
-    <div class="legend-item">
-      <span class="seq-reverse">REVERSE</span> : reverse primer 영역 (공통)
+	<div class="legend-item">
+	  <span class="seq-target">TARGET</span> : Target sequence (Forward or Reverse primer's 3'end)
+	</div>
+	<div class="legend-item">
+	  <span class="seq-forward">FORWARD</span> : Forward primer sequence 
+	</div>
+	<div class="legend-item">
+	  <span class="seq-reverse">REVERSE</span> : Reverse primer sequence
+	</div>
+	<div class="legend-item">
+        <span class="seq-mismatch">MISMATCH</span> : Artificial Mismatch (-3 position Specificity)
     </div>
   </div>
 {% endmacro %}

@@ -48,6 +48,7 @@ qc_params:
   BLASTN: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastn"
   BLASTDBCMD: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastdbcmd"
   BLASTN_DB: /storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38
+  BLASTN_REF: /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa
 
   PRIMER_MAX_DIFF_TM: 3
   PRIMER_MIN_DIFF_TM: 0

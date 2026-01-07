@@ -1,41 +1,51 @@
 {# app/templates/partials/amplicon_macros.html #}
 {% macro render_colored_template(row) %}
-  {% set seq = row.template_sequence %}
-  {% if not seq %}
-    -
-  {% else %}
-    {% set length = seq|length %}
-    <span class="seq-segment">
-      {%- for i in range(length) -%}
+  {%- set seq = row.template_sequence -%}
+  {%- if not seq -%}-{%- else -%}
+    {%- set f_start = row.forward_binding_start_index if row.forward_binding_start_index is not none else none -%}
+    {%- set f_end   = row.forward_binding_end_index   if row.forward_binding_end_index is not none else none -%}
+    {%- set r_start = row.reverse_binding_start_index if row.reverse_binding_start_index is not none else none -%}
+    {%- set r_end   = row.reverse_binding_end_index   if row.reverse_binding_end_index is not none else none -%}
+    {%- set p_start = row.probe_binding_start_index if (row.probe_binding_start_index is defined and row.probe_binding_start_index is not none) else none -%}
+    {%- set p_end   = row.probe_binding_end_index   if (row.probe_binding_end_index is defined and row.probe_binding_end_index is not none) else none -%}
+    {%- set d_start = f_start if f_start is not none else 0 -%}
+    {%- set d_end = r_end if r_end is not none else (seq|length - 1) -%}
+
+    <span class="seq-segment" style="font-family: 'Courier New', monospace; letter-spacing: 0px;">
+      {%- for i in range(d_start, d_end + 1) -%}
         {%- set ch = seq[i] -%}
-        {%- if row.target_start_index is not none
-               and row.target_end_index is not none
-               and i >= row.target_start_index
-               and i <= row.target_end_index -%}
+        {%- if row.target_start_index is not none and i >= row.target_start_index and i <= row.target_end_index -%}
           <span class="seq-target">{{ ch }}</span>
-        {%- elif row.forward_start_index is not none
-                 and row.forward_end_index is not none
-                 and i >= row.forward_start_index
-                 and i <= row.forward_end_index -%}
+        {%- elif f_start is not none and i >= f_start and i <= f_end -%}
           <span class="seq-forward">{{ ch }}</span>
-        {%- elif row.reverse_start_index is not none
-                 and row.reverse_end_index is not none
-                 and i >= row.reverse_start_index
-                 and i <= row.reverse_end_index -%}
+        {%- elif r_start is not none and i >= r_start and i <= r_end -%}
           <span class="seq-reverse">{{ ch }}</span>
-        {%- elif row.probe_start_index is defined
-                 and row.probe_end_index is defined
-                 and row.probe_start_index is not none
-                 and row.probe_end_index is not none
-                 and i >= row.probe_start_index
-                 and i <= row.probe_end_index -%}
+        {%- elif p_start is not none and i >= p_start and i <= p_end -%}
           <span class="seq-probe">{{ ch }}</span>
         {%- else -%}
-          <span class="seq-normal">{{ ch }}</span>
+          {{ ch }}
         {%- endif -%}
       {%- endfor -%}
     </span>
-  {% endif %}
+  {%- endif -%}
+{% endmacro %}
+
+{# 카드 렌더러와 범례는 기존 구조 유지 #}
+{% macro render_amplicon_card(region, row) %}
+  <div class="amplicon-card">
+    <div class="amplicon-header">
+      ID: {{ row.ID }} <span class="len">({{ row.amplicon_length }} bp)</span>
+    </div>
+    <table class="amplicon-meta">
+      {# ... 기존 테이블 내용 동일 ... #}
+    </table>
+    <div class="template-view">
+      <strong>Template Sequence (Primer to Primer):</strong>
+      <div class="template-seq">
+        {{ render_colored_template(row) }}
+      </div>
+    </div>
+  </div>
 {% endmacro %}
 
 

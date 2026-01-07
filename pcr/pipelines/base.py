@@ -8,7 +8,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from pcr.components import Amplicon
 from pcr.qc.thermo import evaluate_amplicons
-from pcr.qc.blast import apply_blast_qc_to_rows
+#from pcr.qc.blast import apply_blast_qc_to_rows
 from pcr.config.schema.qc import QCParams
 
 
@@ -123,11 +123,10 @@ def run_pipeline_from_amplicons(
 		result_columns = [
 			'ID','FORWARD_ID','REVERSE_ID','QC_PASS','set','type','assay','amplicon_sequence','amplicon_gc','amplicon_tm','amplicon_length',
 			'forward_sequence','forward_length','forward_gc_percent','forward_tm','reverse_sequence','rc_reverse_sequence','reverse_length','reverse_gc_percent','reverse_tm',
+			'forward_binding_start_index','forward_binding_end_index','reverse_binding_start_index','reverse_binding_end_index','target_start_index','target_end_index','template_sequence'
 		]
 		for i in range(0, len(total_df.index),4):
 			temp_df = total_df.iloc[i : i + 4]
-			# print(temp_df)
-			
 			idx = (i // 4) + 1
 			group_id = genomic_id
 			id_dict = {
@@ -163,7 +162,6 @@ def run_pipeline_from_amplicons(
 					id_dict["ALT"]["MM"]["R"],
 				]
 			})
-			#print(temp_df)
 			df.index = temp_df.index
 			temp_df = pd.concat([temp_df, df], axis=1)
 			total_list.append(temp_df)

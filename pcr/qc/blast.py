@@ -1,4 +1,3 @@
-# pcr/qc/blast.py
 from __future__ import annotations
 
 from typing import Dict, Any, List, Tuple, Optional
@@ -16,11 +15,55 @@ _OUTFMT = (
 )
 
 
+# ---------------------------
+# 0) 작은 유틸
+# ---------------------------
+def _revcomp(seq: str) -> str:
+    comp = str.maketrans("ACGTNacgtn", "TGCANtgcan")
+    return seq.translate(comp)[::-1]
+
+
+def hit_strand(hit: BlastHit) -> str:
+    return "+" if hit["sstart"] <= hit["send"] else "-"
+
+
+def hit_subject_interval_1b(hit: BlastHit) -> Tuple[int, int]:
+    s = min(hit["sstart"], hit["send"])
+    e = max(hit["sstart"], hit["send"])
+    return s, e
+
+
+def hit_3p_1b(hit: BlastHit) -> int:
+    s, e = hit_subject_interval_1b(hit)
+    return e if hit_strand(hit) == "+" else s
+
+
+def _fetch_seq_from_fasta(
+    fasta_path: Optional[str],
+    chrom: str,
+    start0: int,
+    end0_excl: int,
+) -> Optional[str]:
+    if not fasta_path:
+        return None
+    try:
+        import pysam  # type: ignore
+    except Exception:
+        return None
+
+    start0 = max(0, int(start0))
+    end0_excl = max(start0, int(end0_excl))
+    try:
+        fa = pysam.FastaFile(str(fasta_path))
+        seq = fa.fetch(chrom, start0, end0_excl)
+        fa.close()
+        seq = (seq or "").upper()
+        return seq if seq else None
+    except Exception:
+        return None
+
+
 def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
-    """
-    BLAST outfmt 6 결과를 파싱하고,
-    qc_params.BLAST_IDENTITY_THRESHOLD / BLAST_LENGTH_THRESHOLD 기준으로 필터링.
-    """
     hits: List[BlastHit] = []
     for line in stdout.strip().splitlines():
         if not line.strip():
@@ -33,6 +76,8 @@ def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
         sseqid = cols[1]
         pident = float(cols[2])
         length = int(cols[3])
+        mismatch = int(cols[4])
+        gapopen = int(cols[5])
         qstart = int(cols[6])
         qend = int(cols[7])
         sstart = int(cols[8])
@@ -42,7 +87,7 @@ def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
         qseq = cols[12]
         sseq = cols[13]
 
-        # ✅ QCParams 기반 필터
+        # ✅ QC 통과(필터링) 조건
         if pident < qc_params.BLAST_IDENTITY_THRESHOLD or length < qc_params.BLAST_LENGTH_THRESHOLD:
             continue
 
@@ -52,6 +97,8 @@ def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
                 "sseqid": sseqid,
                 "pident": pident,
                 "length": length,
+                "mismatch": mismatch,
+                "gapopen": gapopen,
                 "qstart": qstart,
                 "qend": qend,
                 "sstart": sstart,
@@ -63,50 +110,34 @@ def _parse_hits(stdout: str, *, qc_params: QCParams) -> List[BlastHit]:
             }
         )
     return hits
-    
-def run_blast_for_single(
-    name: str,
-    seq: str,
-    db: str,
-    *,
-    qc_params: QCParams,
-) -> List[BlastHit]:
-    """
-    파일 생성 없이 표준 입력(stdin)을 이용한 단일 서열 BLAST.
-    """
+
+
+def run_blast_for_single(name: str, seq: str, db: str, *, qc_params: QCParams) -> List[BlastHit]:
     name = name.strip()
     seq = seq.strip().upper()
-
-    # 1. FASTA 형식의 문자열 생성
     fasta_str = f">{name}\n{seq}\n"
 
-    # 2. BLAST 명령어 구성 (파일 경로 대신 '-'를 입력하여 stdin 사용 명시)
     cmd = [
         str(qc_params.BLASTN),
-        "-task", "blastn-short",  # 프라이머와 같은 짧은 서열에 최적화된 옵션
+        "-task", "blastn-short",
         "-db", db,
-        "-query", "-",            # 핵심: 표준 입력을 쿼리로 사용하도록 설정
+        "-query", "-",
         "-outfmt", _OUTFMT,
         "-num_alignments", str(qc_params.BLAST_MAX_ALIGNMENTS),
     ]
 
-    # 3. subprocess 실행 (input 인자에 fasta_str을 직접 전달)
     try:
         result = subprocess.run(
-            cmd, 
-            input=fasta_str,      # 서열 데이터를 직접 찔러 넣음
-            capture_output=True, 
-            text=True, 
-            check=True            # 에러 발생 시 예외 발생
+            cmd,
+            input=fasta_str,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return _parse_hits(result.stdout, qc_params=qc_params)
-    except subprocess.CalledProcessError as e:
-        # 로그 기록 등의 처리를 추가할 수 있습니다.
-        print(f"BLAST 실행 에러: {e.stderr}")
+    except Exception:
         return []
-    except FileNotFoundError:
-        print(f"BLAST 실행 파일을 찾을 수 없습니다: {qc_params.BLASTN}")
-        return []
+
 
 def run_blast_for_primers(
     f_name: str,
@@ -117,12 +148,8 @@ def run_blast_for_primers(
     *,
     qc_params: QCParams,
 ) -> Dict[str, List[BlastHit]]:
-    """
-    primer pair를 한 번에 BLAST.
-    """
     f_seq = f_seq.strip().upper()
     r_seq = r_seq.strip().upper()
-
     fasta_str = f">{f_name}\n{f_seq}\n>{r_name}\n{r_seq}\n"
 
     with tempfile.TemporaryDirectory() as td:
@@ -151,196 +178,301 @@ def run_blast_for_primers(
         return hits
 
 
-def hit_strand_and_3end(hit: Dict[str, Any]) -> Tuple[str, int]:
-    sstart = hit["sstart"]
-    send = hit["send"]
-    if sstart <= send:
-        return "+", send
-    return "-", sstart
+# ---------------------------
+# 1) QC 통과된 hit들로 FR 페어(amplicon 생성가능) 찾기
+# ---------------------------
+def _is_valid_fr_pair(fh: BlastHit, rh: BlastHit) -> bool:
+    if fh["sseqid"] != rh["sseqid"]:
+        return False
+    fs = hit_strand(fh)
+    rs = hit_strand(rh)
+    if fs == rs:
+        return False
+
+    f3 = hit_3p_1b(fh)
+    r3 = hit_3p_1b(rh)
+
+    if fs == "+" and rs == "-" and f3 < r3:
+        return True
+    if fs == "-" and rs == "+" and r3 < f3:
+        return True
+    return False
 
 
-def hit_strand_and_5end(hit: Dict[str, Any]) -> Tuple[str, int]:
-    sstart = hit["sstart"]
-    send = hit["send"]
-    if sstart <= send:
-        return "+", sstart
-    return "-", send
-
-
-def find_nearby_amplicons(
+# ✅ ADDED: 여러 FR 페어를 "ref window 길이" 기준으로 정렬해서 반환
+def _build_all_fr_pairs(
     f_hits: List[BlastHit],
     r_hits: List[BlastHit],
     *,
     min_bp: int,
     max_bp: int,
-    f_len: Optional[int] = None,
-    r_len: Optional[int] = None,
-) -> Tuple[int, Optional[int], List[str]]:
-    count = 0
-    min_size: Optional[int] = None
-    details: List[str] = []
-
-    if f_len is None or r_len is None:
-        return 0, None, []
-
-    for fh in f_hits:
-        f_chr = fh["sseqid"]
-        f_strand, f_3p = hit_strand_and_3end(fh)
-        _, f_5p = hit_strand_and_5end(fh)
-
-        for rh in r_hits:
-            if rh["sseqid"] != f_chr:
-                continue
-
-            r_strand, r_3p = hit_strand_and_3end(rh)
-
-            if f_strand == r_strand:
-                continue
-
-            valid = False
-            if f_strand == "+" and r_strand == "-" and f_3p < r_3p:
-                valid = True
-            elif f_strand == "-" and r_strand == "+" and r_3p < f_3p:
-                valid = True
-            if not valid:
-                continue
-
-            core_amp = abs(r_3p - f_3p) + 1
-            amp_size = core_amp + f_len + r_len
-
-            if min_bp <= amp_size <= max_bp:
-                count += 1
-                if min_size is None or amp_size < min_size:
-                    min_size = amp_size
-                details.append(
-                    f"FR:{f_chr}:{f_5p}({f_strand})-{r_3p}({r_strand})({amp_size}bp)"
-                )
-
-    return count, min_size, details
-
-
-def find_self_amplicons(
-    hits: List[BlastHit],
-    *,
-    min_bp: int,
-    max_bp: int,
-    primer_len: Optional[int] = None,
-    label: str = "F",
-    primer_name: str = "PRIMER",
-    primer_seq: Optional[str] = None,
-) -> Tuple[int, Optional[int], List[str]]:
-    count = 0
-    min_size: Optional[int] = None
-    details: List[str] = []
-
-    if primer_len is None or primer_seq is None:
-        return 0, None, []
-
-    n = len(hits)
-    for i in range(n):
-        hi = hits[i]
-        chr_i = hi["sseqid"]
-        strand_i, p3_i = hit_strand_and_3end(hi)
-
-        for j in range(i + 1, n):
-            hj = hits[j]
-            if hj["sseqid"] != chr_i:
-                continue
-
-            strand_j, p3_j = hit_strand_and_3end(hj)
-            if strand_i == strand_j:
-                continue
-
-            valid = False
-            if strand_i == "+" and strand_j == "-" and p3_i < p3_j:
-                valid = True
-            elif strand_i == "-" and strand_j == "+" and p3_j < p3_i:
-                valid = True
-            if not valid:
-                continue
-
-            core_amp = abs(p3_j - p3_i) + 1
-            amp_size = core_amp + 2 * primer_len
-
-            if min_bp <= amp_size <= max_bp:
-                count += 1
-                if min_size is None or amp_size < min_size:
-                    min_size = amp_size
-
-                details.append(
-                    f"{label}-SELF:{chr_i}:{p3_i}({strand_i})-{p3_j}({strand_j})({amp_size}bp)"
-                    f"|pident={hi['pident']:.1f}/{hj['pident']:.1f}"
-                    f"|qseq={hi['qseq']}"
-                    f"|sseq_i={hi['sseq']}"
-                    f"|sseq_j={hj['sseq']}"
-                )
-
-    return count, min_size, details
-
-
-def probe_in_any_amplicon(
-    f_hits: List[BlastHit],
-    r_hits: List[BlastHit],
-    p_hits: List[BlastHit],
-    *,
-    min_bp: int,
-    max_bp: int,
-    f_len: Optional[int] = None,
-    r_len: Optional[int] = None,
-    p_len: Optional[int] = None,
-) -> Tuple[bool, List[str]]:
-    if not p_hits or f_len is None or r_len is None or p_len is None:
-        return False, []
-
-    details: List[str] = []
-    found = False
+    f_len: int,
+    r_len: int,
+    max_pairs: int = 50,
+) -> List[Tuple[BlastHit, BlastHit, int]]:
+    """
+    return: [(fh, rh, ref_len), ...] sorted by ref_len asc
+    """
+    pairs: List[Tuple[BlastHit, BlastHit, int]] = []
 
     for fh in f_hits:
-        f_chr = fh["sseqid"]
-        f_strand, f_5p = hit_strand_and_5end(fh)
-        f_start = min(fh["sstart"], fh["send"])
-        f_end = max(fh["sstart"], fh["send"])
-
         for rh in r_hits:
-            if rh["sseqid"] != f_chr:
+            if not _is_valid_fr_pair(fh, rh):
                 continue
 
-            r_strand, r_5p = hit_strand_and_5end(rh)
-            r_start = min(rh["sstart"], rh["send"])
-            r_end = max(rh["sstart"], rh["send"])
+            f3 = hit_3p_1b(fh)
+            r3 = hit_3p_1b(rh)
+            fs = hit_strand(fh)
+            rs = hit_strand(rh)
 
-            if f_strand == r_strand:
+            # forward full span (1-based inclusive)
+            if fs == "+":
+                f_full_s = f3 - f_len + 1
+                f_full_e = f3
+            else:
+                f_full_s = f3
+                f_full_e = f3 + f_len - 1
+
+            # reverse full span
+            if rs == "+":
+                r_full_s = r3 - r_len + 1
+                r_full_e = r3
+            else:
+                r_full_s = r3
+                r_full_e = r3 + r_len - 1
+
+            ref_s = min(f_full_s, r_full_s)
+            ref_e = max(f_full_e, r_full_e)
+            ref_len = ref_e - ref_s + 1
+
+            if not (min_bp <= ref_len <= max_bp):
                 continue
 
-            valid = False
-            if f_strand == "+" and r_strand == "-" and f_5p < r_5p:
-                valid = True
-            elif f_strand == "-" and r_strand == "+" and r_5p < f_5p:
-                valid = True
-            if not valid:
+            pairs.append((fh, rh, ref_len))
+
+    pairs.sort(key=lambda x: x[2])
+    return pairs[:max_pairs]
+
+
+# ---------------------------
+# 2) reference sequence 만들기 (primer 길이 고려)
+# ---------------------------
+def _build_reference_window(
+    *,
+    chrom: str,
+    fh: BlastHit,
+    rh: BlastHit,
+    f_seq: str,
+    r_seq: str,
+) -> Dict[str, Any]:
+    f_len = len(f_seq)
+    r_len = len(r_seq)
+
+    f3 = hit_3p_1b(fh)
+    r3 = hit_3p_1b(rh)
+    fs = hit_strand(fh)
+    rs = hit_strand(rh)
+
+    if fs == "+":
+        f_full_s = f3 - f_len + 1
+        f_full_e = f3
+    else:
+        f_full_s = f3
+        f_full_e = f3 + f_len - 1
+
+    if rs == "+":
+        r_full_s = r3 - r_len + 1
+        r_full_e = r3
+    else:
+        r_full_s = r3
+        r_full_e = r3 + r_len - 1
+
+    ref_s = min(f_full_s, r_full_s)
+    ref_e = max(f_full_e, r_full_e)
+
+    return {
+        "chrom": chrom,
+        "reference_start_1b": ref_s,
+        "reference_end_1b": ref_e,
+        "forward_full_bind_1b": (f_full_s, f_full_e),
+        "reverse_full_bind_1b": (r_full_s, r_full_e),
+    }
+
+
+# ---------------------------
+# 3) reference 기준으로 amplicon(사이 영역) + mismatch index 만들기
+# ---------------------------
+def _compare_primer_to_reference(
+    *,
+    reference_seq: str,
+    reference_start_1b: int,
+    primer_seq: str,
+    primer_strand: str,
+    full_bind_1b: Tuple[int, int],
+    hit: BlastHit,
+) -> Dict[str, Any]:
+    primer_seq = primer_seq.upper()
+    L = len(primer_seq)
+
+    b_s, b_e = full_bind_1b
+    s0 = b_s - reference_start_1b
+    e0_excl = (b_e - reference_start_1b) + 1
+    ref_bind = reference_seq[s0:e0_excl]
+
+    ref_for_compare = _revcomp(ref_bind) if primer_strand == "-" else ref_bind
+
+    mm_primer_idx: List[int] = []
+    mm_detail: List[Dict[str, Any]] = []
+
+    for i in range(min(L, len(ref_for_compare))):
+        if primer_seq[i] != ref_for_compare[i]:
+            mm_primer_idx.append(i)
+            ref_i0 = (s0 + i) if primer_strand == "+" else ((e0_excl - 1) - i)
+            mm_detail.append({
+                "primer_i0": i,
+                "ref_i0": ref_i0,
+                "ref_pos_1b": reference_start_1b + ref_i0,
+                "primer_base": primer_seq[i],
+                "ref_base": reference_seq[ref_i0],
+            })
+
+    qstart = int(hit.get("qstart", 1))
+    qend = int(hit.get("qend", 0))
+    qstart = max(1, min(L, qstart))
+    qend = max(0, min(L, qend))
+
+    unmatched_5p = list(range(0, max(0, qstart - 1)))
+    unmatched_3p = list(range(min(L, qend), L))  # ✅ 말단
+
+    mismatch_all = sorted(set(mm_primer_idx + unmatched_5p + unmatched_3p))
+
+    return {
+        "primer_seq": primer_seq,
+        "strand": primer_strand,
+        "full_bind_1b": {"start": b_s, "end": b_e},
+        "ref_bind_seq": ref_bind,
+        "qstart": qstart,
+        "qend": qend,
+        "unmatched_5p_indices": unmatched_5p,
+        "unmatched_3p_indices": unmatched_3p,
+        "mismatch_aligned_indices": sorted(set(mm_primer_idx)),
+        "mismatch_all_indices": mismatch_all,
+        "mismatch_detail": mm_detail,
+    }
+
+
+# ✅ ADDED: 단일 (fh,rh)로부터 "amplicon 후보 1개" 결과 dict 생성
+def _build_one_amplicon_result(
+    *,
+    fh: BlastHit,
+    rh: BlastHit,
+    f_seq: str,
+    r_seq: str,
+    fasta_path: str,
+    qc_params: QCParams,
+    db: str,
+    probe_name: Optional[str],
+    probe_seq: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    chrom = fh["sseqid"]
+
+    ref_meta = _build_reference_window(
+        chrom=chrom,
+        fh=fh,
+        rh=rh,
+        f_seq=f_seq,
+        r_seq=r_seq,
+    )
+    ref_s = int(ref_meta["reference_start_1b"])
+    ref_e = int(ref_meta["reference_end_1b"])
+
+    reference_seq = _fetch_seq_from_fasta(fasta_path, chrom, ref_s - 1, ref_e)
+    if not reference_seq:
+        return None
+
+    # inner amplicon (3'~3')
+    f3 = hit_3p_1b(fh)
+    r3 = hit_3p_1b(rh)
+
+    if hit_strand(fh) == "+" and hit_strand(rh) == "-":
+        amp_s = f3 + 1
+        amp_e = r3 - 1
+    else:
+        amp_s = r3 + 1
+        amp_e = f3 - 1
+
+    if amp_s > amp_e:
+        amplicon_seq = ""
+        amplicon_len = 0
+    else:
+        s0 = amp_s - ref_s
+        e0_excl = (amp_e - ref_s) + 1
+        amplicon_seq = reference_seq[s0:e0_excl]
+        amplicon_len = len(amplicon_seq)
+
+    f_cmp = _compare_primer_to_reference(
+        reference_seq=reference_seq,
+        reference_start_1b=ref_s,
+        primer_seq=f_seq,
+        primer_strand=hit_strand(fh),
+        full_bind_1b=tuple(ref_meta["forward_full_bind_1b"]),
+        hit=fh,
+    )
+    r_cmp = _compare_primer_to_reference(
+        reference_seq=reference_seq,
+        reference_start_1b=ref_s,
+        primer_seq=r_seq,
+        primer_strand=hit_strand(rh),
+        full_bind_1b=tuple(ref_meta["reverse_full_bind_1b"]),
+        hit=rh,
+    )
+
+    # probe in inner amplicon?
+    probe_in_amp = None
+    if probe_seq:
+        probe_in_amp = False
+        p_hits = run_blast_for_single(probe_name or "PROBE", probe_seq, db, qc_params=qc_params)
+        for ph in p_hits:
+            if ph["sseqid"] != chrom:
                 continue
+            ps, pe = hit_subject_interval_1b(ph)
+            if amp_s <= ps and pe <= amp_e:
+                probe_in_amp = True
+                break
 
-            core_amp = abs(r_5p - f_5p) + 1
-            amp_size = core_amp + f_len + r_len
-            if not (min_bp <= amp_size <= max_bp):
-                continue
+    # PASS: probe 조건만 기본 반영(원하면 mismatch 조건도 여기 추가)
+    PASS = True
+    if probe_seq and probe_in_amp is not True:
+        PASS = False
 
-            amp_start = min(f_start, r_start)
-            amp_end = max(f_end, r_end)
-
-            for ph in p_hits:
-                if ph["sseqid"] != f_chr:
-                    continue
-                p_start = min(ph["sstart"], ph["send"])
-                p_end = max(ph["sstart"], ph["send"])
-
-                if amp_start <= p_start and p_end <= amp_end:
-                    found = True
-                    details.append(
-                        f"PROBE_IN_FR:{f_chr}:{amp_start}-{amp_end}|probe:{p_start}-{p_end}"
-                    )
-
-    return found, details
+    return {
+        "PASS": PASS,
+        "genomic": {
+            "chrom": chrom,
+            "forward_hit_interval_1b": {"start": hit_subject_interval_1b(fh)[0], "end": hit_subject_interval_1b(fh)[1]},
+            "reverse_hit_interval_1b": {"start": hit_subject_interval_1b(rh)[0], "end": hit_subject_interval_1b(rh)[1]},
+            "forward_strand": hit_strand(fh),
+            "reverse_strand": hit_strand(rh),
+        },
+        "reference": {
+            "start_1b": ref_s,
+            "end_1b": ref_e,
+            "seq": reference_seq,
+            "forward_full_bind_1b": {"start": ref_meta["forward_full_bind_1b"][0], "end": ref_meta["forward_full_bind_1b"][1]},
+            "reverse_full_bind_1b": {"start": ref_meta["reverse_full_bind_1b"][0], "end": ref_meta["reverse_full_bind_1b"][1]},
+        },
+        "amplicon": {
+            "start_1b": amp_s,
+            "end_1b": amp_e,
+            "length_bp": amplicon_len,
+            "seq": amplicon_seq,
+        },
+        "binding": {
+            "forward": f_cmp,
+            "reverse": r_cmp,
+            "probe_in_amplicon": probe_in_amp if probe_seq else None,
+        },
+    }
 
 
 def blast_qc_for_primer_pair(
@@ -350,219 +482,71 @@ def blast_qc_for_primer_pair(
     r_seq: str,
     db: str,
     *,
+    fasta: str,
     qc_params: QCParams,
     probe_name: Optional[str] = None,
     probe_seq: Optional[str] = None,
+    max_amplicons: int = 20,  # ✅ ADDED: 생성 후보 제한
 ) -> Dict[str, Any]:
     """
-    return dict 키는 기존 웹 템플릿/라우터 호환 유지:
-      - f_hits, r_hits, nearby_count, min_amplicon_size, amplicon_details,
-        qc_blast_hit, qc_blast_amplicon, qc_probe_in_amplicon, probe_in_amplicon, blast_error
+    ✅ CHANGED: 여러 amplicon 후보를 만들어서 반환
+      - result["amplicons"] = [amplicon_result1, amplicon_result2, ...]
+      - PASS = 후보 중 PASS=True 가 하나라도 있으면 True
+      - filtered_amplicons = PASS=True 인 것만
     """
     f_seq = f_seq.strip().upper()
     r_seq = r_seq.strip().upper()
     probe_seq = probe_seq.strip().upper() if probe_seq else None
 
-    # + 포함 시(수정염기 등) BLAST 스킵 처리(원 로직 유지)
     if "+" in f_seq or "+" in r_seq:
-        return {
-            "f_hits": 0,
-            "r_hits": 0,
-            "nearby_count": 0,
-            "min_amplicon_size": None,
-            "amplicon_details": [],
-            "qc_blast_hit": "X",
-            "qc_blast_amplicon": "X",
-            "qc_probe_in_amplicon": "-" if probe_seq is None else "X",
-            "probe_in_amplicon": False,
-            "blast_error": False,
-        }
+        return {"blast_error": False, "PASS": False, "result": {"amplicons": [], "filtered_amplicons": []}}
 
-    blast_error = False
-    f_hits = r_hits = -1
-    nearby_count = -1
-    min_amp_size: Optional[int] = None
-    amp_details: List[str] = []
-    probe_in_amp = False
-    probe_amp_details: List[str] = []
-
-    min_bp = qc_params.MIN_AMP_BP
-    max_bp = qc_params.MAX_AMP_BP
+    fasta_path = str(fasta[0]) if isinstance(fasta, (tuple, list)) else str(fasta)
 
     try:
         blast_hits = run_blast_for_primers(f_name, f_seq, r_name, r_seq, db, qc_params=qc_params)
-        f_hits_list = blast_hits.get(f_name, [])
-        r_hits_list = blast_hits.get(r_name, [])
+        f_hits = blast_hits.get(f_name, [])
+        r_hits = blast_hits.get(r_name, [])
 
-        f_hits = len(f_hits_list)
-        r_hits = len(r_hits_list)
-
-        c_FR, min_FR, det_FR = find_nearby_amplicons(
-            f_hits_list,
-            r_hits_list,
-            min_bp=min_bp,
-            max_bp=max_bp,
+        # ✅ ADDED: 가능한 FR 페어들을 모두 구성
+        pairs = _build_all_fr_pairs(
+            f_hits,
+            r_hits,
+            min_bp=qc_params.MIN_AMP_BP,
+            max_bp=qc_params.MAX_AMP_BP,
             f_len=len(f_seq),
             r_len=len(r_seq),
+            max_pairs=max_amplicons,
         )
 
-        c_FF, min_FF, det_FF = find_self_amplicons(
-            f_hits_list,
-            min_bp=min_bp,
-            max_bp=max_bp,
-            primer_len=len(f_seq),
-            label="F",
-            primer_name=f_name,
-            primer_seq=f_seq,
-        )
-
-        c_RR, min_RR, det_RR = find_self_amplicons(
-            r_hits_list,
-            min_bp=min_bp,
-            max_bp=max_bp,
-            primer_len=len(r_seq),
-            label="R",
-            primer_name=r_name,
-            primer_seq=r_seq,
-        )
-
-        nearby_count = c_FR + c_FF + c_RR
-        mins = [x for x in [min_FR, min_FF, min_RR] if x is not None]
-        min_amp_size = min(mins) if mins else None
-        amp_details = det_FR + det_FF + det_RR
-
-        if probe_seq:
-            pname = probe_name or "PROBE"
-            p_hits_list = run_blast_for_single(pname, probe_seq, db, qc_params=qc_params)
-            probe_in_amp, probe_amp_details = probe_in_any_amplicon(
-                f_hits_list,
-                r_hits_list,
-                p_hits_list,
-                min_bp=min_bp,
-                max_bp=max_bp,
-                f_len=len(f_seq),
-                r_len=len(r_seq),
-                p_len=len(probe_seq),
+        amplicons: List[Dict[str, Any]] = []
+        for fh, rh, _ref_len in pairs:
+            one = _build_one_amplicon_result(
+                fh=fh,
+                rh=rh,
+                f_seq=f_seq,
+                r_seq=r_seq,
+                fasta_path=fasta_path,
+                qc_params=qc_params,
+                db=db,
+                probe_name=probe_name,
+                probe_seq=probe_seq,
             )
+            if one is not None:
+                amplicons.append(one)
 
-    except Exception:
-        blast_error = True
+        filtered = [a for a in amplicons if a.get("PASS") is True]
+        PASS = len(filtered) > 0
 
-    if blast_error:
-        qc_blast_hit = "X"
-        qc_blast_amplicon = "X"
-        qc_probe_in_amplicon = "X" if probe_seq else "-"
-    else:
-        # ✅ 기존 BlastQCConfig.max_hits 대체: qc_params.BLAST_MAX_ALIGNMENTS를 기준으로 동일하게 사용
-        # (원래 의미가 "리포트 align 수"이긴 한데, 기존 코드의 max_hits 용도로 쓰고 있었다면 일단 동일값 사용)
-        max_hits = qc_params.BLAST_MAX_ALIGNMENTS
+        return {
+            "blast_error": False,
+            "PASS": PASS,
+            "result": {
+                "amplicons": amplicons,
+                "filtered_amplicons": filtered,  # ✅ QC 진행은 이걸로 하면 됨
+            },
+        }
 
-        qc_blast_hit = "O" if (f_hits <= max_hits and r_hits <= max_hits) else "X"
-        qc_blast_amplicon = "O" if nearby_count <= 1 else "X"
-        qc_probe_in_amplicon = ("O" if probe_in_amp else "X") if probe_seq else "-"
-
-    all_amp_details = amp_details + probe_amp_details
-
-    return {
-        "f_hits": f_hits,
-        "r_hits": r_hits,
-        "nearby_count": nearby_count,
-        "min_amplicon_size": min_amp_size,
-        "amplicon_details": all_amp_details,
-        "qc_blast_hit": qc_blast_hit,
-        "qc_blast_amplicon": qc_blast_amplicon,
-        "qc_probe_in_amplicon": qc_probe_in_amplicon,
-        "probe_in_amplicon": probe_in_amp,
-        "blast_error": blast_error,
-    }
-
-def apply_blast_qc_to_rows(
-    genomic_id: str,
-    rows: List[Dict[str, Any]],
-    *,
-    db: str,
-    qc_params: QCParams,
-    include_probe: bool = True,
-    fail_closed: bool = True,   # BLAST 에러 시 fail 처리 (안전)
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    rows(list[dict])에 BLAST QC 결과를 붙여서:
-      - total_enriched: 전체 rows + BLAST 결과 컬럼
-      - filtered: BLAST QC까지 통과한 rows
-
-    BLAST QC PASS 조건(네 blast_qc_for_primer_pair 반환 기반):
-      - qc_blast_hit == 'O'
-      - qc_blast_amplicon == 'O'
-      - probe 있으면 qc_probe_in_amplicon == 'O' (없으면 '-' 허용)
-      - blast_error == False
-    """
-    total_enriched: List[Dict[str, Any]] = []
-    filtered: List[Dict[str, Any]] = []
-
-    for i, row in enumerate(rows, start=1):
-        # 원본 보호 원하면 copy(); 여기선 inplace 피하려고 copy()
-        a = dict(row)
-
-        f_seq = a.get("forward_sequence") or a.get("forward_seq")
-        r_seq = a.get("reverse_sequence") or a.get("reverse_seq")
-        p_seq = a.get("probe_sequence") or a.get("probe_seq")
-
-        # 이름 없으면 자동 생성 (primer pair 별로 구분되게 i 사용)
-        f_name = a.get("forward_name") or f"{genomic_id}_F_{i}"
-        r_name = a.get("reverse_name") or f"{genomic_id}_R_{i}"
-        p_name = a.get("probe_name") or f"{genomic_id}_P_{i}"
-
-        # 기본값(에러/결측 안전)
-        a.setdefault("blast_error", False)
-        a.setdefault("qc_blast_hit", "X")
-        a.setdefault("qc_blast_amplicon", "X")
-        a.setdefault("qc_probe_in_amplicon", "-" if not p_seq else "X")
-        a.setdefault("nearby_count", -1)
-        a.setdefault("min_amplicon_size", None)
-        a.setdefault("f_hits", -1)
-        a.setdefault("r_hits", -1)
-        a.setdefault("amplicon_details", [])
-
-        if not f_seq or not r_seq:
-            # forward/reverse 없으면 BLAST 자체가 불가
-            a["blast_error"] = True
-            a["qc_blast_hit"] = "X"
-            a["qc_blast_amplicon"] = "X"
-            a["qc_probe_in_amplicon"] = "X" if (include_probe and p_seq) else "-"
-        else:
-            try:
-                res = blast_qc_for_primer_pair(
-                    f_name=f_name,
-                    f_seq=str(f_seq),
-                    r_name=r_name,
-                    r_seq=str(r_seq),
-                    db=db,
-                    qc_params=qc_params,
-                    probe_name=p_name if (include_probe and p_seq) else None,
-                    probe_seq=str(p_seq) if (include_probe and p_seq) else None,
-                )
-                print(res)
-                # 반환 키 그대로 merge
-                a.update(res)
-            except Exception:
-                a["blast_error"] = True
-                if fail_closed:
-                    a["qc_blast_hit"] = "X"
-                    a["qc_blast_amplicon"] = "X"
-                    a["qc_probe_in_amplicon"] = "X" if (include_probe and p_seq) else "-"
-
-        # ---- BLAST PASS 판정 ----
-        probe_ok = (a.get("qc_probe_in_amplicon") in ("O", "-"))
-        blast_pass = (
-            (a.get("blast_error") is False)
-            and (a.get("qc_blast_hit") == "O")
-            and (a.get("qc_blast_amplicon") == "O")
-            and probe_ok
-        )
-        a["BLAST_PASS"] = "O" if blast_pass else "X"
-
-        total_enriched.append(a)
-        if blast_pass:
-            filtered.append(a)
-
-    return total_enriched, filtered
+    except Exception as e:
+        print(f"[blast_qc_for_primer_pair] error: {e}")
+        return {"blast_error": True, "PASS": False, "result": {"amplicons": [], "filtered_amplicons": []}}

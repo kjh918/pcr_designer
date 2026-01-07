@@ -1,113 +1,140 @@
 {# app/templates/partials/results_single_as_pcr.html #}
 {% from "partials/as_pcr_macros.html" import
   render_as_pcr_card,
-  render_as_seq_legend
+  render_as_seq_legend,
+  render_colored_template_as
 %}
+<style>
+  /* 전체 테이블 컨테이너 *//* 매크로 내부에서 인라인으로 넣었지만, CSS로 관리하면 더 깔끔합니다 */
+  .assay-container {
+    margin-bottom: 30px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 12px; /* 글씨 크기 축소 */
+  }
 
-{% if single_result %}
-  <hr>
-  <h2>Single Region Result (AS-PCR)</h2>
+  /* 상태바 (QC Status Bar) */
+  .status-bar {
+    height: 8px;
+    width: 100%;
+  }
+  .status-pass { background-color: #28a745; } /* 통과: 초록색 */
+  .status-fail { background-color: #dc3545; } /* 실패: 빨간색 */
 
-  <p class="single-region-summary">
-    Region:
-    {{ single_result.region.chrom }}:
-    {{ single_result.region.start }}-{{ single_result.region.end }}
-    (총 {{ single_result.total_count }}개, QC 통과 {{ single_result.filtered_count }}개)
-  </p>
-{% endif %}
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .as-pcr-table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap; /* 줄바꿈 방지 */
+  }
+
+  .as-pcr-table th {
+    background-color: #f1f3f5;
+    padding: 8px 10px;
+    border: 1px solid #dee2e6;
+    font-weight: 700;
+  }
+
+  .as-pcr-table td {
+    padding: 6px 10px;
+    border: 1px solid #eee;
+    vertical-align: middle;
+  }
+
+  /* 폰트 스타일 */
+  .seq-font { font-family: 'Courier New', monospace; font-size: 11px; }
+  .qc-pass { color: #28a745; font-weight: bold; }
+  .qc-fail { color: #dc3545; font-weight: bold; }
+
+  /* 특정 컬럼 너비 제한 (서열이 너무 길 경우 대비) */
+  .full-seq-col { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+</style>
 
 {% if single_filtered_amplicons %}
-  <h3>QC 통과 Assays (Top 5)</h3>
+  <h3>🧬 QC Passed AS-PCR Candidates (Top 5 Sets)</h3>
 
-  <div class="amplicon-list">
-    {% for row in single_filtered_amplicons[:5] %}
-      {{ render_as_pcr_card(single_result.region, row) }}
+  {% for assay_group in single_filtered_amplicons[:20] | batch(4) %}
+    <div class="assay-container">
+      {# Assay Header #}
+      {% set base = assay_group[0] %}
+      <div style="background: #343a40; color: white; padding: 10px 20px; display: flex; justify-content: space-between;">
+        <span><strong>Primer ID:</strong> {{ base.ID }}</span>
+        <span><strong>Region:</strong> {{ base.region_name if base.region_name else '-' }}</span>
+      </div>
 
-      {# ============================
-         ✅ FIX: template(wt/alt/wt_mm/alt_mm)별 정보 출력
-         - row 안에 아래 중 하나가 들어있는 경우를 모두 커버:
-           1) row.amplicons (AspcrSet 스타일)
-           2) row.templates / row.template_map
-           3) row.wt / row.alt / row.wt_mm / row.alt_mm (개별 키)
-         ============================ #}
+      <div class="table-responsive">
+        <table class="as-pcr-table">
+          <thead>
+            <tr>
+              <th rowspan="2">Type</th>
+              <th colspan="4">Forward Primer</th>
+              <th colspan="4">Reverse Primer</th>
+              <th rowspan="2">Template View (Primer Highlighted)</th>
+            </tr>
+            <tr>
+              <th>Sequence</th>
+              <th>Len</th>
+              <th>Tm</th>
+              <th>GC%</th>
+              <th>Sequence</th>
+              <th>Len</th>
+              <th>Tm</th>
+              <th>GC%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in assay_group %}
+              {# 타입에 따른 라벨 및 색상 설정 #}
+              {% set idx = loop.index0 %}
+              {% set type_name = ['WT', 'ALT', 'WT_MM', 'ALT_MM'][idx] %}
+              {% set badge_cls = 'bg-wt' if idx == 0 else ('bg-alt' if idx == 1 else 'bg-mm') %}
+              
+              <tr>
+                <td style="text-align: center;">
+                  <span class="badge-type {{ badge_cls }}">{{ type_name }}</span>
+                </td>
+                
+                {# Forward Info #}
+                <td class="seq-font" style="color: #d63384;">{{ row.forward_sequence or '-' }}</td>
+                <td class="metric-cell">{{ row.forward_len or (row.forward_sequence|length if row.forward_sequence else '-') }}</td>
+                <td class="metric-cell">{{ row.forward_tm|round(1) if row.forward_tm else '-' }}°C</td>
+                <td class="metric-cell">{{ row.forward_gc_percent|round(1) if row.forward_gc_percent else '-' }}%</td>
 
-      {# ✅ FIX-1: AspcrSet 스타일 (row.amplicons['wt']... ) #}
-      {% if row.amplicons is defined %}
-        <div class="card subcard" style="margin-top:10px;">
-          <div class="section-title">Template별 Amplicon (wt/alt/wt_mm/alt_mm)</div>
+                {# Reverse Info (공통일 경우 동일하게 출력) #}
+                <td class="seq-font" style="color: #0d6efd;">{{ row.reverse_sequence or '-' }}</td>
+                <td class="metric-cell">{{ row.reverse_len or (row.reverse_sequence|length if row.reverse_sequence else '-') }}</td>
+                <td class="metric-cell">{{ row.reverse_tm|round(1) if row.reverse_tm else '-' }}°C</td>
+                <td class="metric-cell">{{ row.reverse_gc_percent|round(1) if row.reverse_gc_percent else '-' }}%</td>
 
-          {% for t in ['wt', 'alt', 'wt_mm', 'alt_mm'] %}
-            {% set a = row.amplicons.get(t) %}
-            {% if a %}
-              <div class="kv" style="margin-top:6px;">
-                <div><b>{{ t }}</b></div>
-                {% if a.forward_primer is defined %}
-                  <div>F: <code>{{ a.forward_primer.sequence }}</code></div>
-                {% endif %}
-                {% if a.reverse_primer is defined %}
-                  <div>R: <code>{{ a.reverse_primer.sequence }}</code></div>
-                {% endif %}
-                {% if a.amplicon_sequence is defined %}
-                  <div>Amplicon ({{ a.amplicon_length if a.amplicon_length is defined else (a.amplicon_sequence|length) }} bp):
-                    <code style="word-break:break-all;">{{ a.amplicon_sequence }}</code>
-                  </div>
-                {% endif %}
-              </div>
-            {% endif %}
-          {% endfor %}
-        </div>
-
-      {# ✅ FIX-2: row.templates 같은 맵이 있는 경우 (서열만이라도 출력) #}
-      {% elif row.templates is defined or row.template_map is defined %}
-        {% set tm = row.templates if row.templates is defined else row.template_map %}
-        <div class="card subcard" style="margin-top:10px;">
-          <div class="section-title">Template별 서열</div>
-          {% for t in ['wt', 'alt', 'wt_mm', 'alt_mm'] %}
-            {% if tm.get(t) %}
-              <div style="margin-top:6px;">
-                <b>{{ t }}</b>:
-                <code style="word-break:break-all;">{{ tm.get(t) }}</code>
-              </div>
-            {% endif %}
-          {% endfor %}
-        </div>
-
-      {# ✅ FIX-3: row에 개별 키로 박혀있는 경우 #}
-      {% elif row.wt is defined or row.alt is defined or row.wt_mm is defined or row.alt_mm is defined %}
-        <div class="card subcard" style="margin-top:10px;">
-          <div class="section-title">Template별 값</div>
-
-          {% if row.wt is defined %}
-            <div style="margin-top:6px;"><b>wt</b>: <code style="word-break:break-all;">{{ row.wt }}</code></div>
-          {% endif %}
-          {% if row.alt is defined %}
-            <div style="margin-top:6px;"><b>alt</b>: <code style="word-break:break-all;">{{ row.alt }}</code></div>
-          {% endif %}
-          {% if row.wt_mm is defined %}
-            <div style="margin-top:6px;"><b>wt_mm</b>: <code style="word-break:break-all;">{{ row.wt_mm }}</code></div>
-          {% endif %}
-          {% if row.alt_mm is defined %}
-            <div style="margin-top:6px;"><b>alt_mm</b>: <code style="word-break:break-all;">{{ row.alt_mm }}</code></div>
-          {% endif %}
-        </div>
-      {% endif %}
-
-    {% endfor %}
-  </div>
+                {# Template View - 매크로 사용 #}
+                <td class="seq-font">
+                  {{ render_colored_template_as(row, type_name|lower) }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
 
   {{ render_as_seq_legend() }}
 {% endif %}
 
 {% if single_total_amplicons and single_filtered_amplicons %}
   <form method="post" action="/export/excel" class="export-form">
-    <input type="hidden" name="kind" value="as_pcr_single">
+    <input type="hidden" name="kind" value="qpcr_single">
 
     <textarea name="total_json" style="display:none;">
-      {{ single_total_amplicons | tojson }}
-    </textarea>
-
+		{{ single_total_amplicons | tojson }}
+	</textarea>
     <textarea name="filtered_json" style="display:none;">
-      {{ single_filtered_amplicons | tojson }}
+      {{ (single_filtered_amplicons or []) | tojson }}
     </textarea>
 
     {# meta는 context에 있으면 같이 보내고, 없으면 빼도 됨 #}

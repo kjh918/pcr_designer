@@ -70,7 +70,6 @@ async def design_aspcr_from_form(
 		regions = await parse_regions_from_form(f)
 		if not regions:
 			raise HTTPException(status_code=400, detail="입력 region이 없습니다.")
-		print(regions)
 		# 공통 kwargs
 		common_kwargs = build_common_kwargs(f)
 
@@ -135,7 +134,6 @@ async def design_aspcr_from_form(
 
 			total_df = result.total_df
 			filtered_df = result.filtered_df
-			
 			context["single_result"] = {
 				"region": r,
 				"total_count": len(total_df),

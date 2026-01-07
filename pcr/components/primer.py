@@ -29,7 +29,6 @@ class Primer:
 		# ✅ 추가: mismatch primer는 템플릿에서 검색이 안되므로 바인딩 좌표를 직접 주입
 		binding_start_index: Optional[int] = None,
 		binding_end_index: Optional[int] = None,
-		# ... (salt/dntp/dna_conc 동일)
 		salt_monovalent_conc: float = 50.0,
 		salt_divalent_conc: float = 1.5,
 		dntp_conc: float = 0.6,
@@ -49,7 +48,7 @@ class Primer:
 			self.binding_start_index = binding_start_index
 			self.binding_end_index = binding_end_index
 		else:
-			self.binding_start_index, self.end_index = get_start_end_index(self.template_sequence, self.sequence)
+			self.binding_start_index, self.binding_end_index = get_start_end_index(self.template_sequence, self.sequence)
 		
 		self.chrom = chrom
 		self.start = start
