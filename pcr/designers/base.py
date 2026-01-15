@@ -269,9 +269,11 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 		probe_opt_length: int = 25,
 		probe_min_length: int = 20,
 		probe_max_length: int = 30,
-		opt_tm: float = 60.0,		  # == probe_opt_tm (사용 예: opt_tm=probe_opt_tm_eff)
+		probe_opt_tm: float = 60.0,		  # == probe_opt_tm (사용 예: opt_tm=probe_opt_tm_eff)
 		probe_min_tm: float = 50.0,
 		probe_max_tm: float = 70.0,
+		min_primer_probe_tm_diff: float = 6.0,
+		max_primer_probe_tm_diff: float = 8.0,
 		probe_opt_gc: float = 45.0,
 		probe_min_gc: float = 35.0,
 		probe_max_gc: float = 65.0,
@@ -288,10 +290,12 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 		self.probe_min_length: int = probe_min_length
 		self.probe_max_length: int = probe_max_length
 
-		self.probe_opt_tm: float = opt_tm
+		self.probe_opt_tm: float = probe_opt_tm
 		self.probe_min_tm: float = probe_min_tm
 		self.probe_max_tm: float = probe_max_tm
-
+		self.min_primer_probe_tm_diff: float = min_primer_probe_tm_diff
+		self.max_primer_probe_tm_diff: float = max_primer_probe_tm_diff
+		
 		self.probe_opt_gc: float = probe_opt_gc
 		self.probe_min_gc: float = probe_min_gc
 		self.probe_max_gc: float = probe_max_gc
@@ -338,6 +342,9 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 				}
 			)
 		# ---- probe(내부 올리고) 특성 설정 ----
+		print(self.probe_opt_tm + self.min_primer_probe_tm_diff)
+		print(self.probe_min_tm + self.min_primer_probe_tm_diff)
+		print(self.probe_max_tm + self.max_primer_probe_tm_diff)
 		self.update_primer3_global_args(
 			{
 			"PRIMER_INTERNAL_SALT_MONOVALENT": self.DEFAULT_SALT_MONOVALENT,
@@ -347,9 +354,9 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 			"PRIMER_INTERNAL_OPT_SIZE": self.probe_opt_length,
 			"PRIMER_INTERNAL_MIN_SIZE": self.probe_min_length,
 			"PRIMER_INTERNAL_MAX_SIZE": self.probe_max_length,
-			"PRIMER_INTERNAL_OPT_TM": self.probe_opt_tm,
-			"PRIMER_INTERNAL_MIN_TM": self.probe_min_tm,
-			"PRIMER_INTERNAL_MAX_TM": self.probe_max_tm,
+			"PRIMER_INTERNAL_OPT_TM": self.probe_opt_tm + self.min_primer_probe_tm_diff,
+			"PRIMER_INTERNAL_MIN_TM": self.probe_min_tm + self.min_primer_probe_tm_diff,
+			"PRIMER_INTERNAL_MAX_TM": self.probe_max_tm + self.max_primer_probe_tm_diff,
 			"PRIMER_INTERNAL_OPT_GC_PERCENT": self.probe_opt_gc,
 			"PRIMER_INTERNAL_MIN_GC": self.probe_min_gc,
 			"PRIMER_INTERNAL_MAX_GC": self.probe_max_gc,

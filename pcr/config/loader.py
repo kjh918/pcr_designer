@@ -13,7 +13,7 @@ def _normalize_pcr_params(raw: Mapping[str, Any]) -> Dict[str, Any]:
     return {
         "primer_kwargs": pcr_raw.get("primer_kwargs") or {},
         "probe_kwargs": pcr_raw.get("probe_kwargs") or {},
-        "bisulfite": pcr_raw.get("bisulfite") or {},
+        "bisulfite": pcr_raw.get("bisulfite_kwargs") or {},
     }
 
 def _normalize_qc_params(raw: Mapping[str, Any]) -> Dict[str, Any]:
