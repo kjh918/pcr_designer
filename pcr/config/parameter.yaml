@@ -58,7 +58,9 @@ qc_params:
   PRIMER_MIN_DIFF_TM: 0
   PROBE_MAX_DIFF_TM: 8
   PROBE_MIN_DIFF_TM: 6
-  # Sequence: Avoid runs of >4 Gs, and ensure the 3' end has few G/C bases (e.g., <2 G/C in the last 5 bases).
+
+  ## TODOList 
+  # Avoid runs of >4 Gs, and ensure the 3' end has few G/C bases (e.g., <2 G/C in the last 5 bases).
   # Avoid Gs at the 5' end (reporter dye) to prevent quenching; avoid G runs.
   HAIRPIN_MIN_DG: -5.0   # hairpin_min_dg
   HOMODIMER_MIN_DG: -6.0   # homodimer_min_dg
@@ -70,3 +72,4 @@ qc_params:
   BLAST_MAX_ALIGNMENTS: 50        # 최대 리포트 align 수  
   MIN_AMP_BP: 50
   MAX_AMP_BP: 300
+

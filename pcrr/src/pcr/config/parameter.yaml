@@ -1,0 +1,103 @@
+# ----------------------------------------------------------------------------
+# 1. References (Genome & BLAST DB)
+# ----------------------------------------------------------------------------
+references:
+  hg19:
+    fasta: "/storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa"
+    blast: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/h19"
+  hg38:
+    fasta: "/storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa"
+    blast: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38"
+
+# ----------------------------------------------------------------------------
+# 2. PCR Parameters (Design Settings)
+# ----------------------------------------------------------------------------
+pcr_params:
+  # 일반 Primer 설계 설정
+  primer_kwargs:
+    n_primers: 100
+    min_amplicon_length: 80
+    max_amplicon_length: 120
+    n_primers: 100
+    opt_length: 20
+    min_length: 18
+    max_length: 27
+    opt_tm: 60.0
+    min_tm: 55.0
+    max_tm: 65.0
+    opt_gc: 45.0
+    min_gc: 25.0
+    max_gc: 85.0
+    # 추가 Primer3 옵션이 필요하면 여기에 작성
+    primer3_global_args: {}
+
+  # Bisulfite PCR 설정
+  bisulfite_kwargs:
+    run: false
+    cpg_default: "methyl"
+
+  # AS-PCR 설정 (Optional)
+  as_pcr_kwargs:
+    cpg_default: "methyl"
+
+  # Probe 설계 설정
+  probe_kwargs:
+    n_probes: 100
+    min_primer_probe_tm_diff: 6.0
+    max_primer_probe_tm_diff: 8.0
+    opt_length: 25
+    min_length: 20
+    max_length: 30
+    opt_tm: 60.0
+    min_tm: 60.0
+    max_tm: 65.0
+    opt_gc: 50.0
+    min_gc: 35.0
+    max_gc: 65.0
+
+# ----------------------------------------------------------------------------
+# 3. QC Parameters (Criteria & Paths)
+# ----------------------------------------------------------------------------
+qc_params:
+  # [Paths] 실행 파일 경로 (계층 구조 필수)
+  paths:
+    BLAST_ROOT: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+"
+    BLAST_BIN_DIR: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin"
+    BLASTN: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastn"
+    BLASTDBCMD: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastdbcmd"
+    BLASTN_DB: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38"
+    BLASTN_REF: "/storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa"
+
+  # [Primer Criteria] 일반 Primer QC 기준
+  primer_criteria:
+    HAIRPIN_MIN_DG: -5.0
+    HOMODIMER_MIN_DG: -6.0
+    HETERODIMER_MIN_DG: -6.0
+    PRIMER_MAX_DIFF_TM: 3.0
+    PRIMER_MIN_DIFF_TM: 0.0
+    BLAST_IDENTITY_THRESHOLD: 90.0
+    BLAST_LENGTH_THRESHOLD: 13
+    BLAST_MAX_ALIGNMENTS: 50
+    MIN_AMP_BP: 50
+    MAX_AMP_BP: 300
+
+  # [Probe Criteria] Probe 전용 QC 기준
+  probe_criteria:
+    HAIRPIN_MIN_DG: -5.0
+    HOMODIMER_MIN_DG: -6.0
+    HETERODIMER_MIN_DG: -6.0
+    PROBE_MAX_DIFF_TM: 8.0
+    PROBE_MIN_DIFF_TM: 6.0
+    AVOID_5_PRIME_G: true
+    BLAST_IDENTITY_THRESHOLD: 90.0
+    BLAST_LENGTH_THRESHOLD: 13
+    BLAST_MAX_ALIGNMENTS: 50
+    MIN_AMP_BP: 50
+    MAX_AMP_BP: 300
+
+  # [AS-PCR Criteria] AS-PCR 전용 QC 기준
+  as_pcr_criteria:
+    CHECK_3_PRIME_SPECIFICITY: true
+    HAIRPIN_MIN_DG: -5.0
+    HOMODIMER_MIN_DG: -6.0
+    HETERODIMER_MIN_DG: -6.0
