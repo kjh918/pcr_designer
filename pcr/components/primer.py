@@ -29,6 +29,7 @@ class Primer:
 		# ✅ 추가: mismatch primer는 템플릿에서 검색이 안되므로 바인딩 좌표를 직접 주입
 		binding_start_index: Optional[int] = None,
 		binding_end_index: Optional[int] = None,
+		penalty: int = None,
 		salt_monovalent_conc: float = 50.0,
 		salt_divalent_conc: float = 1.5,
 		dntp_conc: float = 0.6,
@@ -58,6 +59,7 @@ class Primer:
 		self.salt_divalent_conc = salt_divalent_conc
 		self.dntp_conc = dntp_conc
 		self.dna_conc = dna_conc
+		self.penalty = penalty
 
 		self._calc_basic_properties()
 		self._calc_hairpin()

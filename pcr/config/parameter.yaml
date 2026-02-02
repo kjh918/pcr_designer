@@ -10,7 +10,7 @@ pcr_params:
   primer_kwargs:
     min_amplicon_length: 80
     max_amplicon_length: 120
-    n_primers: 100
+    n_primers: 10
     opt_length: 20
     min_length: 18
     max_length: 27
@@ -31,18 +31,23 @@ pcr_params:
     cpg_default: "methyl"
 
   probe_kwargs:
-    n_probes: 100
-    min_primer_probe_tm_diff: 6
-    max_primer_probe_tm_diff: 8
+    n_probes: 10
+    min_primer_probe_tm_diff: 5
+    max_primer_probe_tm_diff: 10
     opt_length: 25
     min_length: 20
     max_length: 30
-    opt_tm: 60
+    opt_tm: 65
     min_tm: 60
-    max_tm: 65
+    max_tm: 70
     opt_gc: 50
     min_gc: 35
     max_gc: 65
+
+    gap_between_primer_and_probe: 3
+    max_probe_3_end_gc: 3
+    max_probe_poly_g: 4
+    #probe_5_base_g: 
 
 qc_params:
 
@@ -60,8 +65,6 @@ qc_params:
   PROBE_MIN_DIFF_TM: 6
 
   ## TODOList 
-  # Avoid runs of >4 Gs, and ensure the 3' end has few G/C bases (e.g., <2 G/C in the last 5 bases).
-  # Avoid Gs at the 5' end (reporter dye) to prevent quenching; avoid G runs.
   HAIRPIN_MIN_DG: -5.0   # hairpin_min_dg
   HOMODIMER_MIN_DG: -6.0   # homodimer_min_dg
   HETERODIMER_MIN_DG: -6.0   # heterodimer_min_dg

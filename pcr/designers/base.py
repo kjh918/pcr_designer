@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import primer3
 from pcr.components import Primer, Amplicon
-from pcr.config import abc
+
 
 # ----------------------------------------------------------------------
 # Base
@@ -105,7 +105,6 @@ class BasePrimerDesigner:
 		target_len = self.target_end_index - self.target_start_index + 1
 		self.update_primer3_seq_args({"SEQUENCE_TARGET": [self.target_start_index, target_len]})
 
-		# ✅ primer3 expects [[min,max]]
 		self.update_primer3_global_args(
 			{
 				"PRIMER_PAIR_MAX_DIFF_TM": self.max_tm_difference,
@@ -175,6 +174,7 @@ class PrimerDesigner(BasePrimerDesigner):
 					target_end_index=self.target_end_index,
 					strand="forward",
 					primer_type="forward",
+					penalty=self.primer3_result.get(f"PRIMER_LEFT_{rank}_PENALTY", 0.0),
 				)
 
 			if self.primer3_result.get(f"PRIMER_RIGHT_{rank}") is not None:
@@ -186,6 +186,7 @@ class PrimerDesigner(BasePrimerDesigner):
 					target_end_index=self.target_end_index,
 					strand="reverse",
 					primer_type="reverse",
+					penalty=self.primer3_result.get(f"PRIMER_RIGHT_{rank}_PENALTY", 0.0),
 				)
 
 			amplicons.append(
@@ -204,19 +205,17 @@ class PrimerDesigner(BasePrimerDesigner):
 
 
 # ----------------------------------------------------------------------
-# Primer + Probe (✅ 네가 말한 방식 그대로)
+# Primer + Probe
 # ----------------------------------------------------------------------
 class ProbePrimerDesigner(BasePrimerDesigner):
 	"""
-	Flow (네가 말한 그대로):
-
-	1) probe-only 디자인 (forward/reverse = False)
-	   -> forward/reverse 가 None인 Amplicon(probe만) 리스트를 만든다
-	2) 그 Amplicon 리스트를 loop:
-	   - 각 probe를 고정(SEQUENCE_INTERNAL_OLIGO)
-	   - 그 probe에 맞춰 primer 조건을 세팅(예: primer Tm = probe_tm - diff)
+	1) probe-only 디자인 -> (forward/reverse None, probe만) Amplicon 리스트 생성
+	2) 그 리스트 loop:
+	   - probe를 고정(SEQUENCE_INTERNAL_OLIGO)
+	   - probe 주변 gap 만큼 exclusion zone(SEQUENCE_EXCLUDED_REGION) 설정
+	   - primer Tm window = probe_tm - diff 로 설정
 	   - primer pair 디자인
-	   - 결과 Amplicon에 (probe + forward + reverse)로 저장
+	   - probe+primers Amplicon으로 결과 생성
 	"""
 
 	def __init__(
@@ -225,20 +224,22 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 		target_start_index: int,
 		target_end_index: int,
 		*,
-		n_probes: int = 10,
+		n_probes: int = 100,
 		probe_sequence: Optional[str] = None,
 		probe_opt_length: int = 25,
 		probe_min_length: int = 20,
 		probe_max_length: int = 30,
-		probe_opt_tm: float = 60.0,
-		probe_min_tm: float = 50.0,
+		probe_opt_tm: float = 65.0,
+		probe_min_tm: float = 60.0,
 		probe_max_tm: float = 70.0,
-		min_primer_probe_tm_diff: float = 6.0,
-		max_primer_probe_tm_diff: float = 8.0,
+		min_primer_probe_tm_diff: float = 5.0,
+		max_primer_probe_tm_diff: float = 10.0,
 		probe_opt_gc: float = 45.0,
 		probe_min_gc: float = 35.0,
 		probe_max_gc: float = 65.0,
 		probe_primer3_global_args: Optional[Dict[str, Any]] = None,
+		# ✅ NEW: probe 주변 exclusion gap (bp)
+		probe_gap: int = 3,
 		reference_template_sequence: Optional[str] = None,
 		**kwargs: Any,
 	) -> None:
@@ -260,7 +261,17 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 		self.probe_min_gc = float(probe_min_gc)
 		self.probe_max_gc = float(probe_max_gc)
 
+		self.probe_gap = int(probe_gap)
 		self._probe_primer3_global_args = probe_primer3_global_args or {}
+
+		# ✅ summary 저장용
+		self.summary: Dict[str, Any] = {
+			"probe_only": {},
+			"filters": {"5_g": 0, "poly_g": 0, "3_gc": 0, "target_cover_fail": 0, "template_find_fail": 0},
+			"primer3_fail": {"no_pair": 0},
+			"counts": {"probe_candidates": 0, "probe_after_filter": 0, "primer_runs": 0, "amplicons_final": 0},
+			"qc": {},  # 네가 qc dict를 밖에서 주입하면 여기 붙이면 됨 (옵션)
+		}
 
 		super().__init__(
 			template_sequence=template_sequence,
@@ -270,21 +281,17 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 			**kwargs,
 		)
 
-	# ------------------------------------------------------------------
-	# probe-only primer3 설정
-	# ------------------------------------------------------------------
 	def _configure_probe_only(self) -> None:
-		# ✅ primer는 끄고 probe만 켠다
 		self.forward_primer = False
 		self.reverse_primer = False
 		self.primer3_global_args["PRIMER_PICK_LEFT_PRIMER"] = 0
 		self.primer3_global_args["PRIMER_PICK_RIGHT_PRIMER"] = 0
 
 		self.primer3_global_args["PRIMER_PICK_INTERNAL_OLIGO"] = 1
-		self.primer3_global_args["PRIMER_INTERNAL_NUM_RETURN"] = self.n_probes
-		self.primer3_global_args["PRIMER_NUM_RETURN"] = self.n_probes  # explain/limit용
-
-		# target 포함 조건 + excluded region (기존 네 로직 유지)
+		self.primer3_global_args["PRIMER_INTERNAL_NUM_RETURN"] = self.n_probes * 10
+		self.primer3_global_args["PRIMER_NUM_RETURN"] = self.n_probes * 10
+		print(self.n_probes * 10)
+		print('xx')
 		self.update_primer3_seq_args(
 			{
 				"SEQUENCE_TARGET": [
@@ -319,27 +326,19 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 			}
 		)
 
-		# 사용자 override
 		if self._probe_primer3_global_args:
 			self.update_primer3_global_args(self._probe_primer3_global_args)
 
-	# ------------------------------------------------------------------
-	# 고정 probe 시퀀스(선택)
-	# ------------------------------------------------------------------
-	def _configure_fixed_probe(self) -> None:
-		if not self.probe_sequence:
-			return
-		self.update_primer3_seq_args({"SEQUENCE_INTERNAL_OLIGO": self.probe_sequence})
-		self.primer3_global_args["PRIMER_PICK_INTERNAL_OLIGO"] = 1
-
-	# ------------------------------------------------------------------
-	# probe-only 결과를 "probe만 있는 Amplicon"으로 만든다 (forward/reverse None)
-	# ------------------------------------------------------------------
 	def _build_probe_only_amplicons(self) -> List[Amplicon]:
 		assert self.primer3_result is not None
 		n_internal = int(self.primer3_result.get("PRIMER_INTERNAL_NUM_RETURNED", 0))
-		amplicons: List[Amplicon] = []
 
+		self.summary["probe_only"] = {
+			"internal_returned": n_internal,
+			"internal_explain": self.primer3_result.get("PRIMER_INTERNAL_EXPLAIN"),
+		}
+
+		amplicons: List[Amplicon] = []
 		for rank in range(n_internal):
 			if self.primer3_result.get(f"PRIMER_INTERNAL_{rank}") is None:
 				continue
@@ -347,6 +346,7 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 			if not probe_seq:
 				continue
 
+			probe_penalty = self.primer3_result.get(f"PRIMER_INTERNAL_{rank}_PENALTY", 0.0)
 			probe = Primer(
 				template_sequence=self.template_sequence,
 				reference_template_sequence=self.reference_template_sequence,
@@ -355,9 +355,9 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 				target_end_index=self.target_end_index,
 				strand="forward",
 				primer_type="probe",
+				penalty=probe_penalty,
 			)
 
-			# ✅ forward/reverse None 인 amplicon 생성
 			amplicons.append(
 				Amplicon(
 					template_sequence=self.template_sequence,
@@ -372,13 +372,64 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 
 		return amplicons
 
-	# ------------------------------------------------------------------
-	# probe 고정 후 primer pair 결과를 probe+primer Amplicon으로 만든다
-	# ------------------------------------------------------------------
+	# ✅ NEW: probe 고정 + gap exclusion + primer tm 세팅 + primer3 실행
+	def _run_primer3_with_params(
+		self,
+		*,
+		probe: Primer,
+		gap: int,
+		target_tm: Optional[float],
+		min_diff: float,
+		max_diff: float,
+	) -> Dict[str, Any]:
+		# reset은 호출자가 해도 되고 여기서 해도 되는데, 여기서는 "seq/global args만" 조정한다고 가정
+		# (design()에서 reset 후 호출)
+
+		# 1) probe 고정
+		self.update_primer3_seq_args({"SEQUENCE_INTERNAL_OLIGO": probe.sequence})
+		self.update_primer3_global_args({"PRIMER_PICK_INTERNAL_OLIGO": 1})
+
+		# 2) probe 주변 exclusion zone: [probe_start-gap, probe_end+gap)
+		#	primer3 excluded region format: [[start, length]]
+		p_start = int(getattr(probe, "binding_start_index", -1))
+		if p_start < 0:
+			# binding_start_index가 없다면 template에서 찾아서 계산
+			p_start = self.template_sequence.find(probe.sequence)
+
+		if p_start >= 0:
+			p_len = len(probe.sequence)
+			excl_start = max(0, p_start - int(gap))
+			excl_end = min(len(self.template_sequence), p_start + p_len + int(gap))
+			excl_len = max(0, excl_end - excl_start)
+			if excl_len > 0:
+				self.primer3_seq_args["SEQUENCE_EXCLUDED_REGION"] = [[excl_start, excl_len]]
+			else:
+				self.primer3_seq_args.pop("SEQUENCE_EXCLUDED_REGION", None)
+		else:
+			# 찾기 실패시 exclusion 미적용
+			self.primer3_seq_args.pop("SEQUENCE_EXCLUDED_REGION", None)
+
+		# 3) primer tm window = probe_tm - diff
+		if target_tm is not None:
+			self.update_primer3_global_args(
+				{
+					"PRIMER_OPT_TM": float(target_tm) - float(min_diff),
+					"PRIMER_MIN_TM": float(target_tm) - float(max_diff),
+					"PRIMER_MAX_TM": float(target_tm) - float(min_diff),
+				}
+			)
+
+		# 4) run primer3
+		return primer3.bindings.designPrimers(self.primer3_seq_args, self.primer3_global_args) or {}
+
 	def _build_amplicons_from_pair_result(self, res: Dict[str, Any], probe: Primer) -> List[Amplicon]:
 		n_forward = int(res.get("PRIMER_LEFT_NUM_RETURNED", 0))
 		n_reverse = int(res.get("PRIMER_RIGHT_NUM_RETURNED", 0))
 		n_pairs = int(res.get("PRIMER_PAIR_NUM_RETURNED", 0))
+
+		if n_pairs == 0:
+			self.summary["primer3_fail"]["no_pair"] += 1
+			return []
 
 		n_designed = max(n_forward, n_reverse, n_pairs)
 		amps: List[Amplicon] = []
@@ -386,7 +437,10 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 		for rank in range(n_designed):
 			if res.get(f"PRIMER_LEFT_{rank}") is None or res.get(f"PRIMER_RIGHT_{rank}") is None:
 				continue
-
+			
+			forward_penalty = res.get(f"PRIMER_LEFT_{rank}_PENALTY", 0.0)
+			reverse_penalty = res.get(f"PRIMER_RIGHT_{rank}_PENALTY", 0.0)
+			
 			forward = Primer(
 				template_sequence=self.template_sequence,
 				reference_template_sequence=self.reference_template_sequence,
@@ -395,6 +449,7 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 				target_end_index=self.target_end_index,
 				strand="forward",
 				primer_type="forward",
+				penalty=forward_penalty,
 			)
 			reverse = Primer(
 				template_sequence=self.template_sequence,
@@ -404,6 +459,7 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 				target_end_index=self.target_end_index,
 				strand="reverse",
 				primer_type="reverse",
+				penalty=reverse_penalty,
 			)
 
 			amps.append(
@@ -414,66 +470,59 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 					target_end_index=self.target_end_index,
 					forward_primer=forward,
 					reverse_primer=reverse,
-					probe=probe,
+					probe=probe
 				)
 			)
 
 		return amps
 
-	# ------------------------------------------------------------------
-	# ✅ 핵심: 네가 말한 전체 플로우를 design()에서 수행
-	# ------------------------------------------------------------------
 	def design(self) -> List[Amplicon]:
 		final_amplicons: List[Amplicon] = []
 
-		# (A) probe_sequence가 있으면: 그 probe로만 primer 디자인
-		if self.probe_sequence:
-			# primer 디자인 모드로 초기화
-			self.reset()
-			self.forward_primer = True
-			self.reverse_primer = True
-			self.primer3_global_args["PRIMER_PICK_LEFT_PRIMER"] = 1
-			self.primer3_global_args["PRIMER_PICK_RIGHT_PRIMER"] = 1
-			self._configure_fixed_probe()
-
-			# probe Primer 객체 만들고
-			probe_obj = Primer(
-				template_sequence=self.template_sequence,
-				reference_template_sequence=self.reference_template_sequence,
-				sequence=self.probe_sequence,
-				target_start_index=self.target_start_index,
-				target_end_index=self.target_end_index,
-				strand="forward",
-				primer_type="probe",
-			)
-
-			# primer3 실행
-			res = primer3.bindings.designPrimers(self.primer3_seq_args, self.primer3_global_args) or {}
-			final_amplicons = self._build_amplicons_from_pair_result(res, probe_obj)
-
-			self.amplicon_list = final_amplicons
-			return self.amplicon_list
-
-		# (B) 1) probe-only 디자인 실행 -> probe만 있는 amplicon 리스트 생성
+		# 1) probe-only
 		self.reset()
 		self._configure_probe_only()
 		self.run_primer3()
 		probe_only_amplicons = self._build_probe_only_amplicons()
-		
-		# (C) 2) probe-only amplicon loop -> 각 probe 고정 후 primer pair 디자인
+
+		self.summary["counts"]["probe_candidates"] = len(probe_only_amplicons)
+
+		# 2) loop each probe -> primers design
+		drop_counts = self.summary["filters"]
+		max_poly_g = 4
+		max_3prime_gc = 3
+
 		for probe_amp in probe_only_amplicons:
 			if probe_amp.probe is None:
 				continue
 
-			# probe가 target 커버하는 것만 (안전)
-			ps = probe_amp.template_sequence.find(probe_amp.probe.sequence)
+			seq = probe_amp.probe.sequence
+
+			# (a) target cover check
+			ps = probe_amp.template_sequence.find(seq)
 			if ps < 0:
+				drop_counts["template_find_fail"] += 1
 				continue
-			pe = ps + len(probe_amp.probe.sequence)
+			pe = ps + len(seq)
 			if not (ps <= self.target_start_index and pe >= self.target_end_index):
+				drop_counts["target_cover_fail"] += 1
 				continue
 
-			# probe tm 기반 primer Tm window 조절 (네가 쓰던 방식)
+			# (b) filters (5' G, polyG, 3' GC)
+			if seq.startswith("G"):
+				drop_counts["5_g"] += 1
+				continue
+			if "G" * (max_poly_g + 1) in seq:
+				drop_counts["poly_g"] += 1
+				continue
+			tail_5bp = seq[-5:]
+			if tail_5bp.count("G") + tail_5bp.count("C") >= max_3prime_gc:
+				drop_counts["3_gc"] += 1
+				continue
+
+			self.summary["counts"]["probe_after_filter"] += 1
+
+			# probe tm
 			probe_tm = getattr(probe_amp.probe, "tm", None)
 			if probe_tm is not None:
 				try:
@@ -481,35 +530,33 @@ class ProbePrimerDesigner(BasePrimerDesigner):
 				except Exception:
 					probe_tm = None
 
-			# primer 디자인 모드로 reset
+			# (c) primer design mode
 			self.reset()
 			self.forward_primer = True
 			self.reverse_primer = True
 			self.primer3_global_args["PRIMER_PICK_LEFT_PRIMER"] = 1
 			self.primer3_global_args["PRIMER_PICK_RIGHT_PRIMER"] = 1
 
-			# probe 고정 주입
-			self.update_primer3_seq_args({"SEQUENCE_INTERNAL_OLIGO": probe_amp.probe.sequence})
-			self.update_primer3_global_args({"PRIMER_PICK_INTERNAL_OLIGO": 1})
+			self.summary["counts"]["primer_runs"] += 1
 
-			# ✅ primer Tm = probe_tm - diff (네 qPCRdesigner 로직)
-			if probe_tm is not None:
-				self.update_primer3_global_args(
-					{
-						"PRIMER_OPT_TM": probe_tm - self.min_primer_probe_tm_diff,
-						"PRIMER_MIN_TM": probe_tm - self.max_primer_probe_tm_diff,
-						"PRIMER_MAX_TM": probe_tm - self.min_primer_probe_tm_diff,
-					}
-				)
+			# ✅ run with exclusion gap + fixed probe + tm window
+			res = self._run_primer3_with_params(
+				probe=probe_amp.probe,
+				gap=self.probe_gap,
+				target_tm=probe_tm,
+				min_diff=self.min_primer_probe_tm_diff,
+				max_diff=self.max_primer_probe_tm_diff,
+			)
 
-			res = primer3.bindings.designPrimers(self.primer3_seq_args, self.primer3_global_args) or {}
 			final_amplicons.extend(self._build_amplicons_from_pair_result(res, probe_amp.probe))
 
 		self.amplicon_list = final_amplicons
+		self.summary["counts"]["amplicons_final"] = len(final_amplicons)
+		
+		print(self.summary)
+
 		return self.amplicon_list
 
-	# Base가 호출하는 hook은 여기서는 사용 안 하므로 안전장치
 	def _build_amplicons(self) -> List[Amplicon]:
-		assert self.primer3_result is not None
-		# design()을 override했기 때문에 기본경로로는 안 들어오는 게 정상
+		# design() override라서 기본 경로는 사용 안 함
 		return []
