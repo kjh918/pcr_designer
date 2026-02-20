@@ -49,7 +49,6 @@ class IsPcrChecker:
         
         fwd_obj = FastaSequence("Forward", f_seq)
         rev_obj = FastaSequence("Reverse", r_seq)
-
         detected_products = []
         
         # 3. Pysam을 이용한 Reference 구간 추출 (Local Fetching)
@@ -59,7 +58,7 @@ class IsPcrChecker:
                 chrom = amplicon.reference_id 
                 
                 # 검색 범위 설정: 타겟 좌표 앞뒤로 여유(Padding)를 둠
-                padding = 500
+                padding = 100
                 fetch_start = max(0, amplicon.target_start_index - padding)
                 fetch_end = amplicon.target_end_index + padding
                 
@@ -76,12 +75,13 @@ class IsPcrChecker:
                     forward_primer=fwd_obj,
                     reverse_primer=rev_obj,
                     min_product_length=30,
-                    max_product_length=5000,
+                    max_product_length=500,
                     header=False,
                     cols="all",
                     output_file=False
                 )
-
+                print(result)
+                exit()
                 if result and result.strip():
                     # 증폭 성공 시 정보 저장
                     product_seq = result.strip()

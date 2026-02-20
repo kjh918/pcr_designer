@@ -30,6 +30,7 @@ class BaseDesignInput(BaseModel):
     # 필수 데이터
     name: str = Field(..., description="Unique name for this primer design task")
     template_sequence: str = Field(..., description="Target Template Sequence")
+    #reference_sequence: str = Field(..., description="Reference Template Sequence")
     target_start: int = Field(..., ge=0, description="0-based Relative Start")
     target_end: int = Field(..., ge=0, description="0-based Relative End")
     

@@ -1,16 +1,12 @@
 import subprocess
 import tempfile
 import os
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 
-# 외부 라이브러리 체크
 try:
     import pysam
-    from ispcr import calculate_pcr_product, FastaSequence
 except ImportError:
     pysam = None
-    calculate_pcr_product = None
-    FastaSequence = None
 
 from ..config.schema.qc import BlastHit, OffTargetAmplicon
 from ..config.schema.root import AppConfig
@@ -22,139 +18,134 @@ class BlastSpecificityChecker:
     def __init__(self, config: AppConfig):
         self.config = config
         self.criteria = config.qc_criteria
-        
-        # ✅ 수정 1: 실제 경로 데이터는 qc_tools.paths 안에 있음
         self.tools = config.qc_tools.paths 
+        
+        # Reference Fasta 로드 (서열 추출용)
+        self.ref_fasta = None
+        self._load_ref_genome()
+
+    def _load_ref_genome(self):
+        if not pysam: return
+        
+        # 1. Config에 정의된 Reference 경로 확인
+        ref_path = self.tools.blast_ref_path 
+        if not ref_path and self.config.references:
+             first_ref = next(iter(self.config.references.values()))
+             ref_path = first_ref.fasta_path
+
+        if ref_path and os.path.exists(ref_path):
+            try:
+                self.ref_fasta = pysam.FastaFile(ref_path)
+            except Exception as e:
+                print(f"⚠️ Warning: Failed to load Reference FASTA: {e}")
+
+    def __del__(self):
+        if self.ref_fasta:
+            try: self.ref_fasta.close()
+            except: pass
 
     def check_amplicon(self, amplicon: Amplicon) -> Dict[str, Any]:
-        """BLAST + isPCR 하이브리드 QC"""
+        """
+        [BLAST-Only Logic]
+        isPCR 라이브러리 없이, BLAST 좌표 계산만으로 증폭 여부를 판단합니다.
+        """
         fwd = amplicon.forward
         rev = amplicon.reverse
+        probe = amplicon.probe
+
+        # 1. BLAST 실행 (Fwd, Rev, Probe)
+        hits = self._run_blast_set(fwd.sequence, rev.sequence, probe.sequence if probe else None)
         
-        # 1. BLAST 실행
-        hits = self._run_blast_pair(
-            f_name="Fwd", f_seq=fwd.sequence, 
-            r_name="Rev", r_seq=rev.sequence
-        )
         f_hits = [h for h in hits if h.qseqid == "Fwd"]
         r_hits = [h for h in hits if h.qseqid == "Rev"]
+        p_hits = [h for h in hits if h.qseqid == "Probe"]
 
-        # 2. 후보 조합
+        # 2. 증폭 산물 후보 찾기 (여기가 곧 in-silico PCR 역할)
+        # Fwd와 Rev가 마주보고 있고, 거리가 적절하면 Amplicon으로 간주
         candidates = self._find_amplicons(f_hits, r_hits)
 
-        # 3. isPCR 검증
-        confirmed_off_targets = []
-        intended_target = None
-        
-        # ✅ 수정 2: Reference 경로 찾기 로직 개선
-        # System Config (hg38 등) 참조 우선 -> 없으면 BLAST DB REF 사용
-        ref_path = ""
-        if amplicon.reference_id in self.config.references:
-            ref_path = self.config.references[amplicon.reference_id].fasta_path
-        elif self.tools.blast_ref_path: # 이전 blast_db_ref_path -> blast_ref_path
-            ref_path = self.tools.blast_ref_path
-
-        ref_fasta = None
-        try:
-            if pysam and ref_path and os.path.exists(ref_path):
-                ref_fasta = pysam.FastaFile(ref_path)
-        except Exception as e:
-            print(f"⚠️ Warning: Could not open reference genome: {e}")
+        # 3. Probe 검증 및 분류
+        signal_candidates = []      # Probe까지 붙는 후보 (형광 O)
+        amplification_candidates = [] # Probe는 안 붙는 후보 (형광 X, 증폭 O)
 
         for cand in candidates:
-            # 타겟 판정
-            is_target_pos = self._is_intended_pos(cand, amplicon)
-            cand.is_target = is_target_pos
+            # 서열 추출 (리포팅용)
+            seq_data = self._fetch_sequence_from_genome(cand.chrom, cand.start, cand.end)
+            cand.reference_sequence = seq_data
+            cand.template_sequence = seq_data
 
-            # isPCR 수행
-            is_real = self._verify_with_ispcr(cand, fwd.sequence, rev.sequence, ref_fasta)
-            
-            if is_real:
-                if is_target_pos:
-                    if intended_target is None:
-                        intended_target = cand
-                else:
-                    confirmed_off_targets.append(cand)
-        
-        if ref_fasta:
-            ref_fasta.close()
+            # Probe 결합 확인 (좌표 기반)
+            probe_binds = self._check_probe_binding(cand, p_hits)
+            cand.probe_binds = probe_binds
 
-        # 4. 결과 업데이트
-        is_passed = (len(confirmed_off_targets) == 0) and (intended_target is not None)
+            if probe_binds:
+                signal_candidates.append(cand)
+            else:
+                amplification_candidates.append(cand)
+
+        # 4. 결과 판정 (Count 기반)
+        # - Signal 후보가 딱 1개여야 함 (그게 Intended Target)
+        count = len(signal_candidates)
+        is_passed = (count == 1)
         
+        intended_target = None
+        off_targets = []
+
+        if count == 1:
+            intended_target = signal_candidates[0]
+            intended_target.is_target = True
+        elif count > 1:
+            off_targets = signal_candidates
+        
+        # 5. 결과 저장
         amplicon.is_qc_pass = is_passed
-        amplicon.off_target_count = len(confirmed_off_targets)
+        amplicon.off_target_count = len(off_targets) if count > 1 else 0
         
-        # 상세 결과 저장 (나중에 리포트에 씀)
         amplicon.qc_details["specificity"] = {
-            "blast_hits": len(hits),
-            "candidates": len(candidates),
-            "intended_found": intended_target is not None
+            "blast_hits_total": len(hits),
+            "signal_candidates_count": count,       # 1이면 정상, >1이면 Off-target
+            "amplification_only_count": len(amplification_candidates),
+            "intended_found": (count == 1)
         }
 
-        # 5. 시각화 데이터
-        alignment_view = None
-        if intended_target and ref_path:
-            alignment_view = self._generate_alignment_view(amplicon, intended_target, ref_path)
+        # 시각화용 데이터
+        alignment_view = {}
+        target_to_show = intended_target if intended_target else (off_targets[0] if off_targets else None)
+        
+        if target_to_show and target_to_show.reference_sequence:
+             alignment_view = {
+                "chrom": target_to_show.chrom,
+                "start": target_to_show.start,
+                "end": target_to_show.end,
+                "seq_snippet": target_to_show.reference_sequence[:50]
+            }
 
         return {
             "passed": is_passed,
-            "off_targets": confirmed_off_targets,
+            "off_targets": off_targets,
             "alignment": alignment_view
         }
 
-    # ... (Helper methods: _is_intended_pos, _verify_with_ispcr, _generate_alignment_view 등은 기존 유지) ...
-    def _is_intended_pos(self, cand: OffTargetAmplicon, amp: Amplicon) -> bool:
-        """현재 후보가 디자인된 타겟 위치와 일치하는지 확인"""
-        # Chromosome 이름 비교 (단순 문자열 비교)
-        # hg38 vs chr1 같은 매핑 이슈가 있을 수 있으니 주의 필요. 여기서는 단순 포함관계 확인
-        if cand.chrom != amp.reference_id and amp.reference_id not in cand.chrom:
-             pass 
-
-        # 좌표 오차 범위 (예: 100bp) 내에 있는지
-        return abs(cand.start - amp.target_start_index) < 100
-
-    def _verify_with_ispcr(self, cand: OffTargetAmplicon, 
-                           fwd_seq: str, rev_seq: str, ref_fasta: Any) -> bool:
-        if not calculate_pcr_product or not ref_fasta:
-            return True
-
-        padding = 100
-        fetch_start = max(0, cand.start - padding)
-        fetch_end = cand.end + padding
-
+    # --------------------------------------------------------------------------
+    # Helper Methods
+    # --------------------------------------------------------------------------
+    def _fetch_sequence_from_genome(self, chrom: str, start: int, end: int) -> str:
+        if not self.ref_fasta: return ""
         try:
-            local_seq_str = ref_fasta.fetch(cand.chrom, fetch_start, fetch_end)
-            local_seq_obj = FastaSequence(cand.chrom, local_seq_str)
-            fwd_obj = FastaSequence("Fwd", fwd_seq)
-            rev_obj = FastaSequence("Rev", rev_seq)
+            # pysam fetch
+            return self.ref_fasta.fetch(chrom, start, end).upper()
+        except KeyError:
+            # chr 처리
+            alt = chrom.replace("chr", "") if "chr" in chrom else f"chr{chrom}"
+            try: return self.ref_fasta.fetch(alt, start, end).upper()
+            except: return ""
+        except: return ""
 
-            result = calculate_pcr_product(
-                sequence=local_seq_obj,
-                forward_primer=fwd_obj,
-                reverse_primer=rev_obj,
-                min_product_length=20, 
-                max_product_length=5000,
-                header=False, cols="all", output_file=False
-            )
-            return bool(result and result.strip())
-        except:
-            return True
-
-    def _generate_alignment_view(self, amp: Amplicon, target_hit: OffTargetAmplicon, ref_path: str) -> Dict[str, str]:
-        try:
-            if not pysam or not os.path.exists(ref_path): return {}
-            with pysam.FastaFile(ref_path) as fasta:
-                ref_seq = fasta.fetch(target_hit.chrom, target_hit.start, target_hit.end).upper()
-            return {"chrom": target_hit.chrom, "snippet": ref_seq[:50]}
-        except: return {}
-
-    def _run_blast_pair(self, f_name: str, f_seq: str, r_name: str, r_seq: str) -> List[BlastHit]:
+    def _run_blast_set(self, fwd_seq: str, rev_seq: str, probe_seq: str = None) -> List[BlastHit]:
         """BLASTN 실행"""
-        fasta_content = f">{f_name}\n{f_seq}\n>{r_name}\n{r_seq}\n"
+        fasta_content = f">Fwd\n{fwd_seq}\n>Rev\n{rev_seq}\n"
+        if probe_seq: fasta_content += f">Probe\n{probe_seq}\n"
         
-        # ✅ 수정 3: 올바른 경로 변수 사용 (self.tools.blastn, self.tools.blast_db_path)
-        # 키 이름이 YAML과 일치해야 함 (blastn_exe -> blastn)
         cmd = [
             self.tools.blastn,
             "-task", "blastn-short",
@@ -166,8 +157,7 @@ class BlastSpecificityChecker:
 
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".fa") as tmp:
-                tmp.write(fasta_content)
-                tmp.flush()
+                tmp.write(fasta_content); tmp.flush()
                 res = subprocess.run(
                     cmd + ["-query", tmp.name], 
                     capture_output=True, text=True, check=True
@@ -177,13 +167,62 @@ class BlastSpecificityChecker:
             print(f"❌ BLAST Execution Failed: {e}")
             return []
 
+    def _check_probe_binding(self, cand: OffTargetAmplicon, p_hits: List[BlastHit]) -> bool:
+        """Probe가 Amplicon 내부에 존재하는지 확인"""
+        for ph in p_hits:
+            if ph.sseqid != cand.chrom: continue
+            
+            # Amplicon 범위 내에 Probe가 매핑되는지 (Overlap)
+            if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end:
+                return True
+        return False
+
+    def _find_amplicons(self, f_hits: List[BlastHit], r_hits: List[BlastHit]) -> List[OffTargetAmplicon]:
+        """
+        [BLAST 기반 in-silico PCR]
+        Forward와 Reverse Hit의 위치 관계를 분석하여 증폭 가능한 후보를 찾습니다.
+        """
+        amplicons = []
+        for fh in f_hits:
+            for rh in r_hits:
+                # 1. 같은 염색체여야 함
+                if fh.sseqid != rh.sseqid: continue
+                # 2. 서로 반대 스트랜드여야 함 (PCR 원리)
+                if fh.strand == rh.strand: continue
+                
+                valid = False
+                start, end = 0, 0
+                
+                # Case A: Fwd(+) ... Rev(-)
+                if fh.strand == "+" and rh.strand == "-" and fh.genomic_end < rh.genomic_start: 
+                    valid = True
+                    start, end = fh.genomic_start, rh.genomic_end
+                
+                # Case B: Rev(+) ... Fwd(-) (Reverse Primer가 Forward 역할 하는 경우)
+                elif fh.strand == "-" and rh.strand == "+" and rh.genomic_end < fh.genomic_start: 
+                    valid = True
+                    start, end = rh.genomic_start, fh.genomic_end
+                
+                if valid:
+                    size = end - start
+                    # 3. Product Size 체크 (설정된 범위 내)
+                    if self.criteria.min_amp_size <= size <= self.criteria.max_amp_size:
+                        amplicons.append(OffTargetAmplicon(
+                            chrom=fh.sseqid, 
+                            start=start, 
+                            end=end, 
+                            product_size=size, 
+                            fwd_hit=fh, 
+                            rev_hit=rh
+                        ))
+        return amplicons
+    
     def _parse_output(self, stdout: str) -> List[BlastHit]:
         """BLAST Output 파싱"""
         hits = []
         for line in stdout.strip().splitlines():
             cols = line.split("\t")
             if len(cols) < 12: continue
-
             try:
                 hit = BlastHit(
                     qseqid=cols[0], sseqid=cols[1],
@@ -191,33 +230,7 @@ class BlastSpecificityChecker:
                     qstart=int(cols[6]), qend=int(cols[7]),
                     sstart=int(cols[8]), send=int(cols[9])
                 )
-                if (hit.pident >= self.criteria.min_identity and 
-                    hit.length >= self.criteria.min_hit_length):
+                if hit.pident >= self.criteria.min_identity: 
                     hits.append(hit)
             except: continue
         return hits
-
-    def _find_amplicons(self, f_hits: List[BlastHit], r_hits: List[BlastHit]) -> List[OffTargetAmplicon]:
-        """Forward/Reverse 조합하여 Amplicon 후보 찾기"""
-        amplicons = []
-        for fh in f_hits:
-            for rh in r_hits:
-                if fh.sseqid != rh.sseqid: continue
-                if fh.strand == rh.strand: continue
-                
-                valid = False
-                if fh.strand == "+" and rh.strand == "-" and fh.genomic_end < rh.genomic_start: valid = True
-                elif fh.strand == "-" and rh.strand == "+" and rh.genomic_end < fh.genomic_start: valid = True
-                
-                if not valid: continue
-
-                start = min(fh.genomic_start, rh.genomic_start)
-                end = max(fh.genomic_end, rh.genomic_end)
-                size = end - start
-                
-                if self.criteria.min_amp_size <= size <= self.criteria.max_amp_size:
-                    amplicons.append(OffTargetAmplicon(
-                        chrom=fh.sseqid, start=start, end=end, product_size=size,
-                        fwd_hit=fh, rev_hit=rh
-                    ))
-        return amplicons

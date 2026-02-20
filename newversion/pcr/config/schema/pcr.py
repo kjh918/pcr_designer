@@ -116,6 +116,14 @@ class ProbeKwargs(BaseDesignKwargs):
         # 2. Key 보정 (Primer3는 Probe 개수를 PRIMER_INTERNAL_NUM_RETURN으로 받음)
         args["PRIMER_INTERNAL_NUM_RETURN"] = self.n_candidates
         
+        #args.update(
+		#		{
+		#			'SEQUENCE_TARGET': [self.target_start_index, self.target_end_index-self.target_start_index+1],
+		#			'SEQUENCE_INTERNAL_EXCLUDED_REGION': [[0, self.target_end_index-self.probe_min_length], [self.target_start_index+self.probe_min_length, len(self.template_sequence)-(self.target_start_index+self.probe_min_length)]]
+		#		}
+            
+        #)
+        
         # 참고: max_probe_poly_g 등은 Primer3 옵션이 아니므로 여기엔 포함 안 됨 (Python 로직에서 사용)
         return args
 
