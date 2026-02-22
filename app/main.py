@@ -1,64 +1,55 @@
-# app/main.py
+import os
+import sys
+import uvicorn
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse # 화면 출력을 위해 추가
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+# 프로젝트 경로 설정
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(BASE_DIR)
 
-from app.routers import export, qc, pages, design_qpcr, design_methyl, design_aspcr, design_manual
+from pcr.factory import PCRFactory
+from pcr.config.loader import load_pipeline_config
 
-app = FastAPI(
-    title="GCX - Primer Design API",
-    description="qPCRdesigner 기반 primer 설계 웹 API",
-    version="0.1.0",
-)
+app = FastAPI(title="GENCURIX PCR API")
 
-# static /templates 설정
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates", auto_reload=True)
-
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# -----------------------
-#   라우터 등록
-# -----------------------
-app.include_router(design_qpcr.router)
-app.include_router(design_methyl.router)
-app.include_router(design_aspcr.router)
-app.include_router(design_manual.router)
-
-app.include_router(export.router)
-app.include_router(qc.router)   # 👈 QC 라우터
-app.include_router(pages.router)   # 👈 QC 라우터
-
-
-# -----------------------
-#   기본 페이지 (GET /)
-# -----------------------
+# 1. [핵심 수정] 브라우저 접속 시 "Not Found" 대신 "서버 작동 중" 화면을 보여줍니다.
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
+async def root():
+    return """
+    <html>
+        <head><title>Gencurix API</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+            <h1 style="color: #2b384c;">🚀 Gencurix PCR Backend is Running!</h1>
+            <p>API Endpoint: <code>/api/design/qpcr</code> (POST)</p>
+            <p>API Documentation: <a href="/docs">Swagger UI (/docs)</a></p>
+            <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; display: inline-block; border-radius: 5px;">
+                <b>Note:</b> 실제 대시보드는 <code>quarto preview index.qmd</code>로 실행하세요.
+            </div>
+        </body>
+    </html>
     """
-    처음 접속할 때는 Primer Design 페이지를 기본으로 보여줌.
-    - mode: 'single' 또는 'multi' (템플릿에서 current_design_mode 로 사용)
-    """
-    return templates.TemplateResponse(
-        "design.html",   # 🔹 이제 index.html 대신 design.html 사용
-        {
-            "request": request,
-            "mode": "single",          # 기본 디자인 모드
-            "primer_type": "default",  # 필요 시 템플릿에서 사용
-            "reference": "hg19",
-            "probe": "no",
-            "single_result": None,
-            "multi_results": None,
-            "error": None,
-        },
-    )
+
+# 2. 기존 디자인 로직 (POST 방식)
+@app.post("/api/design/qpcr")
+async def design_qpcr(request: Request):
+    base_yaml = os.path.join(BASE_DIR, "pcr/config/base_pcr.yaml")
+    sys_yaml = os.path.join(BASE_DIR, "pcr/config/system.yaml")
+
+    try:
+        config = load_pipeline_config(base_yaml, sys_yaml, "qPCR")
+        web_input = await request.json()
+        
+        factory = PCRFactory(config)
+        result = factory.execute_design(
+            chrom=web_input.get("chrom"),
+            start=web_input.get("start"),
+            end=web_input.get("end")
+        )
+        return result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    # 포트 8000번으로 실행
+    uvicorn.run(app, host="0.0.0.0", port=8000)

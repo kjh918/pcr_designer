@@ -1,0 +1,11 @@
+system:
+  blastn_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/bin/blastn"
+  makeblastdb_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/bin/makeblastdb"
+
+references:
+  hg38:
+    fasta_path: "/Users/kimjihoon/Documents/reference_genome/hg38.fa"
+    blast_db_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/db/hg38/hg38"
+  hg19:
+    fasta_path: "/storage/references/hg19.fa"
+    blast_db_path: "/storage/references/blastdb/hg19"

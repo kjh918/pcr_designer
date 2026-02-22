@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GENCURIX PRIMER DESIGN</title>
+</head>
+<body>
+
+<h2>Primer Design</h2>
+
+Chrom: <input id="chrom"><br>
+Start: <input id="start" type="number"><br>
+End: <input id="end" type="number"><br>
+
+<button onclick="runDesign()">RUN</button>
+
+<hr>
+
+<pre id="result"></pre>
+
+<script>
+async function runDesign() {
+
+    const payload = {
+        chrom: document.getElementById("chrom").value,
+        start: parseInt(document.getElementById("start").value),
+        end: parseInt(document.getElementById("end").value)
+    };
+
+    const response = await fetch("/api/design/qpcr", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    document.getElementById("result").textContent =
+        JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>

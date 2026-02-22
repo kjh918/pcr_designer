@@ -1,595 +1,99 @@
+
 ---
 title: "GENCURIX TARGET-FINDER"
 author: "NGS-TEAM"
-format: dashboard
-engine: knitr
+format:
+  dashboard:
+    orientation: rows
+engine: python
 server: shiny
 ---
 
-```{r}
-#| label: setup-block
-#| context: setup
-    options(stringsAsFactors=FALSE) 
-    suppressPackageStartupMessages(library("shiny"))
-    suppressPackageStartupMessages(library("bslib"))
-    suppressPackageStartupMessages(library("bsplus"))
-    suppressPackageStartupMessages(library("Hmisc"))
-    suppressPackageStartupMessages(library("plyr"))
-    suppressPackageStartupMessages(library("dplyr"))
-    suppressPackageStartupMessages(library("RMySQL"))
-    suppressPackageStartupMessages(library("parallel"))
-    suppressPackageStartupMessages(library("shinyWidgets"))
-    suppressPackageStartupMessages(library("stringr"))
-    suppressPackageStartupMessages(library("Biostrings"))
-    suppressPackageStartupMessages(library("shinyjs"))
-    # suppressPackageStartupMessages(library("shinybusy"))
-    suppressPackageStartupMessages(library("GenomicRanges"))
-    suppressPackageStartupMessages(library("vcfR"))
-    suppressPackageStartupMessages(library("ggrepel"))
-    suppressPackageStartupMessages(library("ggplot2"))
-    suppressPackageStartupMessages(library("Cairo"))
-    grDevices::X11.options(type='cairo')
-    options(device='x11')
-    options(bitmapType='cairo')
-    #GENOME   = BSgenome.Hsapiens.UCSC.hg38
-    #---------------------------------------------------------------------------
-    source("PrimerSuite_Funtions.R")
-###
-```
+{python} #| context: setup import requests import pandas as pd from shiny import ui, render, reactive, req import matplotlib.pyplot as plt  API_URL = "http://localhost:8000/api/design/qpcr" 
 
 <style type="text/css">
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Roboto+Condensed&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed&display=swap');
+    @import url('');
     body{ font-size: 14px; font-family: 'Nunito';}
-    h1{ font-size: 24px; font-family: 'Nunito'; font-weight: bold; }
-    h2{ font-size: 20px; font-family: 'Nunito'; font-weight: bold; }
-    h3{ font-size: 18px; font-family: 'Nunito'; }
-    h4{ font-size: 14px; font-family: 'Nunito'; }
-    .accordion-button { font-family: Nunito; font-size: 14px; font-weight: bold; padding-top: 3px; padding-bottom: 3px; }
-    .accordion-body { font-family: Roboto Condensed; font-size: 12px; }
-    .target-highlight { font-weight: bold; color: #C73500; }
+    .sidebar { background-color: #f8f9fa; padding: 15px; }
+    .btn-apply { font-family: 'Roboto Condensed'; font-weight: bold; background-color: #f5e1a2; color: #000; border: 1px solid #ccc; }
+    .btn-run { font-family: 'Roboto Condensed'; font-weight: bold; background-color: #DAE8FC; color: #2b384c; border: 1px solid #2b384c; }
+    .btn-import { font-family: 'Roboto Condensed'; font-weight: bold; background-color: #D5E8D4; border-color: #2D7600; color: #2D7600; }
 </style>
 
 # {.sidebar width="350px"}
 
-<br style="margin-top: 3px; margin-bottom: 3px;">
-<div style="font-size: 15px; font-weight: bold;"> Target Gene </div>
-<hr style="border: none; height: 1px; background-color: #7a7a7a; margin-top: 5px; margin-bottom: 10px;">
-
-```{r}
-#| label: target-gene-input
-    fluidPage(
-        column( width=7, 
-            textAreaInput(inputId="Input.TargetGene", value="", resize="none", height="15px", label=div(style="font-family: Roboto Condensed; font-size: 12px;", "GENE SYMBOL" )),
-        ),
-        column( width=4, 
-            HTML('<hr style="border: solid 0px #FFFFFF; margin-top: 10px; margin-bottom: 13px;">'),
-            actionButton("Input.GeneSave", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY",style="font-family: Roboto Condensed; font-weight: bold; font-size: 12x; background-color: #f5e1a2;"),
-        ),
-        column(width=1),
-        br()
-    )
-    HTML('<hr style="border: none; height: 1px; background-color: #000000; margin-top: 1px; margin-bottom: 15px;">')
-    fluidPage(
-        column(width=6, align="center",
-            span(style="font-family: Roboto Condensed; font-size: 16x; ", "Target Gene"),
-            span(textOutput('SELECTED_GENE'), style="font-family: Roboto; font-weight: bold; font-size: 18px;")
-        ),
-        column(width=5, align="center",
-            span(style="font-family: Roboto Condensed; font-size: 16x; ", "Taret Type"), 
-            span(textOutput('SELECTED_TARGET_TYPE'), style="font-family: Roboto; font-weight: bold; font-size: 18px;")
-        ),
-        column(width=1)
-    )
-``` 
-
-<hr style="border: none; height: 1px; background-color: #000000; margin-top: 1px; margin-bottom: 15px;">
-<div style="font-size: 15px; font-weight: bold;"> Target Type of Gene</div>
-<hr style="border: solid 0px #FFFFFF; margin-top: 3px; margin-bottom: 3px;">
-
-```{r}
-#| label: target-type-input
-#| echo: false
-#| warning: false
-#| message: false
-    fluidPage(
-        accordion( id="Input.TargetType", open=FALSE, multiple=FALSE,
-            accordion_panel( "Residue",
-                selectizeInput(inputId="Input.TargetResidue",  choices=c(""), selected=NULL, label="Amino Acid & Number"),
-                actionButton("Input.TargetUseResidue", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x;")
-            ),
-            accordion_panel( "Exon Number",
-                selectInput(inputId="Input.TargetExon",  choices=c(""), selected=NULL, label="Exon Number"),
-                actionButton("Input.TargetUseExon", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x;")
-            ),
-            accordion_panel( "RSID",
-                textAreaInput(inputId="Input.TargetRSID", value="", height="15px", resize="none", label="RSID"),
-                actionButton("Input.TargetUseRSID", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x;")
-            )
-        )
-    )
-```
-
-<hr style="border: none; height: 1px; background-color: #000000; margin-top: 10px; margin-bottom: 15px;">
-<div style="font-size: 15px; font-weight: bold;"> Target by Genomic Position</div>
-<hr style="border: solid 0px #FFFFFF; margin-top: 3px; margin-bottom: 3px;">
-
-```{r}
-#| label: target-genomic-position-input
-#| echo: false
-#| warning: false
-#| message: false
-    fluidPage(
-        accordion( id="Input.GenomicPosition", open=FALSE, multiple=FALSE,
-            accordion_panel( "Select Input",
-                textAreaInput(inputId="Input.TargetPOS1.Chrom", value="", height="14px", resize="none",
-                    label=div(style="font-family: Roboto Condensed; font-size: 13px; white-space: pre-wrap;", "CHROMOSOME")
-                ),
-                splitLayout( cellWidths = c("50%","50%"), 
-                    textAreaInput(inputId="Input.TargetPOS1.Start", value = "", height="13px", resize="none", label=div(style="font-family: Roboto Condensed; font-size: 13px; white-space: pre-wrap;", "START") ),
-                    textAreaInput(inputId="Input.TargetPOS1.End", value="", height="13px", resize="none", label=div(style="font-family: Roboto Condensed; font-size: 13px; white-space: pre-wrap;", "END") )
-                ),
-                actionButton("Input.TargetUsePOS", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x;")
-            ),
-            accordion_panel( "Copy & Paste",
-                textAreaInput(inputId="Input.TargetPOS2", value="", height="35px", resize="vertical", label=div(style="font-family: Nunito; font-size:  14x; white-space: pre-wrap;", "Chr:Start-End") ),
-                actionButton("Input.TargetUsePOS2", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x;")
-            ),
-            accordion_panel( "RSID Without GENE",
-                span(style="font-family: Roboto Condensed; font-size: 12x; color: #C73500", "GENE 입력 없이 RSID 사이트 검색시 약 1분 소요됨."),
-                textAreaInput(inputId="Input.TargetRSID2", value="", width="150px", height="15px", resize="none", label="RSID"),
-                actionButton("Input.TargetUseRSID2", icon=icon(name="circle-check", lib="font-awesome"), label="APPLY", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x;")
-            )
-
-        )
-    )
-```
-
-<hr style="border: none; height: 1px; background-color: #000000; margin-top: 10px; margin-bottom: 15px;">
-<div style="font-size: 15px; font-weight: bold;"> ANALYSIS RUN </div>
-<hr style="border: solid 0px #FFFFFF; margin-top: 3px; margin-bottom: 3px;">
 
 
-```{r}
-#| label: analysis-config
-#| echo: false
-#| warning: false
-#| message: false
-    
-    prettySwitch(inputId="Input.UseGenomicPosition", value=FALSE, status="danger",
-        label=div(style="font-family: Roboto Condensed; font-size: 14px;", "Use Genomic Position Target")
-    )
-    fluidPage(column(width=12, align="center",
-        actionButton("Input.RUN_ANALYSIS", icon=icon(name="dna", lib="font-awesome"), label="FIND TARGET REGION", style="font-family: Roboto Condensed; font-weight: bold; font-size: 10x; background-color: #DAE8FC; color: #2b384c; border-color: #2b384c;", width="200px"),
-        HTML('<hr style="border: solid 0px #FFFFFF; margin-top: 8px; margin-bottom: 6px;">')
-    ))
 
-```
+Target Gene
+<hr style="border: none; height: 1px; background-color: #7a7a7a; margin-bottom: 10px;">
 
-<hr style="border: none; height: 1px; background-color: #000000; margin-top: 10px; margin-bottom: 15px;">
-<div style="font-size: 15px; font-weight: bold;"> Analysis Result </div>
-<hr style="border: solid 0px #FFFFFF; margin-top: 3px; margin-bottom: 3px;">
+{python} ui.row(     ui.column(8, ui.input_text_area("Input_TargetGene", "GENE SYMBOL", value="", height="45px", resize="none")),     ui.column(4, ui.div(style="margin-top: 25px;", ui.input_action_button("Input_GeneSave", "APPLY", class_="btn-apply"))) ) ui.hr() ui.row(     ui.column(6, ui.div(align="center", ui.span("Target Gene", style="font-size: 12px;"), ui.br(), ui.output_text("SELECTED_GENE"))),     ui.column(6, ui.div(align="center", ui.span("Target Type", style="font-size: 12px;"), ui.br(), ui.output_text("SELECTED_TARGET_TYPE"))) ) 
 
-```{r}
-#| label: analysis-result
-#| echo: false
-#| warning: false
-#| message: false
-    
-    prettySwitch(inputId="Input.ReverseComp", value=FALSE, status="primary", label=span(style="font-family: Roboto Condensed; font-size: 14px;", "Reverse-Complemet Sequences"))
-    prettySwitch(inputId="Input.TargetSeqLower", value=FALSE, status="danger", label=div(style="font-family: Roboto Condensed; font-size: 14px;", "Target Region to Lowercase"))
-    prettySwitch(inputId="Input.ApplyExpansion", value=FALSE, status="danger", label=div(style="font-family: Roboto Condensed; font-size: 14px;", "Expand Genomic Position Target"))
-    sliderInput(inputId='Input.ExpansionLength', min=0, max=200, step=1, value=60, ticks=T, width="250px", label=div(style="font-family: Roboto Condensed; font-size: 13px;", "Expansion Length (bp)" ))
-    sliderInput(inputId='Input.PlotFontSize', min=2, max=6, step=0.5, value=4, ticks=T, width="250px", label=div(style="font-family: Roboto Condensed; font-size: 13px;", "Plot  Font-Size" ))
-    actionButton(inputId="Input.EXPORT_AS_FILE1", icon=icon(name="file-export", lib="font-awesome"), label=HTML("Export as File"), style="font-family: Roboto Condensed; font-size: 8x;", width="130px")
-    HTML('<hr style="border: none; height: 1px; background-color: #000000; margin-top: 10px; margin-bottom: 15px;">')
-    HTML('<hr style="border: solid 0px #FFFFFF; margin-top: 3px; margin-bottom: 3px;">')
-    fluidPage( column( width=12, align="center",
-        actionButton(inputId="Input.SAVE_TO_PRIMER_DESIGN", icon=icon(name="arrow-right-to-bracket", lib="font-awesome"), label=HTML("IMPORT to PRIMER DESIGN"), style="font-family: Roboto Condensed; font-weight: bold; font-size: 15x; background-color: #D5E8D4; border-color: #2D7600; color: #2D7600;", width="220px")
-    ))
+<hr style="border: none; height: 1px; background-color: #000; margin-top: 15px;">
+Target Type of Gene
 
-```
+{python} ui.accordion(     ui.accordion_panel("Residue", ui.input_select("Input_TargetResidue", "Amino Acid", choices=[]), ui.input_action_button("Btn_Res", "APPLY", class_="btn-apply")),     ui.accordion_panel("Exon Number", ui.input_select("Input_TargetExon", "Exon", choices=[]), ui.input_action_button("Btn_Ex", "APPLY", class_="btn-apply")),     ui.accordion_panel("RSID", ui.input_text("Input_TargetRSID", "RSID"), ui.input_action_button("Btn_RS", "APPLY", class_="btn-apply")),     id="acc_type", open=False ) 
+
+<hr style="border: none; height: 1px; background-color: #000; margin-top: 15px;">
+Genomic Position
+
+{python} ui.accordion(     ui.accordion_panel("Input", ui.input_text("Input_Chrom", "CHR"), ui.row(ui.column(6, ui.input_text("Input_Start", "START")), ui.column(6, ui.input_text("Input_End", "END"))), ui.input_action_button("Btn_P1", "APPLY", class_="btn-apply")),     id="acc_pos", open=False ) 
+
+<hr style="border: none; height: 1px; background-color: #000; margin-top: 15px;">
+ANALYSIS RUN
+
+{python} ui.input_switch("Input_UsePos", "Use Genomic Position", False) ui.div(align="center", ui.input_action_button("Input_RUN", "FIND TARGET REGION", icon="dna", class_="btn-run", width="220px")) 
+
+<hr style="border: none; height: 1px; background-color: #000; margin-top: 15px;">
+Analysis Result
+
+{python} ui.input_switch("Input_RevComp", "Reverse-Complement", False) ui.input_switch("Input_Lower", "Lowercase Target", False) ui.input_slider("Input_Exp", "Expansion (bp)", 0, 200, 60) ui.input_action_button("Btn_ExpFile", "Export as File", icon="file-export", width="100%") ui.hr() ui.div(align="center", ui.input_action_button("Input_IMP", "IMPORT to PRIMER DESIGN", class_="btn-import", width="250px")) 
 
 # TARGET FINDER
 
-```{r}
-#| context: server
-#| label: target-finder-server
-#| echo: false
-#| warning: false
-#| message: false
+{python} #| context: server @render.text def SELECTED_GENE(): return input.Input_TargetGene() if input.Input_TargetGene() else "-"  @render.text def SELECTED_TARGET_TYPE(): return "-" 
 
-    # input gene control ---------------------------------------------------------------------------
-    GENE             <- reactiveValues( inputGene="" )
-    TARGET_TYPE      <- reactiveValues( targetType="" )
-    GENOMIC_POSIITON <- reactiveValues( genomicPosition=data.frame(chrom="", startpos=NA, endpos=NA) )
-    GENE_STRUCTURE   <- reactiveValues( data=data.frame() )
-    TARGET_FEATURE   <- reactiveValues( data="" )
-    TARGET_DATA      <- reactiveValues( data=data.frame() )
-    CONTROL          <- reactiveValues( makeplot=FALSE )
+## Row {height="320px"}
 
-    # gene update
-    observeEvent( input$Input.GeneSave, { 
-        req(input$Input.GeneSave)
-        GENE$inputGene <- ifelse( Gene.Name.Check(input$Input.TargetGene), input$Input.TargetGene, "" )       
-        updateSelectizeInput( session=session, inputId='Input.TargetResidue', choices=Update.Gene.Residues(INPUT_GENE=input$Input.TargetGene), selected=NULL, server = TRUE, options = list(maxOptions = 10000) )
-        updateSelectInput( session=session, inputId='Input.TargetExon', choices=Update.Gene.Exons(INPUT_GENE=input$Input.TargetGene), selected=NULL )
-        CONTROL$makeplot <- FALSE
-        TARGET_TYPE$targetType <- "-"
-    })
-    # select RESIDUE
-    observeEvent( input$Input.TargetUseResidue, { 
-        req(input$Input.TargetUseResidue)
-        TARGET_TYPE$targetType <- "RESIDUE"
-        TARGET_FEATURE$data    <- GetResiduePosition(input$Input.TargetResidue)
-        GENE_STRUCTURE$data    <- Make.Gene.Structure(INPUT_GENE=input$Input.TargetGene)
-    })
-    # select EXON
-    observeEvent( input$Input.TargetUseExon, { 
-        req(input$Input.TargetUseExon)
-        TARGET_TYPE$targetType <- "EXON"
-        TARGET_FEATURE$data    <- input$Input.TargetExon
-        GENE_STRUCTURE$data    <- Make.Gene.Structure(INPUT_GENE=input$Input.TargetGene)
-    })
-    # select RSID_GENE
-    observeEvent( input$Input.TargetUseRSID, { 
-        req(input$Input.TargetUseRSID)
-        TARGET_TYPE$targetType <- "RSID_GENE"
-        TARGET_FEATURE$data    <- RSID.Postiion.Finder(INPUT_RSID=input$Input.TargetRSID, INPUT_GENE=input$Input.TargetGene, GNOMAD_VCF_DIR="gnomad_vcf")
-        GENE_STRUCTURE$data    <- Make.Gene.Structure(INPUT_GENE=input$Input.TargetGene)
-    })
-    # select POSITION-1
-    observeEvent( input$Input.TargetUsePOS, { 
-        req(input$Input.TargetUsePOS)
-        TARGET_TYPE$targetType <- "POSITION"
-        GENOMIC_POSIITON$genomicPosition <- data.frame(
-            chrom    = ifelse( length(grep("^chr", input$Input.TargetPOS1.Chrom)) == 0, paste0("chr", input$Input.TargetPOS1.Chrom), input$Input.TargetPOS1.Chrom),
-            startpos = as.numeric(input$Input.TargetPOS1.Start), 
-            endpos   = as.numeric(input$Input.TargetPOS1.End)
-        )
-    })
-    # select POSITION-2
-    observeEvent( input$Input.TargetUsePOS2, { 
-        req(input$Input.TargetUsePOS2)
-        TARGET_TYPE$targetType           <- "POSITION"
-        GENOMIC_POSIITON$genomicPosition <- Genomic.Position.Convert(ChrStartEnd=input$Input.TargetPOS2)
-    })
-    # select RSID_POS
-    observeEvent( input$Input.TargetUseRSID2, { 
-        req(input$Input.TargetUseRSID2)
-        TARGET_TYPE$targetType           <- "RSID_POS"
-        GENOMIC_POSIITON$genomicPosition <- RSID.Postiion.Finder(INPUT_RSID=input$Input.TargetRSID2, INPUT_GENE=NULL, GNOMAD_VCF_DIR="gnomad_vcf")
-    })
-    
-    #if( !is.na(GENOMIC_POSIITON$genomicPosition$startpos) ){ SERVER_BUSY$status <- "Finished." }
+### PLOT {padding="5px"}
 
+{python} @render.plot def TARGET_DNA_PLOT():     fig, ax = plt.subplots(figsize=(10, 2))     ax.text(0.5, 0.5, "GENOMIC SEQUENCES PLOT", ha='center', color='gray')     ax.axis('off')     return fig 
 
-    # RUN ANALYSIS
-    observeEvent( input$Input.RUN_ANALYSIS, { 
-        req(input$Input.RUN_ANALYSIS)
-        if( input$Input.UseGenomicPosition ){
-            if( TARGET_TYPE$targetType %in% c("RESIDUE","EXON","RSID_GENE") ){
-                TARGET_DATA$data <- data.frame()
-                CONTROL$makeplot <- FALSE
-            }else{
-                TARGET_DATA$data <- Target.Region.Structure.ByPosition( TargetFeatrue = GENOMIC_POSIITON$genomicPosition )
-                CONTROL$makeplot <- TRUE
-            }
-        }else{
-            if( TARGET_TYPE$targetType %in% c("RESIDUE","EXON","RSID_GENE") ){
-                TARGET_DATA$data <- Target.Region.Structure.ByGene(
-                    GeneStructrure = GENE_STRUCTURE$data, 
-                    TargetType     = TARGET_TYPE$targetType, 
-                    TargetFeatrue  = TARGET_FEATURE$data
-                )
-                CONTROL$makeplot <- TRUE
-            }else{
-                TARGET_DATA$data <- data.frame()
-                CONTROL$makeplot <- FALSE
-            }
-        }
-    })
-    # DNA SEQ PLOT
-    output$TARGET_DNA_PLOT <- renderPlot({
-        if( CONTROL$makeplot ){
-            p.res = Target.Region.Genome.Sequences.Plot( 
-                targetData        = TARGET_DATA$data, 
-                targetType        = TARGET_TYPE$targetType,
-                applyExpansion    = input$Input.ApplyExpansion,
-                expansionLength   = input$Input.ExpansionLength,
-                fontSize          = input$Input.PlotFontSize,
-                targetToLowerCase = input$Input.TargetSeqLower,
-                revComp           = input$Input.ReverseComp        
-            )
-        }else{
-            p.res = ggplot() + theme_void() + coord_cartesian(ylim=c(-0.1,0.1) ) +
-                annotate("text", x=0, y=0, label="NO TARGET DATA.", family="Nunito", fontface="italic", size=input$Input.PlotFontSize*1.2, col="#adadad" )
-                
-        }
-        p.res
-    })
+## Row {height="150px"}
 
-    OvelapGeneInfo <- reactive({
-        if( CONTROL$makeplot ){
-            if( input$Input.UseGenomicPosition ){
-                ovGene <- readRDS("hg38genes.rds")[subjectHits(findOverlaps(GRanges(GENOMIC_POSIITON$genomicPosition %>% dplyr::rename(start=2, end=3)),readRDS("hg38genes.rds")))]
-                if( length(ovGene) == 0 ){ ovlpGene <- "Inter-Gene-Region (IGR)" }else{ ovlpGene <- ovGene$gene }
-            }else{ ovlpGene <- GENE$inputGene }
-            if( ovlpGene != "Inter-Gene-Region (IGR)" ){
-                mane_data <- Get.MANE.Selection(INPUT_GENE=ovlpGene) 
-                if( nrow(mane_data) > 0 ){
-                    tx_info <- paste0( mane_data$refseq, " / ", mane_data$ensembl )
-                }else{
-                    tx_info <- ""
-                }
-            }else{ tx_info <- "" }
-            target_region <- TARGET_DATA$data %>% filter( target_site == "target") %>% .$cds %>% unique() %>% paste0(collapse=", ")
-            target_region <- gsub("cds",    "CDS",    target_region)
-            target_region <- gsub("utr",    "UTR",    target_region)
-            target_region <- gsub("intron", "Intron", target_region)
-            gene_strand   <- TARGET_DATA$data$strand %>% unique()
-            gene_strand   <- gene_strand[!is.na(gene_strand)]
-            if( gene_strand == "+" ){ GS <- "Plus ( + )" }else{ GS <- "Minus ( - )" }
-            if( ovlpGene == "Inter-Gene-Region (IGR)" ){ GS <- "Plus ( + )" }
-            res <- list(gene=ovlpGene, tx=tx_info, targetregion=target_region, gene_strand=GS )
-        }else{ res <- list(gene="", tx="", targetregion="", gene_strand="" ) }
-        return(res)
-    })
+### Overlaped Gene
+{python} @render.text def OVERLAP_GENE(): return "-" 
 
-    SeqResults <- reactive({
-        if( CONTROL$makeplot ){
-            if( TARGET_TYPE$targetType %in% c("POSITION","RSID_POS") ){
-                if( input$Input.ApplyExpansion ){ padding = input$Input.ExpansionLength }else{ padding = 0 }
-            }else{
-                padding = input$Input.ExpansionLength
-            }
-            target_range = c(
-                TARGET_DATA$data  %>% filter( target_site == "target" ) %>% .$position %>% min() - padding,
-                TARGET_DATA$data  %>% filter( target_site == "target" ) %>% .$position %>% max() + padding
-            )
-            seqdata <- TARGET_DATA$data %>% filter( position %in% c(target_range[1]:target_range[2]))
-            if( input$Input.ReverseComp ){
-                seqdata$DNA <- sapply(seqdata$reference, function(dna) as.character(Biostrings::reverseComplement(DNAString(dna))) )
-                seqdata     <- seqdata %>% arrange( desc(position) ) %>% mutate(INDEX=1:nrow(.))
-            }else{
-                seqdata <- seqdata %>% mutate( DNA=reference, INDEX=1:nrow(.) )
-            }        
-            if( input$Input.TargetSeqLower ){
-                seqdata$DNA <- apply(seqdata[,c("DNA","target_site")], 1, function(ts) {
-                    if(is.na(ts[2])){ dna=ts[1] }else{ dna=tolower(ts[1]) }
-                    return(dna)
-                })
-            }
-            targetIndex <- seqdata %>% filter(target_site == "target") %>% .$INDEX
-            pre_target_seq  <- seqdata %>% filter( INDEX < min(targetIndex) ) 
-            target_seq      <- seqdata %>% filter( INDEX %in%  targetIndex  )
-            post_target_seq <- seqdata %>% filter( INDEX > max(targetIndex) )
-            if( nrow(pre_target_seq) > 0 ){
-                PreTargetSeq <- paste0(pre_target_seq$DNA, collapse="")
-                PreTargetPos <- paste0(unique(pre_target_seq$chrom),":",min(pre_target_seq$position),"-",max(pre_target_seq$position))
-            }else{
-                PreTargetSeq <- ""
-                PreTargetPos <- ""
-            }
-            if( nrow(post_target_seq) > 0 ){
-                PostTargetSeq <- paste0(post_target_seq$DNA, collapse="")
-                PostTargetPos <- paste0(unique(post_target_seq$chrom),":",min(post_target_seq$position),"-",max(post_target_seq$position))
-            }else{
-                PostTargetSeq <- ""
-                PostTargetPos <- ""
-            }
-            TotalPos  <- paste0(unique(seqdata$chrom),":",min(seqdata$position),"-",max(seqdata$position))
-            TargetSeq <- paste0(target_seq$DNA, collapse="")
-            TargetPos <- paste0(unique(target_seq$chrom),":",min(target_seq$position),"-",max(target_seq$position))
-            
-            seqRes <- list( 
-                pre_target  = PreTargetSeq,  pre_target_pos  = PreTargetPos,  pre_target_len  = paste0(nrow(pre_target_seq), " bp"),
-                target      = TargetSeq,     target_pos      = TargetPos,     target_len      = paste0(nrow(target_seq), " bp"),
-                post_target = PostTargetSeq, post_target_pos = PostTargetPos, post_target_len = paste0(nrow(post_target_seq), " bp"),
-                total_pos   = TotalPos,      total_len       = paste0(nrow(seqdata), " bp")
-            )
-        }else{
-            seqRes <- list( 
-                pre_target  = "", pre_target_pos  = "", pre_target_len  = "",
-                target      = "", target_pos      = "", target_len      = "",
-                post_target = "", post_target_pos = "", post_target_len = "", 
-                total_pos   = "", total_len       = ""
-            )
-        }
-        return(seqRes)
-    })
+### Strand
+{python} @render.text def STRAND(): return "+" 
 
-    output$SELECTED_GENE        = renderText({ if( GENE$inputGene == "" ){ "-" }else{ GENE$inputGene } })
-    output$SELECTED_TARGET_TYPE = renderText({ if( TARGET_TYPE$targetType == "" ){ "-" }else{ TARGET_TYPE$targetType } })
-    output$OVERLAP_GENE         = renderText({ OvelapGeneInfo()$gene })
-    output$GENE_STRAND          = renderText({ OvelapGeneInfo()$gene_strand })
-    output$TX_INFO              = renderText({ OvelapGeneInfo()$tx })
-    output$TARGET_REGION_GROUP  = renderText({ OvelapGeneInfo()$targetregion })
-    output$SEQ_PRE_TARGET       = renderText({ SeqResults()$pre_target })
-    output$SEQ_TARGET           = renderText({ SeqResults()$target })
-    output$SEQ_POST_TARGET      = renderText({ SeqResults()$post_target })
-    output$POS_PRE_TARGET       = renderText({ SeqResults()$pre_target_pos })
-    output$POS_TARGET           = renderText({ SeqResults()$target_pos })
-    output$POS_POST_TARGET      = renderText({ SeqResults()$post_target_pos })
-    output$POS_TOTAL            = renderText({ SeqResults()$total_pos })
-    output$LEN_PRE_TARGET       = renderText({ SeqResults()$pre_target_len })
-    output$LEN_TARGET           = renderText({ SeqResults()$target_len })
-    output$LEN_POST_TARGET      = renderText({ SeqResults()$post_target_len })
-    output$LEN_TOTAL            = renderText({ SeqResults()$total_len })
-    output$FULL_LENGTH          = renderText({ paste0(
-        SeqResults()$pre_target," ",SeqResults()$target," ",SeqResults()$post_target)
-    })
-    output$SEQ_PRE_TARGET_FULL  = renderText({ SeqResults()$pre_target })
-    output$SEQ_TARGET_FULL      = renderText({ SeqResults()$target })
-    output$SEQ_POST_TARGET_FULL = renderText({ SeqResults()$post_target })
- 
+### Transcript
+{python} @render.text def TX(): return "-" 
 
-```
+### Features
+{python} @render.text def FEATURES(): return "-" 
 
+## Row {height="180px"}
 
-### PLOT {height="320px" padding="5px" .flow} 
+### Full-Length
+{python} @render.ui def info_full(): return ui.div(ui.p("Pos: -"), ui.p("Len: 0 bp")) 
 
-```{r}
-#| label: dna-plot
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px; ", "EXPANDED TARGET REGION GENOMIC SEQUENCES")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    plotOutput('TARGET_DNA_PLOT', width = "100%", height = "250px")
-```
+### Pre-Target
+{python} @render.ui def info_pre(): return ui.div(ui.p("Pos: -"), ui.p("Len: 0 bp")) 
 
+### Target
+{python} @render.ui def info_target(): return ui.div(ui.p("Pos: -"), ui.p("Len: 0 bp")) 
 
-### FRAGMENT INFO1 {.flow height="100px"}
+### Post-Target
+{python} @render.ui def info_post(): return ui.div(ui.p("Pos: -"), ui.p("Len: 0 bp")) 
 
-```{r}
-#| label: overlap-gene
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Overlaped Gene")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    span(style="font-size: 16px; font-weight: bold;", textOutput('OVERLAP_GENE'))   
-```
+## Row {height="300px"}
 
-```{r}
-#| label: gene-strand
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Gene/Target Strand")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    span(style="font-size: 16px; font-weight: bold;", textOutput('GENE_STRAND'))
-```
+### SEQUENCES
 
-```{r}
-#| label: tx-info
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Transcript Info")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    span(style="font-size: 14px; font-weight: bold;", textOutput('TX_INFO'))
-
-```
-
-```{r}
-#| label: genomic-feature
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Genomic Features of Target")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    span(style="font-size: 16px; font-weight: bold;", textOutput('TARGET_REGION_GROUP'))
-```
-
-
-### FRAGMENT INFO2 {.flow height="150px"}
-
-```{r}
-#| label: length-full
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Fragment Full-Length")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    fluidPage(
-        span(style="font-size: 12px;", "Position"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('POS_TOTAL')), 
-        span(style="font-size: 12px;", "Length"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('LEN_TOTAL'))   
-    )
-
-```
-
-```{r}
-#| label: head-part
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Pre-Target Fragment")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    fluidPage(
-        span(style="font-size: 12px;", "Position"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('POS_PRE_TARGET')),
-        span(style="font-size: 12px;", "Length"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('LEN_PRE_TARGET'))   
-    )
-
-```
-
-```{r}
-#| label: target-part
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Target Fragment")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    fluidPage(
-        span(style="font-size: 12px;", "Position"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('POS_TARGET')),
-        span(style="font-size: 12px;", "Length"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('LEN_TARGET'))   
-    )
-```
-
-```{r}
-#| label: tail-part
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-align: center
-    span(style="font-size: 14px;", "Post-Target Fragment")
-    HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-    fluidPage(
-        span(style="font-size: 12px;", "Position"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('POS_POST_TARGET')),
-        span(style="font-size: 12px;", "Length"),
-        span(style="font-size: 14px; font-weight: bold;", textOutput('LEN_POST_TARGET'))   
-    )
-```
-
-### 
-
-<span style="font-size: 12px; font-weight: bold;">FULL-LENGTH FRAGMENT SEQUENCES</span>
-<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">
-<span style="font-family: Consolas; font-size: 16px;">`r textOutput('SEQ_PRE_TARGET_FULL', inline=T)`<span style="color: #ff0000; font-weight: bold;">`r textOutput('SEQ_TARGET_FULL', inline=T)`</span>`r textOutput('SEQ_POST_TARGET_FULL', inline=T)`</span>
-
-
-### PRE-TARGET-SEQ {.flow}
-```{r}
-#| label: pre-target-seq
-#| echo: false
-#| warning: false
-#| message: false
-    
-        span(style="font-size: 12px; font-weight: bold;", "PRE-TARGET SEQUENCES")
-        HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-        span(style="font-family: Consolas; font-size: 16px;", textOutput('SEQ_PRE_TARGET'))
-        br()
-        br()
-        span(style="font-size: 12px; font-weight: bold;",  "TARGET SEQUENCES")
-        HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-        span(style="font-family: Consolas; font-size: 16px;", textOutput('SEQ_TARGET'))
-        br()
-        br()
-        span(style="font-size: 12px; font-weight: bold;", "POST-TARGET SEQUENCES")
-        HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-        span(style="font-family: Consolas; font-size: 16px;", textOutput('SEQ_POST_TARGET'))
-        br()
-        br()
-        # span(style="font-size: 12px; font-weight: bold;", "FULL-LENGTH FRAGMENT SEQUENCES")
-        # HTML('<hr style="border: none; height: 1px; background-color: #adadad; margin-top: 5px; margin-bottom: 8px;">')
-        # span(style="font-family: Consolas; font-size: 16px;", textOutput('FULL_LENGTH'))
-        # br()
-    
-```
-
+FULL-LENGTH FRAGMENT SEQUENCES
+<hr style="border: none; height: 1px; background-color: #adadad;">
+<div style="font-family: Consolas; font-size: 16px; background: #f8f9fa; padding: 15px; word-break: break-all;">
+{python} @render.ui def seq_display():     return ui.div(         ui.span("PRE-SEQ"),         ui.span("TARGET", style="color:red; font-weight:bold;"),         ui.span("POST-SEQ")     ) 
+</div>
