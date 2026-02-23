@@ -1,11 +1,23 @@
+#system:
+#  blastn_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/bin/blastn"
+#  makeblastdb_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/bin/makeblastdb"
+
+#references:
+#  hg38:
+#    fasta_path: "/Users/kimjihoon/Documents/reference_genome/hg38.fa"
+#    blast_db_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/db/hg38/hg38"
+#  hg19:
+#    fasta_path: "/storage/references/hg19.fa"
+#    blast_db_path: "/storage/references/blastdb/hg19"
+
 system:
-  blastn_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/bin/blastn"
-  makeblastdb_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/bin/makeblastdb"
+  blastn_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastn"
+  makeblastdb_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/makeblastdb"
 
 references:
   hg38:
-    fasta_path: "/Users/kimjihoon/Documents/reference_genome/hg38.fa"
-    blast_db_path: "/Users/kimjihoon/Documents/ncbi-blast-2.17.0+/db/hg38/hg38"
+    fasta_path: "/storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa"
+    blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38"
   hg19:
     fasta_path: "/storage/references/hg19.fa"
-    blast_db_path: "/storage/references/blastdb/hg19"
+    blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg19"

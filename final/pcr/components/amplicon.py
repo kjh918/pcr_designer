@@ -55,8 +55,10 @@ class Amplicon(BaseModel):
     ref_sequence_clip: str = "" # Amplicon 위치에 해당하는 Reference 서열
     product_size: int = 0
     tm: float = 0.0
+    gc: float = 0.0
     region: Optional[GenomicRegion] = None
-        
+    genomic_pos: str = ""       # Amplicon 게놈 좌표 (chr:start-end)
+    alignment_visual: List[str] = Field(default_factory=list, description="웹 UI 렌더링용 Alignment 다이어그램")    
     # 변이 분석 결과
     all_changes: List[SequenceChange] = Field(default_factory=list)
     target_change_count: int = 0
@@ -85,10 +87,13 @@ class Amplicon(BaseModel):
             if self.template_sequence:
                 self.sequence = self.template_sequence[self.forward.start_index : self.reverse.end_index]
                 try:
-                    # primer3 최신 버전 함수명 calcTm 사용
-                    self.tm = primer3.calcTm(self.sequence, mv_conc=50, dv_conc=1.5, dntp_conc=0.6, dna_conc=50)
+                    self.tm = primer3.calc_tm(self.sequence, mv_conc=50, dv_conc=1.5, dntp_conc=0.6, dna_conc=50)
+                    g_count = self.sequence.upper().count('G')
+                    c_count = self.sequence.upper().count('C')
+                    self.gc = round(((g_count + c_count) / len(self.sequence)) * 100, 2)
                 except Exception:
                     self.tm = 0.0
+                    self.gc = 0.0
 
             # 3. Reference 서열 추출
             if self.reference_sequence and len(self.reference_sequence) >= len(self.template_sequence):

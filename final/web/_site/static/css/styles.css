@@ -1,0 +1,250 @@
+/* -----------------------------------
+   1. Fonts & Base Layout
+------------------------------------ */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Roboto+Condensed:wght@400;700&display=swap');
+
+body {
+    background-color: #f4f7f9;
+    font-family: 'Nunito', sans-serif; /* Target-Finder 기본 폰트 */
+    font-size: 14px;
+    margin: 0;
+}
+
+.app-shell {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+}
+
+/* -----------------------------------
+   2. Sidebar (Target-Finder 스타일: 350px)
+------------------------------------ */
+.sidebar {
+    width: 350px; /* 원본 코드와 동일한 너비 복구 */
+    background-color: #ffffff;
+    border-right: 1px solid #dee2e6;
+    padding: 20px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+/* 사이드바 메인 타이틀 */
+.sidebar h4 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* -----------------------------------
+   3. Main Panel
+------------------------------------ */
+.main-panel {
+    flex-grow: 1;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.panel {
+    background: white;
+    border-radius: 6px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid #e9ecef;
+}
+
+.panel-title {
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* -----------------------------------
+   4. Lines (Target-Finder 특유의 실선)
+------------------------------------ */
+hr.rule { 
+    border: none; 
+    height: 1px; 
+    background-color: #000000; /* 진한 검은색 구분선 */
+    margin-top: 10px; 
+    margin-bottom: 15px; 
+}
+hr.rule-light { 
+    border: none; 
+    height: 1px; 
+    background-color: #adadad; /* 회색 구분선 */
+    margin-top: 5px; 
+    margin-bottom: 8px; 
+}
+
+/* -----------------------------------
+   5. Inputs & Labels
+------------------------------------ */
+.section-title {
+    font-size: 15px;
+    font-weight: bold;
+    font-family: 'Nunito', sans-serif;
+}
+
+.small-label {
+    display: block;
+    font-family: 'Roboto Condensed', sans-serif; /* 라벨 전용 폰트 */
+    font-size: 12px;
+    color: #333;
+    margin-bottom: 3px;
+}
+
+.input-tight {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.warn { font-size: 11px; color: #C73500; margin-top: 5px; font-family: 'Roboto Condensed', sans-serif; font-weight: bold; }
+
+/* -----------------------------------
+   6. Buttons (RUN 버튼 스타일 동기화)
+------------------------------------ */
+.btn-run {
+    background-color: #DAE8FC;
+    color: #2b384c;
+    border: 1px solid #2b384c;
+    padding: 10px; 
+    width: 100%;
+    border-radius: 4px; 
+    font-family: 'Roboto Condensed', sans-serif;
+    font-weight: bold; 
+    font-size: 14px;
+    cursor: pointer; 
+    transition: background 0.2s;
+}
+.btn-run:hover { background-color: #c4d9f7; }
+
+/* -----------------------------------
+   7. Sequences & Tables
+------------------------------------ */
+.seq-display { 
+    font-family: 'Consolas', monospace; /* 시퀀스는 무조건 Consolas 16px */
+    font-size: 16px; 
+    background: #f1f3f5; 
+    padding: 10px; 
+    border-radius: 4px; 
+    word-break: break-all; 
+}
+.alignment-pre {
+    background-color: #ffffff; /* 기존 까만 배경에서 하얀 배경으로 */
+    color: #333; 
+    padding: 10px; 
+    border-radius: 4px;
+    border: 1px solid #eee;
+    font-family: 'Consolas', monospace; 
+    font-size: 14px; 
+    overflow-x: auto; 
+}
+
+.probe-color { color: #ff0000; font-weight: bold; border-left: 3px solid #ff0000; } /* 빨간색 강조 */
+.pos-label { display: block; color: #666; font-size: 12px; margin-top: 4px; font-family: 'Nunito', sans-serif; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { background-color: #f8f9fa; text-align: left; padding: 10px; border-bottom: 2px solid #adadad; font-family: 'Roboto Condensed', sans-serif; font-size: 13px; }
+.table td { padding: 10px; border-bottom: 1px solid #eee; }
+.table-container { width: 100%; overflow-x: auto; }
+.qc-list { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.8; color: #333; }
+
+/* -----------------------------------
+   8. Custom Accordion & Grid
+------------------------------------ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+.custom-accordion { margin-bottom: 10px; background-color: #ffffff; }
+.custom-accordion summary {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0px; 
+    font-size: 14px; font-weight: bold; font-family: 'Nunito', sans-serif;
+    color: #333; cursor: pointer; list-style: none; user-select: none;
+    border-bottom: 1px solid #adadad; /* Target-Finder 식 하단 선 */
+}
+.custom-accordion summary::-webkit-details-marker { display: none; }
+.custom-accordion summary::after { content: '▼'; font-size: 10px; color: #333; transition: transform 0.3s ease; }
+.custom-accordion[open] summary::after { transform: rotate(-180deg); }
+.custom-accordion[open] summary { color: #C73500; border-color: #C73500; }
+.accordion-content { padding: 15px 5px; }
+
+/* -----------------------------------
+   9. Main Page Cards (Home)
+------------------------------------ */
+.welcome-section { 
+    text-align: center; 
+    margin-top: 60px; 
+}
+.welcome-section h1 { 
+    font-family: 'Nunito', sans-serif; 
+    font-weight: 900; 
+    color: #333; 
+    font-size: 32px; 
+}
+.welcome-section p { 
+    font-family: 'Roboto Condensed', sans-serif; 
+    color: #666; 
+    font-size: 16px; 
+}
+
+.card-container {
+    display: flex;
+    gap: 25px;
+    justify-content: center; /* 카드를 가운데로 모음 */
+    margin: 50px auto 0 auto; /* 위쪽 마진 50px, 좌우 자동(가운데 정렬) */
+    flex-wrap: wrap;
+    max-width: 700px; /* 💡 카드 2개 너비(약 280px * 2) + 간격에 맞춰 제한 */
+}
+
+.design-card { 
+    text-decoration: none !important; 
+    color: inherit; 
+    background: white; 
+    border: 1px solid #e0e6ed; 
+    border-radius: 12px; 
+    padding: 40px 20px; 
+    width: 280px; 
+    text-align: center; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+    transition: all 0.3s ease; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+}
+.design-card:hover { 
+    transform: translateY(-8px); 
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1); 
+    border-color: #2b384c; /* 기존 파란색 대신 이번 테마의 짙은 네이비색으로 포인트 */
+}
+.design-card .icon { 
+    font-size: 40px; 
+    margin-bottom: 15px; 
+}
+.design-card .card-title { 
+    margin: 0 0 10px 0; 
+    color: #2b384c; /* 테마 통일성 부여 */
+    font-size: 24px; 
+    font-weight: 900; 
+    display: block; 
+    font-family: 'Nunito', sans-serif; 
+}
+.design-card p { 
+    font-size: 14px; 
+    color: #6c757d; 
+    margin: 0; 
+    font-family: 'Roboto Condensed', sans-serif; 
+}

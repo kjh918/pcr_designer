@@ -77,7 +77,32 @@ class ProbeKwargs(BaseModel):
             "PRIMER_INTERNAL_MIN_GC": self.min_gc,
             "PRIMER_INTERNAL_MAX_GC": self.max_gc,
         }
-
+    
+    def to_seq_args(self, template_seq: str, target_start: int, target_len: int) -> Dict[str, Any]:
+        """
+        Primer3가 엉뚱한 곳에서 Probe를 찾지 못하도록, 타겟 주변 외의 구역을 완전히 차단합니다.
+        """
+        seq_len = len(template_seq)
+        left_limit = max(0, target_start - self.max_length + 1)
+        right_limit = min(seq_len, target_start + target_len + self.max_length - 1)
+        
+        excluded_regions = []
+        
+        if left_limit > 0:
+            excluded_regions.append([0, left_limit])    
+        if right_limit < seq_len:
+            excluded_regions.append([right_limit, seq_len - right_limit])
+        print({
+            "SEQUENCE_TEMPLATE": template_seq,
+            "SEQUENCE_TARGET": [target_start, target_len],
+            "SEQUENCE_INTERNAL_EXCLUDED_REGION": excluded_regions # 🔥 여기가 핵심
+        })
+        return {
+            "SEQUENCE_TEMPLATE": template_seq,
+            "SEQUENCE_TARGET": [target_start, target_len],
+            "SEQUENCE_INTERNAL_EXCLUDED_REGION": excluded_regions # 🔥 여기가 핵심
+        }
+    
 class PCRParams(BaseModel):
     primer_kwargs: PrimerKwargs
     probe_kwargs: Optional[ProbeKwargs] = None

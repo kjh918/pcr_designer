@@ -1,0 +1,23 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "GENCURIX PRIMER SUITE"
+  navbar:
+    background: "#0056b3" # 젠큐릭스 느낌의 블루 계열 (수정 가능)
+    left:
+      - href: main.qmd
+        text: "Home"
+      # 아래 링크들은 나중에 폴더를 만들면 활성화됩니다.
+      - href: qpcr/qpcr.qmd
+        text: "TaqMan qPCR"
+        
+      - href: manual/manual.qmd
+        text: "Manual qPCR"
+format:
+  html:
+    theme: cosmo
+    css: static/css/styles.css
+    toc: false
+    page-layout: full

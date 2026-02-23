@@ -1,0 +1,21 @@
+---
+title: "GENCURIX PRIMER SUITE"
+---
+
+```{=html}
+<div class="welcome-section" style="text-align: center; margin-top: 60px;">
+<h1 style="font-weight: 800; color: #333;">Welcome to NGS-TEAM Suite</h1>
+<p style="color: #666; font-size: 1.1em;">분석 목적에 맞는 디자인 모듈을 선택해 주세요.</p>
+</div>
+<div class="card-container">
+<a href="qpcr/qpcr.qmd" class="design-card">
+<div class="icon">🧬</div>
+<div class="card-title">qPCR</div>
+<p>TaqMan Probe & Primer Design</p>
+</a>
+<a href="manual/manual.qmd" class="design-card">
+<div class="icon">🛠️</div>
+<div class="card-title">Manual</div>
+<p>Manual Design</p>
+</a>
+</div>

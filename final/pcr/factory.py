@@ -36,13 +36,8 @@ PIPELINE_MAP = {
 #     "as_pcr": (ASPCRDesignInput, ASPCRPrimerDesigner, ASPCRQCExecutor),
 #     "ms_pcr": (MSPCRDesignInput, MSPCRPrimerDesigner, MSPCRQCExecutor),
 }
-
 class PCRFactory:
     def __init__(self, config: Optional[PipelineConfig] = None):
-        """
-        config가 주어지지 않으면 기본 yaml 경로에서 로드합니다.
-        (실무에서는 외부에서 assay_type에 맞게 load_pipeline_config()로 생성한 객체를 주입받는 것을 권장)
-        """
         self.config = config
 
     def run(
@@ -59,16 +54,13 @@ class PCRFactory:
         overrides: dict = None,
         **extra_input_kwargs,
     ) -> BaseDesignOutput:
-        """
-        [MODIFIED] 파이프라인 오케스트레이션: Design -> QC -> Rank
-        """
+        
         assay_type = assay_type.lower()
         if assay_type not in PIPELINE_MAP:
             raise ValueError(f"Unknown assay_type: '{assay_type}'. Choose from {list(PIPELINE_MAP.keys())}")
 
         InputClass, DesignClass, QCClass = PIPELINE_MAP[assay_type]
 
-        # Config Lazy Loading (주입되지 않았을 경우)
         if not self.config:
             self.config = load_pipeline_config(
                 base_yaml_path="pcr/config/base_pcr.yaml",
@@ -104,22 +96,35 @@ class PCRFactory:
         initial_count = len(output.amplicons)
 
         # ---------------------------------------------------------
-        # 3. QC 실행 (Batch 최적화 적용)
+        # 3. QC 실행 및 탈락 사유 추적
         # ---------------------------------------------------------
         if run_qc:
-            # Assay 특화 QC 파이프라인 초기화
             qc_executor = QCClass(self.config)
             
-            # [MODIFIED] for문으로 하나씩 돌리지 않고, 리스트 전체를 넘겨 배치 처리(BLAST 등) 수행
+            # [수정] QC 실행
             qc_passed_amplicons = qc_executor.execute(output.amplicons)
             
+            # [핵심 추가] QC 통계 수집
+            # 가정: qc_executor 내부에 self.qc_stats = {"blast_fail": 0, "thermo_fail": 0, ...} 와 같은 딕셔너리가 존재함
+            qc_stats = getattr(qc_executor, "qc_stats", {})
+            
+            # 터미널에 즉시 출력 (디버깅 용도)
+            print(f"\n🔍 [QC STATS] Total Analyzed: {initial_count} | Passed: {len(qc_passed_amplicons)}")
+            if qc_stats:
+                for reason, count in qc_stats.items():
+                    print(f"   => Failed due to '{reason}': {count}")
+            
+            # JSON 결과 로그에 추가 (웹 출력용)
             output.log_messages.append(f"QC Passed: {len(qc_passed_amplicons)} / {initial_count}")
+            if qc_stats:
+                output.log_messages.append(f"QC Fail Reasons: {qc_stats}")
+                
         else:
             qc_passed_amplicons = output.amplicons
             output.log_messages.append("QC Skipped.")
 
         # ---------------------------------------------------------
-        # 4. Ranking (QC를 통과한 결과물 대상)
+        # 4. Ranking
         # ---------------------------------------------------------
         if qc_passed_amplicons:
             ranker = ProbeCentricRanker(probe_overlap_threshold=0.9)
@@ -130,5 +135,8 @@ class PCRFactory:
             output.amplicons = []
             output.status = "fail"
             output.error_msg = "All amplicons failed QC."
+            # 모두 탈락했을 때 상세 사유 로그 추가
+            if run_qc and getattr(qc_executor, "qc_stats", {}):
+                output.error_msg += f" Details: {qc_executor.qc_stats}"
 
         return output

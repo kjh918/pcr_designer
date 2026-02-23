@@ -1,0 +1,88 @@
+<main class="main">
+<div class="panel">
+<div class="panel-title">DESIGN SUMMARY</div>
+<hr class="rule-light">
+<div class="grid-3">
+<div>
+<div class="small-label">CHROMOSOME</div>
+<div style="font-weight:900;" id="summary-chrom">-</div>
+</div>
+<div>
+<div class="small-label">TARGET POSITION</div>
+<div style="font-weight:900;" id="summary-pos">-</div>
+</div>
+<div>
+<div class="small-label">STATUS</div>
+<div style="font-weight:900;" id="summary-status">WAITING</div>
+</div>
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-title">SEQUENCE ALIGNMENT (REF vs ALT)</div>
+<hr class="rule-light">
+<pre id="alignment-view" class="alignment-pre">Run the design to see sequence alignment.</pre>
+</div>
+
+<div class="panel">
+<div class="panel-title">CANDIDATE LIST</div>
+<hr class="rule-light">
+<div class="table-container">
+<table class="table" id="result-table">
+<thead>
+<tr>
+<th>Rank</th>
+<th>Forward Primer (5'→3')</th>
+<th>Reverse Primer (5'→3')</th>
+<th>Probe (5'→3')</th>
+<th>Size</th>
+<th>Tm (F/R/P)</th>
+<th>Penalty</th>
+</tr>
+</thead>
+<tbody id="candidate-tbody">
+<tr>
+<td colspan="7" style="text-align:center; padding:40px; color:#999;">
+No candidates. Enter parameters and click 'Design Start'.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="grid-2">
+<div class="panel">
+<div class="panel-title">SELECTED SET DETAILS</div>
+<hr class="rule-light">
+
+<div class="detail-item">
+<label class="small-label">Forward Primer</label>
+<div class="seq-display" id="detail-fwd-seq">-</div>
+<small class="pos-label" id="detail-fwd-pos"></small>
+</div>
+
+<div class="detail-item" style="margin-top:15px;">
+<label class="small-label">Probe</label>
+<div class="seq-display probe-color" id="detail-prb-seq">-</div>
+<small class="pos-label" id="detail-prb-pos"></small>
+</div>
+
+<div class="detail-item" style="margin-top:15px;">
+<label class="small-label">Reverse Primer</label>
+<div class="seq-display" id="detail-rev-seq">-</div>
+<small class="pos-label" id="detail-rev-pos"></small>
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-title">QC FLAGS & PROPERTIES</div>
+<hr class="rule-light">
+<div id="qc-content">
+<ul class="qc-list" id="qc-flags-list">
+<li style="color:#999;">Select a candidate to see QC details.</li>
+</ul>
+</div>
+</div>
+</div>
+</main>

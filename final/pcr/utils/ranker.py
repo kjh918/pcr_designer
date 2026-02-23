@@ -8,59 +8,49 @@ from pcr.components.amplicon import Amplicon
 class ProbeCentricRanker:
     def __init__(self, probe_overlap_threshold: float = 0.9):
         """
-        probe_overlap_threshold: Probe 서열이 90% 이상 겹치면 같은 위치로 간주
+        [MODIFIED] SNP 설계에서는 위치가 무조건 겹치므로, 
+        좌표 기반의 overlap threshold는 무시하고 '서열 자체의 다름'을 기준으로 랭킹을 매깁니다.
+        (파라미터는 하위 호환성을 위해 남겨둠)
         """
-        self.threshold = probe_overlap_threshold
+        pass
 
     def _get_total_penalty(self, amp: Amplicon) -> float:
         """Pair Penalty와 Internal(Probe) Penalty를 합산하여 세트 전체의 품질 점수를 계산"""
         total = amp.pair_penalty
         
-        # [MODIFIED] Probe 페널티 안전하게 합산
+        # Probe 페널티 안전하게 합산
         if amp.probe and getattr(amp.probe, 'penalty', 0.0):
             total += amp.probe.penalty
             
         return total
 
-    def _is_probe_overlapping(self, amp1: Amplicon, amp2: Amplicon) -> bool:
-        """두 앰플리콘의 Probe 위치 중첩도 계산"""
-        if not amp1.probe or not amp2.probe:
-            return False
-        
-        p1, p2 = amp1.probe, amp2.probe
-        
-        # [MODIFIED] end_index가 속성으로 없을 경우를 대비한 동적 계산
-        p1_end = getattr(p1, 'end_index', p1.start_index + len(p1.sequence))
-        p2_end = getattr(p2, 'end_index', p2.start_index + len(p2.sequence))
-        
-        intersection = max(0, min(p1_end, p2_end) - max(p1.start_index, p2.start_index))
-        
-        min_len = min(p1_end - p1.start_index, p2_end - p2.start_index)
-        if min_len == 0: 
-            return False
-            
-        return (intersection / min_len) >= self.threshold
-
     def select_diverse_probes(self, amplicons: List[Amplicon], top_k: int = 10) -> List[Amplicon]:
         """
-        1. Total Penalty 기준으로 정렬
-        2. Probe가 있는 후보 최우선 선발
-        3. 동일 구역(Overlap) 내에서는 가장 우수한 세트 1개만 남김
+        1. Total Penalty 기준으로 정렬 (낮을수록 우수)
+        2. Probe가 있는 후보만 선발
+        3. [핵심] 완전히 동일한 서열의 Probe를 가진 세트가 이미 있다면 패스 (다양성 확보)
         """
+        # 1. Total Penalty가 가장 낮은(좋은) 순서대로 정렬
         sorted_amps = sorted(amplicons, key=self._get_total_penalty)
-        with_probe = [a for a in sorted_amps if a.probe is not None]
-
+        
         selected: List[Amplicon] = []
+        seen_probe_seqs = set() # 이미 선택된 프로브의 '염기서열'을 기억하는 바구니
 
-        for amp in with_probe:
+        for amp in sorted_amps:
             if len(selected) >= top_k:
                 break
             
-            is_redundant = any(self._is_probe_overlapping(amp, chosen) for chosen in selected)
+            if not amp.probe:
+                continue
+                
+            probe_seq = amp.probe.sequence.upper()
             
-            if not is_redundant:
+            # 2. 프로브 서열이 바구니에 없으면(즉, 새로운 서열이면) 픽업!
+            if probe_seq not in seen_probe_seqs:
                 # 합산 페널티 정보를 객체에 기록 (리포팅 확인용)
                 amp.total_penalty = self._get_total_penalty(amp)
+                
                 selected.append(amp)
+                seen_probe_seqs.add(probe_seq)
 
         return selected
