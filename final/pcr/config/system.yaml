@@ -10,14 +10,25 @@
 #    fasta_path: "/storage/references/hg19.fa"
 #    blast_db_path: "/storage/references/blastdb/hg19"
 
+#system:
+#  blastn_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastn"
+#  makeblastdb_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/makeblastdb"
+
+#references:
+#  hg38:
+#    fasta_path: "/storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa"
+#    blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38"
+#  hg19:
+#    fasta_path: "/storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa"
+#    blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg19"
 system:
-  blastn_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/blastn"
-  makeblastdb_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/bin/makeblastdb"
+  blastn_path: "/home/jhkim/app/ncbi-blast-2.17.0+/bin/blastn"
+  makeblastdb_path: "/home/jhkim/app/ncbi-blast-2.17.0+/bin/makeblastdb"
 
 references:
   hg38:
-    fasta_path: "/storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa"
-    blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38"
+    fasta_path: "/home/jhkim/reference/hg38/hg38.fa"
+    blast_db_path: "/home/jhkim/app/ncbi-blast-2.17.0+/db/hg38"
   hg19:
-    fasta_path: "/storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa"
-    blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg19"
+    fasta_path: "/home/jhkim/reference/hg19/hg19.fa"
+    blast_db_path: "/home/jhkim/reference/hg19/blast_db"

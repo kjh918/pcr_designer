@@ -12,8 +12,6 @@ website:
       - href: qpcr/main.qmd
         text: "TaqMan qPCR"
         
-      - href: manual/manual.qmd
-        text: "Manual qPCR"
 format:
   html:
     theme: cosmo

@@ -7,11 +7,12 @@
 #    --alt C \
 #    --fasta /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa \
 #    --top_k 5
-PYTHONPATH=. python3.11 scripts/design_qpcr.py \
+PYTHONPATH=. python3 scripts/design_qpcr.py \
     --chrom chr17 \
     --start 39723640 \
     --end 39723640 \
     --ref G \
     --alt A \
     --genome hg38 \
-    --top_k 5
+    --top_k 5 \
+    --base_config /tmp/tmppkkzed98.yaml

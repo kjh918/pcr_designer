@@ -42,6 +42,14 @@ body {
 /* -----------------------------------
    3. Main Panel
 ------------------------------------ */
+.main {
+  flex-grow: 1;
+  height: 100%;       /* 부모(.app-shell) 높이에 딱 맞춤 */
+  overflow-y: auto;   /* 내부 스크롤 */
+  padding: 30px;
+  background-color: #ffffff;
+}
+
 .main-panel {
     flex-grow: 1;
     padding: 20px;

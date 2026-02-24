@@ -12,10 +12,4 @@ title: "GENCURIX PRIMER SUITE"
 <div class="icon">🧬</div>
 <div class="card-title">qPCR</div>
 <p>TaqMan Probe & Primer Design</p>
-</a>
-<a href="manual/manual.qmd" class="design-card">
-<div class="icon">🛠️</div>
-<div class="card-title">Manual</div>
-<p>Manual Design</p>
-</a>
 </div>

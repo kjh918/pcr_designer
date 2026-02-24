@@ -7,12 +7,21 @@
 
 // 1. 추적할 입력창 ID 목록
 const TRACKED_INPUTS = [
-    "input-ref-genome",  
-    "input-chrom",
-    "input-start",
-    "input-end",
-    "input-ref-base", 
-    "input-alt-base",
+    // --- Neccessary Inputs ---
+    "input-ref-genome","input-chrom", "input-start", "input-end",
+    "input-ref-base", "input-alt-base", "input-strand",
+    
+    // --- Primer Options ---
+    "min_amplicon_length", "max_amplicon_length",
+    "primer_min_length", "primer_opt_length", "primer_max_length",
+    "primer_min_tm", "primer_opt_tm", "primer_max_tm",
+    "primer_min_gc", "primer_opt_gc", "primer_max_gc",
+
+    // --- Probe Options ---
+    "probe_min_length", "probe_opt_length", "probe_max_length",
+    "min_primer_probe_tm_diff", "max_primer_probe_tm_diff",
+    "probe_min_tm", "probe_opt_tm", "probe_max_tm",
+    "probe_min_gc", "probe_opt_gc", "probe_max_gc"
     // 필요시 여기에 다른 ID 추가 (예: "min_amplicon_length" 등)
 ];
 

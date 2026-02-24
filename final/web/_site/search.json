@@ -1,23 +1,16 @@
 [
   {
-    "objectID": "manual/manual.html",
-    "href": "manual/manual.html",
-    "title": "Manual qPCR Design",
+    "objectID": "qpcr/main.html",
+    "href": "qpcr/main.html",
+    "title": "TaqMan qPCR Design",
     "section": "",
-    "text": "Manual qPCR DESIGN\n\nPRIMER SUITE\n\n\nTarget Information\n\n\nREFERENCE GENOME  Human (GRCh38/hg38) Human (GRCh37/hg19) Custom FASTA… \nCHROMOSOME \n\n\nSTART \n\n\nEND \n\n\nSTRAND  Plus (+) Minus (-) \n\n※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)\n\n\n\nAdvanced Parameters\n\n\n\n\nPRIMER OPTIONS\n\n\nAMPLICON SIZE (MIN / MAX)\n\n \n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nPROBE OPTIONS\n\n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM DIFF (MIN / MAX)\n\n \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nRUN\n\n\n\nDESIGN START\n\n\n\nExport\n\n\nSave\n\n\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nSize\n\n\nTm (F/R/P)\n\n\nPenalty\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\n\nSELECTED SET DETAILS\n\n\n\nForward Primer\n\n-\n\n\n\n\nProbe\n\n-\n\n\n\n\nReverse Primer\n\n-\n\n\n\n\n\n\nQC FLAGS & PROPERTIES\n\n\n\n\n\nSelect a candidate to see QC details."
+    "text": "qPCR DESIGN\n\nNGS-TEAM PRIMER SUITE\n\n\nTarget Information\n\n\n\nREFERENCE GENOME  hg38 (GRCh38) hg19 (GRCh37) \n\nCHROMOSOME \n\n\nSTART \n\n\nEND \n\n\n\n\nREF \n\n\nALT \n\n\nSTRAND  Plus (+) Minus (-) \n\n※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)\n\n\n\nAdvanced Parameters\n\n\n\n\nPRIMER OPTIONS\n\n\nAMPLICON SIZE (MIN / MAX)\n\n \n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nPROBE OPTIONS\n\n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM DIFF (MIN / MAX)\n\n \n\nGC% (MIN / OPT / MAX)\n\n  \n\nCONSTRAINTS\n\n\nMax Poly-G \n\n\nMax 3’ End GC \n\n\nAvoid 5’ G  True False \n\n\n\n\n\n\nQC & SPECIFICITY OPTIONS\n\n\nTHERMODYNAMICS (Min dG)\n\n\nHairpin \n\n\nHomodimer \n\n\nHeterodimer \n\n\nSPECIFICITY (BLAST)\n\n\nMin Identity (%) \n\n\nMin Hit Length \n\n\nMax Alignments \n\n\nAMPLICON QC (Size / Check)\n\n\nMin Size \n\n\nMax Size \n\n\nUse In-Silico PCR  False True \n\n\nOLIGO CONSTRAINTS (QC Only)\n\n\nPrimer Max Tm Diff \n\n\n\n\n\n\nRUN\n\n\n\nDESIGN START\n\n\n\nExport\n\n\nSave\n\n\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nSize\n\n\nTm (F/R/P)\n\n\nPenalty\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\n\nSELECTED SET DETAILS\n\n\n\nForward Primer\n\n-\n\n\n\n\nProbe\n\n-\n\n\n\n\nReverse Primer\n\n-\n\n\n\n\n\n\nQC FLAGS & PROPERTIES\n\n\n\n\n\nSelect a candidate to see QC details."
   },
   {
     "objectID": "main.html",
     "href": "main.html",
     "title": "GENCURIX PRIMER SUITE",
     "section": "",
-    "text": "Welcome to NGS-TEAM Suite\n\n\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n\n🧬\n\n\nqPCR\n\n\nTaqMan Probe & Primer Design\n\n \n\n🛠️\n\n\nManual\n\n\nManual Design"
-  },
-  {
-    "objectID": "qpcr/main.html",
-    "href": "qpcr/main.html",
-    "title": "TaqMan qPCR Design",
-    "section": "",
-    "text": "qPCR DESIGN\n\nNGS-TEAM PRIMER SUITE\n\n\nTarget Information\n\n\n\nREFERENCE GENOME  hg38 (GRCh38) hg19 (GRCh37) \n\nCHROMOSOME \n\n\nSTART \n\n\nEND \n\n\n\n\nREF \n\n\nALT \n\n\nSTRAND  Plus (+) Minus (-) \n\n※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)\n\n\n\nAdvanced Parameters\n\n\n\n\nPRIMER OPTIONS\n\n\nAMPLICON SIZE (MIN / MAX)\n\n \n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nPROBE OPTIONS\n\n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM DIFF (MIN / MAX)\n\n \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nRUN\n\n\n\nDESIGN START\n\n\n\nExport\n\n\nSave\n\n\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nSize\n\n\nTm (F/R/P)\n\n\nPenalty\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\n\nSELECTED SET DETAILS\n\n\n\nForward Primer\n\n-\n\n\n\n\nProbe\n\n-\n\n\n\n\nReverse Primer\n\n-\n\n\n\n\n\n\nQC FLAGS & PROPERTIES\n\n\n\n\n\nSelect a candidate to see QC details."
+    "text": "Welcome to NGS-TEAM Suite\n\n\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n\n🧬\n\n\nqPCR\n\n\nTaqMan Probe & Primer Design"
   }
 ]

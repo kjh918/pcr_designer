@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.26">
+<meta name="generator" content="quarto-1.8.27">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -37,10 +37,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-3535153847b1ef308d7b786cd0bf7d03.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-b3fea08dc7ab994f51d5dafdd0222f97.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -97,10 +97,6 @@ ul.task-list li input[type="checkbox"] {
   <li class="nav-item">
     <a class="nav-link active" href="../qpcr/main.html" aria-current="page"> 
 <span class="menu-text">TaqMan qPCR</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../manual/manual.html"> 
-<span class="menu-text">Manual qPCR</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -184,19 +180,19 @@ PRIMER OPTIONS
 <div class="accordion-content">
 <label class="small-label">AMPLICON SIZE (MIN / MAX)</label>
 <div class="grid-2" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="min_amplicon_length" value="80"> <input type="number" class="input-tight" id="max_amplicon_length" value="120"></p>
+<p><input type="number" class="input-tight" id="min_amplicon_length" value="80"> <input type="number" class="input-tight" id="max_amplicon_length" value="200"></p>
 </div>
 <label class="small-label">LENGTH (MIN / OPT / MAX)</label>
 <div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="primer_min_length" value="20"> <input type="number" class="input-tight" id="primer_opt_length" value="25"> <input type="number" class="input-tight" id="primer_max_length" value="30"></p>
+<p><input type="number" class="input-tight" id="primer_min_length" value="15"> <input type="number" class="input-tight" id="primer_opt_length" value="18"> <input type="number" class="input-tight" id="primer_max_length" value="25"></p>
 </div>
 <label class="small-label">TM (MIN / OPT / MAX)</label>
 <div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="primer_min_tm" value="55" step="0.1"> <input type="number" class="input-tight" id="primer_opt_tm" value="60" step="0.1"> <input type="number" class="input-tight" id="primer_max_tm" value="65" step="0.1"></p>
+<p><input type="number" class="input-tight" id="primer_min_tm" value="50" step="0.1"> <input type="number" class="input-tight" id="primer_opt_tm" value="55" step="0.1"> <input type="number" class="input-tight" id="primer_max_tm" value="60" step="0.1"></p>
 </div>
 <label class="small-label">GC% (MIN / OPT / MAX)</label>
 <div class="grid-3">
-<p><input type="number" class="input-tight" id="primer_min_gc" value="35"> <input type="number" class="input-tight" id="primer_opt_gc" value="50"> <input type="number" class="input-tight" id="primer_max_gc" value="65"></p>
+<p><input type="number" class="input-tight" id="primer_min_gc" value="45"> <input type="number" class="input-tight" id="primer_opt_gc" value="50"> <input type="number" class="input-tight" id="primer_max_gc" value="65"></p>
 </div>
 </div>
 </details>
@@ -211,15 +207,72 @@ PROBE OPTIONS
 </div>
 <label class="small-label">TM DIFF (MIN / MAX)</label>
 <div class="grid-2" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="min_primer_probe_tm_diff" value="6" step="0.1"> <input type="number" class="input-tight" id="max_primer_probe_tm_diff" value="8" step="0.1"></p>
-</div>
-<label class="small-label">TM (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="probe_min_tm" value="60" step="0.1"> <input type="number" class="input-tight" id="probe_opt_tm" value="60" step="0.1"> <input type="number" class="input-tight" id="probe_max_tm" value="65" step="0.1"></p>
+<p><input type="number" class="input-tight" id="min_primer_probe_tm_diff" value="5" step="0.1"> <input type="number" class="input-tight" id="max_primer_probe_tm_diff" value="10" step="0.1"></p>
 </div>
 <label class="small-label">GC% (MIN / OPT / MAX)</label>
-<div class="grid-3">
+<div class="grid-3" style="margin-bottom:12px;">
 <p><input type="number" class="input-tight" id="probe_min_gc" value="35"> <input type="number" class="input-tight" id="probe_opt_gc" value="50"> <input type="number" class="input-tight" id="probe_max_gc" value="65"></p>
+</div>
+<label class="small-label" style="margin-top:12px;">CONSTRAINTS</label>
+<div class="grid-1" style="gap: 8px;">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<p><span style="font-size:0.8em; color:#666;">Max Poly-G</span> <input type="number" class="input-tight" id="probe_max_poly_g" value="3" style="width: 60px;"></p>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<p><span style="font-size:0.8em; color:#666;">Max 3’ End GC</span> <input type="number" class="input-tight" id="probe_max_3_end_gc" value="2" style="width: 60px;"></p>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<p><span style="font-size:0.8em; color:#666;">Avoid 5’ G</span> <select class="input-tight" id="probe_avoid_5_prime_g" style="width: 60px;"> <option value="true" selected="">True</option> <option value="false">False</option> </select></p>
+</div>
+</div>
+</div>
+</details>
+<details class="custom-accordion">
+<summary>
+QC &amp; SPECIFICITY OPTIONS
+</summary>
+<div class="accordion-content">
+<label class="small-label">THERMODYNAMICS (Min dG)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<div>
+<p><span style="font-size:0.8em; color:#666;">Hairpin</span> <input type="number" class="input-tight" id="qc_hairpin_min_dg" value="-5.0" step="0.1"></p>
+</div>
+<div>
+<p><span style="font-size:0.8em; color:#666;">Homodimer</span> <input type="number" class="input-tight" id="qc_homodimer_min_dg" value="-6.0" step="0.1"></p>
+</div>
+<div>
+<p><span style="font-size:0.8em; color:#666;">Heterodimer</span> <input type="number" class="input-tight" id="qc_heterodimer_min_dg" value="-6.0" step="0.1"></p>
+</div>
+</div>
+<label class="small-label">SPECIFICITY (BLAST)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<div>
+<p><span style="font-size:0.8em; color:#666;">Min Identity (%)</span> <input type="number" class="input-tight" id="qc_min_identity" value="90.0" step="0.1"></p>
+</div>
+<div>
+<p><span style="font-size:0.8em; color:#666;">Min Hit Length</span> <input type="number" class="input-tight" id="qc_min_hit_length" value="13"></p>
+</div>
+<div>
+<p><span style="font-size:0.8em; color:#666;">Max Alignments</span> <input type="number" class="input-tight" id="qc_blast_max_alignments" value="50"></p>
+</div>
+</div>
+<label class="small-label">AMPLICON QC (Size / Check)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<div>
+<p><span style="font-size:0.8em; color:#666;">Min Size</span> <input type="number" class="input-tight" id="qc_min_amp_size" value="50"></p>
+</div>
+<div>
+<p><span style="font-size:0.8em; color:#666;">Max Size</span> <input type="number" class="input-tight" id="qc_max_amp_size" value="300"></p>
+</div>
+<div>
+<p><span style="font-size:0.8em; color:#666;">Use In-Silico PCR</span> <select class="input-tight" id="qc_use_ispcr_check"> <option value="false" selected="">False</option> <option value="true">True</option> </select></p>
+</div>
+</div>
+<label class="small-label">OLIGO CONSTRAINTS (QC Only)</label>
+<div class="grid-2" style="margin-bottom:12px;">
+<div>
+<p><span style="font-size:0.8em; color:#666;">Primer Max Tm Diff</span> <input type="number" class="input-tight" id="qc_primer_max_diff_tm" value="3.0" step="0.1"></p>
+</div>
 </div>
 </div>
 </details>

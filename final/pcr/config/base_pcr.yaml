@@ -23,9 +23,6 @@ pcr_params:
     opt_length: 25
     min_length: 20
     max_length: 30
-    opt_tm: 60.0
-    min_tm: 55.0
-    max_tm: 65.0
     opt_gc: 50.0
     min_gc: 40.0
     max_gc: 60.0
