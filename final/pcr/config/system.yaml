@@ -19,5 +19,5 @@ references:
     fasta_path: "/storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa"
     blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg38"
   hg19:
-    fasta_path: "/storage/references/hg19.fa"
+    fasta_path: "/storage/references_and_index/hg19/fasta/cbNIPT/hg19.fa"
     blast_db_path: "/storage/home/jhkim/Apps/ncbi-blast-2.17.0+/ref/hg19"

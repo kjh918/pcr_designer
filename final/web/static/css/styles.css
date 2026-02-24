@@ -11,16 +11,18 @@ body {
 }
 
 .app-shell {
-    display: flex;
-    height: calc(100vh - 60px);
-    overflow: hidden;
+    display: flex !important;       /* !important로 강제 적용 */
+    flex-direction: row !important; /* 가로 배치 강제 */
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;               /* 전체 화면 스크롤 방지 */
 }
 
 /* -----------------------------------
    2. Sidebar (Target-Finder 스타일: 350px)
 ------------------------------------ */
 .sidebar {
-    width: 350px; /* 원본 코드와 동일한 너비 복구 */
+    width: 300px; /* 원본 코드와 동일한 너비 복구 */
     background-color: #ffffff;
     border-right: 1px solid #dee2e6;
     padding: 20px;
@@ -40,6 +42,14 @@ body {
 /* -----------------------------------
    3. Main Panel
 ------------------------------------ */
+.main {
+  flex-grow: 1;
+  height: 100%;       /* 부모(.app-shell) 높이에 딱 맞춤 */
+  overflow-y: auto;   /* 내부 스크롤 */
+  padding: 30px;
+  background-color: #ffffff;
+}
+
 .main-panel {
     flex-grow: 1;
     padding: 20px;

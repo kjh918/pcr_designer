@@ -95,7 +95,7 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="../qpcr/qpcr.html" aria-current="page"> 
+    <a class="nav-link active" href="../qpcr/main.html" aria-current="page"> 
 <span class="menu-text">TaqMan qPCR</span></a>
   </li>  
   <li class="nav-item">
@@ -148,14 +148,24 @@ ul.task-list li input[type="checkbox"] {
 Target Information
 </div>
 <hr class="rule-light">
-<p><label class="small-label">REFERENCE GENOME</label> <select class="input-tight" id="input-ref-genome"> <option value="hg38">Human (GRCh38/hg38)</option> <option value="hg19">Human (GRCh37/hg19)</option> <option value="custom">Custom FASTA…</option> </select></p>
+<div class="input-group">
+<p><label class="small-label">REFERENCE GENOME</label> <select id="input-ref-genome" class="form-select"> <option value="hg38" selected="">hg38 (GRCh38)</option> <option value="hg19">hg19 (GRCh37)</option> </select></p>
+</div>
 <p><label class="small-label" style="margin-top:10px;">CHROMOSOME</label> <input class="input-tight" id="input-chrom" placeholder="e.g. chr17"></p>
 <div class="grid-2" style="margin-top:10px;">
 <div>
-<p><label class="small-label">START</label> <input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723626"></p>
+<p><label class="small-label">START</label> <input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723640"></p>
 </div>
 <div>
-<p><label class="small-label">END</label> <input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723626"></p>
+<p><label class="small-label">END</label> <input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723640"></p>
+</div>
+</div>
+<div class="grid-2" style="margin-top:10px;">
+<div>
+<p><label class="small-label">REF</label> <input type="text" class="input-tight" id="input-ref-base" placeholder="e.g. G"></p>
+</div>
+<div>
+<p><label class="small-label">ALT</label> <input type="text" class="input-tight" id="input-alt-base" placeholder="e.g. A"></p>
 </div>
 </div>
 <p><label class="small-label" style="margin-top:10px;">STRAND</label> <select class="input-tight" id="input-strand"> <option value="+">Plus (+)</option> <option value="-">Minus (-)</option> </select></p>
@@ -357,6 +367,7 @@ Select a candidate to see QC details.
 </div>
 </main>
 </div>
+<script src="app.js"></script>
 
 
 </main></div>

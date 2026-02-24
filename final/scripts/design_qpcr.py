@@ -10,19 +10,24 @@ try:
 except ImportError:
     pysam = None
 
+# 상위 경로 추가 (pcr 패키지 인식용)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pcr.config.loader import load_pipeline_config
 from pcr.factory import PCRFactory
 
 def reverse_complement(seq: str) -> str:
-    """염기서열의 역상보 서열을 반환합니다."""
+    # 염기서열의 역상보 서열을 반환합니다.# 
     return seq.translate(str.maketrans('ATGCatgcNn', 'TACGtacgNn'))[::-1]
 
 def fetch_and_validate_ref(chrom: str, start: int, end: int, fasta_path: str, expected_ref: str, strand: str = "+"):
-    """FASTA에서 서열을 추출하여 검증합니다."""
+    # FASTA에서 서열을 추출하여 검증합니다.# 
     if not pysam:
         raise ImportError("pysam이 필요합니다. (pip install pysam)")
+    
+    if not os.path.exists(fasta_path):
+        raise FileNotFoundError(f"FASTA file not found: {fasta_path}")
+
     with pysam.FastaFile(fasta_path) as fasta:
         actual_ref_plus = fasta.fetch(chrom, start - 1, end).upper()
         
@@ -38,15 +43,38 @@ def fetch_and_validate_ref(chrom: str, start: int, end: int, fasta_path: str, ex
 
 def design_qpcr_primers(
     chrom: str, start: int, end: int, ref: str, alt: str, strand: str,
-    fasta_path: str, padding: int, top_k: int,
-    base_yaml: str, system_yaml: str
+    genome: str = "hg38",      # ✅ 추가: Genome 이름
+    fasta_path: str = None,    # 옵션: CLI에서 직접 주면 이게 우선, 아니면 Config 사용
+    padding: int = 100, 
+    top_k: int = 5,
+    base_yaml: str = "pcr/config/base_pcr.yaml", 
+    system_yaml: str = "pcr/config/system.yaml"
 ) -> Dict[str, Any]:
     
     assay_type = "qpcr"
     task_name = f"{chrom}_{start}_{ref}>{alt}({strand})"
 
+    # 1. Config 로드 (여기서 system.yaml을 읽음)
     config = load_pipeline_config(base_yaml, system_yaml, assay_type)
 
+    # --------------------------------------------------------------------------
+    # ✅ 2. FASTA 경로 결정 로직 (CLI 우선 -> Config 조회)
+    # --------------------------------------------------------------------------
+    if not fasta_path:
+        try:
+            # Config의 get_reference 메서드로 경로 조회
+            ref_cfg = config.get_reference(genome)
+            fasta_path = ref_cfg.fasta_path
+        except ValueError as e:
+            return {"status": "error", "reason": f"Genome config error: {str(e)}"}
+        except Exception as e:
+            return {"status": "error", "reason": f"Failed to resolve fasta path: {str(e)}"}
+    
+    # 경로가 여전히 없으면 에러
+    if not fasta_path:
+        return {"status": "error", "reason": f"FASTA path is required. Check system.yaml for '{genome}' or provide --fasta."}
+
+    # 3. 서열 추출 (Pysam)
     try:
         ref_plus = fetch_and_validate_ref(chrom, start, end, fasta_path, ref, strand)
         alt_plus = reverse_complement(alt) if strand == "-" else alt
@@ -64,21 +92,24 @@ def design_qpcr_primers(
         rel_end = rel_start + len(alt_plus)
         
     except Exception as e:
-        return {"status": "error", "reason": str(e)}
+        return {"status": "error", "reason": f"Sequence extraction failed: {str(e)}"}
 
+    # 4. Factory 실행
+    # (이미 로드한 config를 넘겨줌)
     factory = PCRFactory(config)
+    
     output = factory.run(
         assay_type=assay_type,
         name=task_name,
         target_start=rel_start,
         target_end=rel_end,
-        reference_name=chrom, # 좌표 계산을 위해 크로모좀 이름 전달
+        reference_name=genome, # ✅ Factory가 내부에서 이 이름을 이용해 BLAST DB 경로 등을 다시 확인/설정함
         template_sequence=alt_template,
         reference_sequence=ref_template, 
         top_k=top_k,
         run_qc=True,
         overrides={"PRIMER_NUM_RETURN": 10},
-        template_genomic_start=template_start_0based, # 절대 좌표 오프셋 전달
+        template_genomic_start=template_start_0based,
         target_strand=strand
     )
 
@@ -88,6 +119,7 @@ def design_qpcr_primers(
             "reason": output.error_msg or "Failed to design primers/probes."
         }
 
+    # 5. 결과 포맷팅 (좌표 역계산)
     def get_position_info(seq: str, is_reverse: bool = False, is_probe: bool = False):
         if not seq: return None
         
@@ -144,21 +176,21 @@ def design_qpcr_primers(
                     "sequence": amp.forward.sequence,
                     "length": len(amp.forward.sequence),
                     "tm": round(amp.forward.tm, 2),
-                    "gc": round((amp.forward.sequence.count('G') + amp.forward.sequence.count('C')) / len(amp.forward.sequence) * 100, 1),
+                    "gc": round((amp.forward.sequence.count('G') + amp.forward.sequence.count('C')) / len(amp.forward.sequence) * 100, 2),
                     **fwd_pos
                 },
                 "reverse": {
                     "sequence": amp.reverse.sequence,
                     "length": len(amp.reverse.sequence),
                     "tm": round(amp.reverse.tm, 2),
-                    "gc": round((amp.reverse.sequence.count('G') + amp.reverse.sequence.count('C')) / len(amp.reverse.sequence) * 100, 1),
+                    "gc": round((amp.reverse.sequence.count('G') + amp.reverse.sequence.count('C')) / len(amp.reverse.sequence) * 100, 2),
                     **rev_pos
                 },
                 "probe": {
                     "sequence": amp.probe.sequence,
                     "length": len(amp.probe.sequence),
                     "tm": round(amp.probe.tm, 2),
-                    "gc": round((amp.probe.sequence.count('G') + amp.probe.sequence.count('C')) / len(amp.probe.sequence) * 100, 1),
+                    "gc": round((amp.probe.sequence.count('G') + amp.probe.sequence.count('C')) / len(amp.probe.sequence) * 100, 2),
                     **prb_pos
                 } if amp.probe else None
             },
@@ -168,9 +200,11 @@ def design_qpcr_primers(
     return {
         "status": "success",
         "metadata": {
-            "assay": "TaqMan-qPCR (SNP)",
+            "assay": "TaqMan-qPCR",
             "chrom": chrom,
-            "candidates_found": len(results)
+            "candidates_found": len(results),
+            "genome_build": genome,
+            "fasta_used": fasta_path
         },
         "target_info": {
             "input_strand": strand,
@@ -187,14 +221,19 @@ def design_qpcr_primers(
     }
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Design qPCR primers/probes (Supports auto-config from system.yaml)")
+    
     parser.add_argument("--chrom", required=True)
     parser.add_argument("--start", type=int, required=True)
     parser.add_argument("--end", type=int, required=True)
     parser.add_argument("--ref", required=True)
     parser.add_argument("--alt", required=True)
     parser.add_argument("--strand", choices=["+", "-"], default="+", help="Strand of the input variant (+ or -)")
-    parser.add_argument("--fasta", required=True)
+    
+    # ✅ 변경됨: Genome 선택 (기본값 hg38), Fasta는 선택사항
+    parser.add_argument("--genome", default="hg38", help="Reference genome build (defined in system.yaml)")
+    parser.add_argument("--fasta", help="Optional: Override FASTA path manually")
+    
     parser.add_argument("-p", "--padding", type=int, default=100)
     parser.add_argument("-k", "--top_k", type=int, default=5)
     parser.add_argument("--base_config", default="pcr/config/base_pcr.yaml")
@@ -203,8 +242,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     res = design_qpcr_primers(
-        args.chrom, args.start, args.end, args.ref, args.alt, args.strand,
-        args.fasta, args.padding, args.top_k,
-        args.base_config, args.system_config
+        chrom=args.chrom, 
+        start=args.start, 
+        end=args.end, 
+        ref=args.ref, 
+        alt=args.alt, 
+        strand=args.strand,
+        genome=args.genome,     # ✅ 전달
+        fasta_path=args.fasta,  # ✅ 전달 (없으면 함수 내부에서 Config 조회)
+        padding=args.padding, 
+        top_k=args.top_k,
+        base_yaml=args.base_config, 
+        system_yaml=args.system_config
     )
+    
     print(json.dumps(res, indent=2))

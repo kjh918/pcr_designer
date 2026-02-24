@@ -9,8 +9,7 @@ website:
     left:
       - href: main.qmd
         text: "Home"
-      # 아래 링크들은 나중에 폴더를 만들면 활성화됩니다.
-      - href: qpcr/qpcr.qmd
+      - href: qpcr/main.qmd
         text: "TaqMan qPCR"
         
       - href: manual/manual.qmd
@@ -21,3 +20,4 @@ format:
     css: static/css/styles.css
     toc: false
     page-layout: full
+  

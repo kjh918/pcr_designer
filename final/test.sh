@@ -13,5 +13,5 @@ PYTHONPATH=. python3.11 scripts/design_qpcr.py \
     --end 39723640 \
     --ref G \
     --alt A \
-    --fasta /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa \
+    --genome hg38 \
     --top_k 5

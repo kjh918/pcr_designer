@@ -1,3 +1,49 @@
+<div class="section-title">Target Information</div>
+<hr class="rule-light">
+
+<div class="input-group">
+<label class="small-label">REFERENCE GENOME</label>
+  <select id="input-ref-genome" class="form-select">
+    <option value="hg38" selected>hg38 (GRCh38)</option>
+    <option value="hg19">hg19 (GRCh37)</option>
+    </select>
+</div>
+
+<label class="small-label" style="margin-top:10px;">CHROMOSOME</label>
+<input class="input-tight" id="input-chrom" placeholder="e.g. chr17">
+
+<div class="grid-2" style="margin-top:10px;">
+<div>
+<label class="small-label">START</label>
+<input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723640">
+</div>
+<div>
+<label class="small-label">END</label>
+<input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723640">
+</div>
+</div>
+
+<div class="grid-2" style="margin-top:10px;">
+<div>
+<label class="small-label">REF</label>
+<input type="text" class="input-tight" id="input-ref-base" placeholder="e.g. G">
+</div>
+<div>
+<label class="small-label">ALT</label>
+<input type="text" class="input-tight" id="input-alt-base" placeholder="e.g. A">
+</div>
+</div>
+
+<label class="small-label" style="margin-top:10px;">STRAND</label>
+<select class="input-tight" id="input-strand">
+<option value="+">Plus (+)</option>
+<option value="-">Minus (-)</option>
+</select>
+
+<div class="warn" style="margin-top:8px;">
+※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)
+</div>
+
 <hr class="rule">
 <div class="section-title">Advanced Parameters</div>
 <hr class="rule-light">
@@ -51,13 +97,6 @@
 <div class="grid-2" style="margin-bottom:12px;">
 <input type="number" class="input-tight" id="min_primer_probe_tm_diff" value="6" step="0.1">
 <input type="number" class="input-tight" id="max_primer_probe_tm_diff" value="8" step="0.1">
-</div>
-
-<label class="small-label">TM (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<input type="number" class="input-tight" id="probe_min_tm" value="60" step="0.1">
-<input type="number" class="input-tight" id="probe_opt_tm" value="60" step="0.1">
-<input type="number" class="input-tight" id="probe_max_tm" value="65" step="0.1">
 </div>
 
 <label class="small-label">GC% (MIN / OPT / MAX)</label>

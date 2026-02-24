@@ -1,17 +1,19 @@
 ---
 title: "TaqMan qPCR Design"
+resources:
+  - "app.js"
 ---
 
 ```{=html}
 <div class="app-shell">
+
 <aside class="sidebar">
 <div class="sidebar-content">
   <h4 style="margin:0;"><b>qPCR DESIGN</b></h4>
   <small>NGS-TEAM PRIMER SUITE</small>
   <hr class="rule">
 
-  {{< include ../base/input.html >}}
-  {{< include partials/qpcr_params.html >}}
+  {{< include partials/params.html >}}
 
 <hr class="rule">
 
@@ -29,3 +31,4 @@ title: "TaqMan qPCR Design"
 {{< include partials/result_panel.html >}}
 
 </div>
+<script src="app.js"></script>
