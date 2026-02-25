@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.8.26">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -37,10 +37,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-b3fea08dc7ab994f51d5dafdd0222f97.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-3535153847b1ef308d7b786cd0bf7d03.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -95,6 +95,10 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../manual/main.html"> 
+<span class="menu-text">Manual TaqMan qPCR</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link active" href="../qpcr/main.html" aria-current="page"> 
 <span class="menu-text">TaqMan qPCR</span></a>
   </li>  
@@ -144,9 +148,14 @@ ul.task-list li input[type="checkbox"] {
 Target Information
 </div>
 <hr class="rule-light">
-<div class="input-group">
-<p><label class="small-label">REFERENCE GENOME</label> <select id="input-ref-genome" class="form-select"> <option value="hg38" selected="">hg38 (GRCh38)</option> <option value="hg19">hg19 (GRCh37)</option> </select></p>
-</div>
+<!--<div class="input-group">
+<label class="small-label">REFERENCE GENOME</label>
+<select id="input-ref-genome" class="form-select">
+<option value="hg38" selected>hg38 (GRCh38)</option>
+<option value="hg19">hg19 (GRCh37)</option>
+</select>
+</div>-->
+<p><label class="small-label" style="margin-top:10px;">REFERENCE GENOME</label> <select class="input-tight" id="input-ref-genome"> <option value="hg38">hg38</option> <option value="hg19">hg19</option> </select></p>
 <p><label class="small-label" style="margin-top:10px;">CHROMOSOME</label> <input class="input-tight" id="input-chrom" placeholder="e.g. chr17"></p>
 <div class="grid-2" style="margin-top:10px;">
 <div>
@@ -285,15 +294,15 @@ RUN
 DESIGN START
 </button>
 <div style="margin-top:10px; display:flex; gap:10px;">
-<button class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">
-Export
+<button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">
+Export (JSON)
 </button>
-<button class="btn-save" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">
-Save
+<button id="btn-export-html" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">
+Export (HTML)
 </button>
 </div>
-</div>
-</aside>
+</div></aside>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <main class="main">
 <div class="panel">
 <div class="panel-title">
@@ -319,12 +328,50 @@ TARGET POSITION
 </div>
 <div>
 <div class="small-label">
+DESIGN DATE
+</div>
+<div id="summary-date" style="font-weight:900;">
+-
+</div>
+</div>
+</div>
+<div class="grid-3" style="margin-top: 15px;">
+<div>
+<div class="small-label">
+REFERENCE GENOME
+</div>
+<div id="summary-reference" style="font-weight:900;">
+-
+</div>
+</div>
+<div>
+<div class="small-label">
+MUTATION (REF &gt; ALT)
+</div>
+<div id="summary-mutation" style="font-weight:900; color: #d9534f;">
+-
+</div>
+</div>
+<div>
+<div class="small-label">
 STATUS
 </div>
 <div id="summary-status" style="font-weight:900;">
 WAITING
 </div>
 </div>
+</div>
+</div>
+<div id="stats-panel" class="panel" style="display: none; margin-top: 20px; background-color: #f8f9fa;">
+<div class="panel-title" style="font-size: 13px; color: #555;">
+📊 DESIGN PIPELINE STATISTICS
+</div>
+<hr class="rule-light">
+<div class="table-container">
+<table class="table-stats">
+<tbody id="stats-tbody">
+</tbody>
+</table>
 </div>
 </div>
 <div class="panel">
@@ -356,13 +403,28 @@ Reverse Primer (5’→3’)
 Probe (5’→3’)
 </th>
 <th>
-Size
+Tm F (°C)
 </th>
 <th>
-Tm (F/R/P)
+Tm R (°C)
 </th>
 <th>
-Penalty
+Tm P (°C)
+</th>
+<th>
+GC F (%)
+</th>
+<th>
+GC R (%)
+</th>
+<th>
+GC P (%)
+</th>
+<th>
+Size (bp)
+</th>
+<th>
+Genomic Position
 </th>
 </tr>
 </thead>
@@ -376,55 +438,23 @@ No candidates. Enter parameters and click ‘Design Start’.
 </table>
 </div>
 </div>
-<div class="grid-2">
-<div class="panel">
+<div id="metadata-panel" class="panel" style="display: none; margin-top: 25px;">
 <div class="panel-title">
-SELECTED SET DETAILS
+DESIGN PARAMETERS &amp; QC SUMMARY
 </div>
 <hr class="rule-light">
-<div class="detail-item">
-<label class="small-label">Forward Primer</label>
-<div id="detail-fwd-seq" class="seq-display">
--
-</div>
-<p><small class="pos-label" id="detail-fwd-pos"></small></p>
-</div>
-<div class="detail-item" style="margin-top:15px;">
-<label class="small-label">Probe</label>
-<div id="detail-prb-seq" class="seq-display probe-color">
--
-</div>
-<p><small class="pos-label" id="detail-prb-pos"></small></p>
-</div>
-<div class="detail-item" style="margin-top:15px;">
-<label class="small-label">Reverse Primer</label>
-<div id="detail-rev-seq" class="seq-display">
--
-</div>
-<p><small class="pos-label" id="detail-rev-pos"></small></p>
-</div>
-</div>
-<div class="panel">
-<div class="panel-title">
-QC FLAGS &amp; PROPERTIES
-</div>
-<hr class="rule-light">
-<div id="qc-content">
-<ul class="qc-list" id="qc-flags-list">
-<li style="color:#999;">
-Select a candidate to see QC details.
-</li>
-</ul>
-</div>
+<div class="table-container">
+<table class="meta-full-table" id="metadata-table">
+</table>
 </div>
 </div>
 </main>
 </div>
 <script src="app.js"></script>
+<script src="style.css"></script>
 
 
 </main></div>
-
 
 
 

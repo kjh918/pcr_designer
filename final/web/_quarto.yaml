@@ -9,6 +9,8 @@ website:
     left:
       - href: main.qmd
         text: "Home"
+      - href: manual/main.qmd
+        text: "Manual TaqMan qPCR"
       - href: qpcr/main.qmd
         text: "TaqMan qPCR"
         

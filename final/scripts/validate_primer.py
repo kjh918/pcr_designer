@@ -1,132 +1,162 @@
 #!/usr/bin/env python3
-"""
-scripts/validate_primers.py
-기존 프라이머/프로브 세트를 검증(In-Silico PCR 및 열역학 QC)하는 독립 실행형 스크립트.
-다른 모듈에서 `validate_primers` 함수를 직접 import 하여 사용할 수 있습니다.
-"""
 import sys
 import os
 import json
-import argparse
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
-# 프로젝트 최상단 디렉토리를 경로에 추가하여 pcr 모듈 인식
+# 상위 경로 추가 (pcr 패키지 인식용)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pcr.config.loader import load_pipeline_config
-from pcr.components.amplicon import Amplicon
-from pcr.components.primer import Primer, Probe
-from pcr.qc.blast import BlastSpecificityChecker
-from pcr.qc.thermo import ThermoChecker
+from pcr.factory import PCRFactory
 
-def validate_primers(
-    fwd_seq: str, 
-    rev_seq: str, 
-    probe_seq: Optional[str] = None, 
-    assay_type: str = "qpcr",
-    yaml_path: str = "pcr/config/base_pcr.yaml"
+def design_manual_qpcr(
+    design_name: str,
+    raw_sequence: str,
+    target_start: int,  # 1-based start
+    target_end: int,    # 1-based end
+    genome: str = "hg38",
+    top_k: int = 5,
+    base_yaml: str = "pcr/config/base_pcr.yaml",
+    system_yaml: str = "pcr/config/system.yaml",
+    qc_overrides: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    [MODIFIED] Class 래퍼를 제거하고 독립적인 함수로 분리했습니다.
-    입력된 서열을 바탕으로 BLAST(특이성)와 Thermo(열역학) 검증을 수행합니다.
+    사용자가 입력한 Raw Sequence 내에서 특정 Target 구간을 포함하는 
+    qPCR 프라이머 및 프로브를 설계합니다.
     """
-    fwd_seq = fwd_seq.upper()
-    rev_seq = rev_seq.upper()
-    probe_seq = probe_seq.upper() if probe_seq else None
-
-    # 1. 설정 로드 및 도구 초기화
-    try:
-        config = load_pipeline_config(yaml_path, assay_type=assay_type)
-        blast_checker = BlastSpecificityChecker(config)
-        thermo_checker = ThermoChecker(config.qc_criteria)
-    except Exception as e:
-        return {"status": "error", "reason": f"Failed to load config or initialize checkers: {e}"}
-
-    # ---------------------------------------------------------
-    # Step 1: BLAST (In-Silico PCR)
-    # ---------------------------------------------------------
-    hits = blast_checker._run_blast_set(fwd_seq, rev_seq, probe_seq)
     
-    f_hits = [h for h in hits if h.qseqid == "Fwd"]
-    r_hits = [h for h in hits if h.qseqid == "Rev"]
-    p_hits = [h for h in hits if h.qseqid == "Probe"]
-
-    found_amplicons = blast_checker._find_amplicons(f_hits, r_hits)
+    assay_type = "qpcr"
+    # 서열 정제 (공백 및 줄바꿈 제거)
+    template = raw_sequence.strip().upper().replace(" ", "")
     
-    if not found_amplicons:
-        return {"status": "fail", "reason": "No valid amplification product found via BLAST.", "amplicons": []}
+    # 1. Config 로드
+    user_overrides = {}
+    if qc_overrides:
+        user_overrides["qc_criteria"] = qc_overrides
 
-    # ---------------------------------------------------------
-    # Step 2: Amplicon 객체화 및 Thermo QC
-    # ---------------------------------------------------------
-    results = []
-    for idx, cand in enumerate(found_amplicons):
-        # 도메인 객체 생성
-        amp = Amplicon(
-            id=f"Valid_{idx}",
-            forward=Primer(sequence=fwd_seq),
-            reverse=Primer(sequence=rev_seq),
-            probe=Probe(sequence=probe_seq) if probe_seq else None,
-            reference_id=cand.chrom,
-            target_start_index=cand.start,
-            target_end_index=cand.end,
-            template_sequence="" # 필요시 fetch
-        )
+    config = load_pipeline_config(base_yaml, system_yaml, assay_type, user_overrides=user_overrides)
+
+    # 2. 0-based 좌표 변환
+    # 사용자가 150-155를 넣었다면 인덱스로는 149:155가 됨
+    rel_start = target_start - 1
+    rel_end = target_end
+    print(1)
+    # 3. Factory 실행
+    factory = PCRFactory(config)
+    
+    # 매뉴얼 설계에서는 reference_sequence와 template_sequence가 동일하거나
+    # 변이 전/후 서열을 직접 생성해야 함 (여기서는 입력 서열을 타겟으로 함)
+    output = factory.run(
+        assay_type=assay_type,
+        name=design_name,
+        target_start=rel_start,
+        target_end=rel_end,
+        reference_name=genome,       # BLAST 수행을 위해 필요
+        template_sequence=template,  # 설계 대상 서열
+        reference_sequence=template, # 비교 대상 서열
+        top_k=top_k,
+        run_qc=True,                 # QC 및 BLAST 활성화
+        overrides={"PRIMER_NUM_RETURN": 10},
+        template_genomic_start=0,    # 매뉴얼 서열이므로 0부터 시작으로 간주
+        target_strand="+"            # 매뉴얼 입력은 항상 Plus strand 기준
+    )
+    print(output)
+    if output.status != "success":
+        fail_reason = output.error_msg or "Failed to design primers/probes."
+        logs = getattr(output, "log_messages", [])
+        return {
+            "status": "fail", 
+            "reason": fail_reason,
+            "log_messages": "; ".join(logs) if isinstance(logs, list) else str(logs)
+        }
+
+    # 4. 결과 포맷팅 (기존 코드와 동일 구조)
+    def get_position_info(seq: str, is_reverse: bool = False):
+        if not seq: return None
+        # DNA 서열 내에서 위치 탐색
+        search_seq = seq.upper()
+        # 역방향 프라이머의 경우 템플릿 서열 내에서 상보 서열 위치를 찾아야 함
+        if is_reverse:
+            # 역상보 변환 (간이 함수)
+            rev_comp = search_seq.translate(str.maketrans('ATGC', 'TACG'))[::-1]
+            rel_idx = template.find(rev_comp)
+        else:
+            rel_idx = template.find(search_seq)
+
+        if rel_idx == -1:
+            return {"index_start": None, "index_end": None, "strand": "?"}
         
-        # Probe 결합 위치 확인
-        probe_binds = False
-        if probe_seq:
-            probe_binds = blast_checker._check_probe_binding(cand, p_hits)
-            
-        # Thermo QC 계산
-        thermo_result = thermo_checker._check_single(amp)
+        return {
+            "index_start": rel_idx + 1,
+            "index_end": rel_idx + len(seq),
+            "strand": "+" if not is_reverse else "-"
+        }
+
+    results = []
+    for rank, amp in enumerate(output.amplicons, start=1):
+        alignment_data = getattr(amp, "alignment_visual", ["Alignment data not available."])
         
         results.append({
-            "chrom": cand.chrom,
-            "start": cand.start,
-            "end": cand.end,
-            "product_size": cand.product_size,
-            "probe_binds": probe_binds,
-            "thermo_passed": thermo_result["passed"],
-            "thermo_details": thermo_result["data"],
-            "fail_reason": thermo_result["fail_reason"]
+            "rank": rank,
+            "id": amp.id,
+            "metrics": {"pair_penalty": round(amp.pair_penalty, 3)},
+            "qc_info": {"is_pass": amp.is_qc_pass, "fail_reason": getattr(amp, "qc_fail_reason", "None")},
+            "amplicon_info": {
+                "sequence": amp.sequence, 
+                "length": amp.product_size,
+                "tm": round(amp.tm, 2), 
+                "gc": amp.gc
+            },
+            "oligos": {
+                "forward": {
+                    "sequence": amp.forward.sequence, 
+                    "length": len(amp.forward.sequence),
+                    "tm": round(amp.forward.tm, 2), 
+                    "gc": round((amp.forward.sequence.count('G') + amp.forward.sequence.count('C')) / len(amp.forward.sequence) * 100, 2),
+                    **get_position_info(amp.forward.sequence, False)
+                },
+                "reverse": {
+                    "sequence": amp.reverse.sequence, 
+                    "length": len(amp.reverse.sequence),
+                    "tm": round(amp.reverse.tm, 2), 
+                    "gc": round((amp.reverse.sequence.count('G') + amp.reverse.sequence.count('C')) / len(amp.reverse.sequence) * 100, 2),
+                    **get_position_info(amp.reverse.sequence, True)
+                },
+                "probe": {
+                    "sequence": amp.probe.sequence, 
+                    "length": len(amp.probe.sequence),
+                    "tm": round(amp.probe.tm, 2), 
+                    "gc": round((amp.probe.sequence.count('G') + amp.probe.sequence.count('C')) / len(amp.probe.sequence) * 100, 2),
+                    **get_position_info(amp.probe.sequence, False) # Probe는 일반적으로 Forward 방향
+                } if amp.probe else None
+            },
+            "alignment_text_block": "\n".join(alignment_data)
         })
 
-    # ---------------------------------------------------------
-    # Step 3: 최종 결과 포맷팅
-    # ---------------------------------------------------------
     return {
         "status": "success",
-        "assay_type": assay_type,
-        "blast_summary": {
-            "total_amplicons_found": len(found_amplicons),
-            "intended_target_found": len(found_amplicons) == 1,
-            "off_target_count": max(0, len(found_amplicons) - 1)
+        "metadata": {
+            "assay": "Manual-TaqMan-qPCR", 
+            "design_name": design_name,
+            "candidates_found": len(results),
+            "genome_build_for_blast": genome
         },
-        "amplicons": results
+        "target_info": {
+            "template_length": len(template),
+            "target_range": f"{target_start}-{target_end}",
+            "template_sequence": template 
+        },
+        "results": results
     }
 
-# =====================================================================
-# CLI 실행 모드 (터미널에서 직접 실행할 때 작동)
-# =====================================================================
+# 실행 예시
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Existing Primer/Probe Validation Tool")
-    parser.add_argument("-f", "--fwd", required=True, help="Forward Primer Sequence")
-    parser.add_argument("-r", "--rev", required=True, help="Reverse Primer Sequence")
-    parser.add_argument("-p", "--probe", default=None, help="Probe Sequence (Optional)")
-    parser.add_argument("-a", "--assay", default="qpcr", help="Assay Type (e.g., qpcr, ms_pcr, base)")
-    parser.add_argument("-c", "--config", default="../pcr/config/base_pcr.yaml", help="Path to base_pcr.yaml")
-    
-    args = parser.parse_args()
-
-    # 함수 직접 호출
-    result = validate_primers(
-        fwd_seq=args.fwd,
-        rev_seq=args.rev,
-        probe_seq=args.probe,
-        assay_type=args.assay,
-        yaml_path=args.config
+    test_seq = "ATGC..." # 실제 긴 서열 입력
+    res = design_manual_qpcr(
+        design_name="Test_Manual_Project",
+        raw_sequence=test_seq,
+        target_start=150,
+        target_end=155
     )
-
-    # 결과를 JSON 형태로 예쁘게 출력 (다른 시스템에서 파이프(|)로 넘겨받기 좋음)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print(json.dumps(res, indent=2))

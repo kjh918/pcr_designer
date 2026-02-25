@@ -12,14 +12,23 @@ class BaseQCExecutor:
         self.checkers = []
         self._setup_checkers()
 
-    def _setup_checkers(self):
+    # pcr/qc/executor.py (BaseQCExecutor)
 
-        # 1. ThermoChecker는 criteria만 필요하므로 명시적으로 전달
+    def _setup_checkers(self):
+        # 1. ThermoChecker는 항상 실행 (물리적 특성 체크)
         self.checkers.append(ThermoChecker(self.config.qc_criteria))
         
-        # 2. BlastSpecificityChecker는 경로(system) 정보도 필요하므로 config 전체 전달
-        self.checkers.append(BlastSpecificityChecker(self.config))
-    
+        # 2. BLAST DB 경로가 설정되어 있을 때만 BlastSpecificityChecker 추가
+        # PipelineConfig의 qc_criteria 혹은 system 설정에 blast_db가 있는지 확인
+        blast_db = getattr(self.config.qc_criteria, "blast_db", None)
+        
+        if blast_db:
+            self.checkers.append(BlastSpecificityChecker(self.config))
+        else:
+            # 로그를 남겨서 사용자가 BLAST가 생략되었음을 알게 합니다.
+            import logging
+            logging.getLogger(__name__).info("🚀 BLAST DB path is None. Skipping BlastSpecificityChecker.")
+        
     def execute(self, amplicons: List[Amplicon]) -> List[Amplicon]:
         """
         [Core Method] 자식 클래스의 super().execute()가 찾아올 목표 메서드입니다.

@@ -64,9 +64,14 @@ class BlastSpecificityChecker:
         """
         Batch 처리를 통해 모든 후보군의 특이성을 한 번에 검증합니다.
         """
+        
         if not amplicons:
             return []
-
+        blast_db = getattr(self.config.qc_criteria, "blast_db", None)
+        
+        if not blast_db or blast_db.lower() == "none":
+            return amplicons # 검사 없이 전원 합격 처리
+        
         # 1. Multi-FASTA 생성 (Query 통합)
         fasta_content = []
         for amp in amplicons:

@@ -53,7 +53,7 @@ def design_qpcr_primers(
     
     assay_type = "qpcr"
     task_name = f"{chrom}_{start}_{ref}>{alt}({strand})"
-
+    print(task_name)
     # 1. Config 로드
     user_overrides = {}
     if qc_overrides:

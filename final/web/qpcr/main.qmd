@@ -2,6 +2,7 @@
 title: "TaqMan qPCR Design"
 resources:
   - "app.js"
+  - "style.css"
 ---
 
 ```{=html}
@@ -22,13 +23,15 @@ resources:
 <button class="btn-run" id="btn-run-qpcr">DESIGN START</button>
 
 <div style="margin-top:10px; display:flex; gap:10px;">
-<button class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export</button>
-<button class="btn-save" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Save</button>
+<button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (JSON)</button>
+<button id="btn-export-html" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (HTML)</button>
 </div>
-</div>
+
 </aside>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 {{< include partials/result_panel.html >}}
 
 </div>
 <script src="app.js"></script>
+<script src="style.css"></script>
