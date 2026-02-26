@@ -46,7 +46,7 @@ const TRACKED_INPUTS = [
 ];
 
 // API endpoint (필요하면 환경에 맞게 바꾸기)
-const API_URL = "http://192.168.0.35/api/design/qpcr";
+const API_URL = "http://192.168.0.35:9000/api/design/qpcr";
 
 /* -----------------------------
    1) Utils (DOM / format / read)

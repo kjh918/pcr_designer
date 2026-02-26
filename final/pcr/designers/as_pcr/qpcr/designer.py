@@ -145,6 +145,7 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
 
         res  = primer3.bindings.design_primers(current_seq_args, run_args)
         num  = res.get("PRIMER_INTERNAL_NUM_RETURNED", 0)
+        print(res)
         return [p for i in range(num) if (p := Probe.from_primer3(res, i))]
 
     def _is_valid_probe(self, probe: Probe) -> bool:
@@ -252,9 +253,7 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
                         ref_full=ref_seq, alt_full=alt_seq, 
                         fwd_seq=fwd.sequence, rev_seq=rev.sequence, prb_seq=prb.sequence
                     )
-                #print(alt_seq)
-                #print(ref_seq)
-                #exit()
+
                 amp = Amplicon(
                     id=f"{self.input.name}_P{probe_idx}_{i}",
                     forward=fwd, reverse=rev, probe=prb,

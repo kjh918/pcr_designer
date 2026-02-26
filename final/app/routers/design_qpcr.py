@@ -202,7 +202,7 @@ async def design_qpcr_api(req: QpcrRequest):
             strand=req.strand,
             genome=req.reference,
             fasta_path=None,
-            padding=300, 
+            padding=150, 
             top_k=req.top_k,
             base_yaml=temp_config_path,
             system_yaml=SYSTEM_YAML_PATH 

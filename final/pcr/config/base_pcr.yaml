@@ -41,6 +41,9 @@ qc_criteria:
   blast_max_alignments: 50
   min_amp_size: 50
   max_amp_size: 300
+  min_query_coverage: 0.8
+  min_identity_threshold: 90.0
+  end_match_tolerance: 1
   use_ispcr_check: false
   primer:
     max_diff_tm: 3.0

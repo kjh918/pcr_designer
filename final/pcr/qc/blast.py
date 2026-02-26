@@ -19,8 +19,9 @@ from pcr.config.schema.app import PipelineConfig
 from pcr.components.amplicon import Amplicon
 
 class BlastSpecificityChecker:
-    OUTFMT = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
-
+    
+    OUTFMT = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq"
+    
     def __init__(self, config: PipelineConfig):
         """
         [MODIFIED] config(PipelineConfig)에서 시스템 및 레퍼런스 정보를 동적으로 로드합니다.
@@ -67,10 +68,6 @@ class BlastSpecificityChecker:
         
         if not amplicons:
             return []
-        blast_db = getattr(self.config.qc_criteria, "blast_db", None)
-        
-        if not blast_db or blast_db.lower() == "none":
-            return amplicons # 검사 없이 전원 합격 처리
         
         # 1. Multi-FASTA 생성 (Query 통합)
         fasta_content = []
@@ -79,7 +76,6 @@ class BlastSpecificityChecker:
             fasta_content.append(f">{amp.id}|Rev\n{amp.reverse.sequence}")
             if amp.probe:
                 fasta_content.append(f">{amp.id}|Probe\n{amp.probe.sequence}")
-
         valid_amplicons = []
 
         try:
@@ -94,7 +90,6 @@ class BlastSpecificityChecker:
                 "-num_alignments", str(self.criteria.blast_max_alignments),
                 "-num_threads", "4", "-query", tmp_path
             ]
-            
             res = subprocess.run(cmd, capture_output=True, text=True, check=True)
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -112,81 +107,230 @@ class BlastSpecificityChecker:
 
                 result_data = self._evaluate_amplicon(amp, f_hits, r_hits, p_hits)
                 amp.blast_stats = result_data
+                amp.is_qc_pass = result_data["passed"]
                 
-                if result_data["passed"]:
-                    valid_amplicons.append(amp)
+                if amp.is_qc_pass:
+                    amp.qc_log = "Passed: Specific target confirmed."
                 else:
-                    amp.is_qc_pass = False
-                    amp.qc_log = "Failed BLAST: Non-specific amplification detected."
+                    # 실패 사유를 상세히 기록 (프론트에서 보여줄 용도)
+                    amp.qc_log = result_data.get("reason", "Failed: Specificity issue.")
 
         except Exception as e:
             print(f"❌ BLAST Execution Failed: {e}")
+            for amp in amplicons:
+                amp.is_qc_pass = False
+                amp.qc_log = f"Error: BLAST analysis failed ({str(e)})"
 
-        return valid_amplicons
-
-    def _evaluate_amplicon(self, amplicon: Amplicon, f_hits: List[BlastHit], r_hits: List[BlastHit], p_hits: List[BlastHit]) -> Dict[str, Any]:
-        """In-silico PCR 판별 및 오프타겟 유무 검사"""
-        candidates = self._find_amplicons(f_hits, r_hits)
-
-        signal_candidates = []
-        amplification_only_candidates = []
-
-        for cand in candidates:
-            # 게놈에서 서열 추출 (pysam 활용)
-            cand.reference_sequence = self._fetch_sequence_from_genome(cand.chrom, cand.start, cand.end)
-            
-            # TaqMan Probe가 있을 경우 바인딩 여부 확인
-            probe_binds = self._check_probe_binding(cand, p_hits) if amplicon.probe else False
-            
-            if not amplicon.probe:
-                signal_candidates.append(cand) # SYBR Green 방식 등
-            else:
-                if probe_binds:
-                    signal_candidates.append(cand)
-                else:
-                    amplification_only_candidates.append(cand)
-
-        # 판정: 시그널이 정확히 1개(의도한 타겟)만 나와야 통과
-        count = len(signal_candidates)
-        is_passed = (count == 1)
+        # 🎯 필터링 없이 전체 리스트 반환 (프론트에서 is_qc_pass로 구분해서 그리게 함)
+        return amplicons
+    
+    def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit]) -> Dict[str, Any]:
+        """
+        [Core] 타겟/오프타겟 영역의 Fwd/Rev/Probe 바인딩 상세 정보를 시각화 데이터로 구성합니다.
+        """
         
-        alignment_view = {}
-        target = signal_candidates[0] if count >= 1 else None
-        if target and target.reference_sequence:
-             alignment_view = {
-                "chrom": target.chrom, "start": target.start, "end": target.end,
-                "seq_snippet": target.reference_sequence[:50]
-            }
+        # 1. Forward Primer Alignment
+        f_report = self._generate_alignment_block(
+            name="Forward Primer",
+            query_seq=cand.fwd_hit.qseq,
+            subject_seq=cand.fwd_hit.sseq,
+            pident=cand.fwd_hit.pident
+        )
+
+        # 2. Reverse Primer Alignment
+        r_report = self._generate_alignment_block(
+            name="Reverse Primer",
+            query_seq=cand.rev_hit.qseq,
+            subject_seq=cand.rev_hit.sseq,
+            pident=cand.rev_hit.pident
+        )
+
+        # 3. Probe Alignment (바인딩된 경우에만)
+        p_report = None
+        # cand 내부에 프로브 히트가 이미 저장되어 있다고 가정 (또는 p_hits에서 추출)
+        target_p_hit = next((ph for ph in p_hits if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end), None)
+        
+        if target_p_hit:
+            p_report = self._generate_alignment_block(
+                name="TaqMan Probe",
+                query_seq=target_p_hit.qseq,
+                subject_seq=target_p_hit.sseq,
+                pident=target_p_hit.pident
+            )
 
         return {
-            "passed": is_passed,
-            "signal_candidates_count": count,
-            "amplification_only_count": len(amplification_only_candidates),
-            "alignment": alignment_view
+            "location": f"{cand.chrom}:{cand.start}-{cand.end}",
+            "product_size": cand.product_size,
+            "is_target": getattr(cand, "is_target", False),
+            "fwd": f_report,
+            "rev": r_report,
+            "probe": p_report,
+            "full_sequence": cand.reference_sequence # 게놈에서 추출한 앰플리콘 전체 서열
         }
 
+    def _generate_alignment_block(self, name: str, query_seq: str, subject_seq: str, pident: float) -> Dict[str, str]:
+        """미스매치 시각화를 위한 문자열 블록 생성"""
+        match_line = ""
+        for q, s in zip(query_seq, subject_seq):
+            if q == s:
+                match_line += "|"
+            elif q == "-" or s == "-": # 인델(Gap) 처리
+                match_line += " "
+            else: # 미스매치
+                match_line += "." # 또는 공백
+        
+        return {
+            "label": name,
+            "query": query_seq,
+            "match": match_line,
+            "subject": subject_seq,
+            "identity": f"{pident}%"
+        }
+    
+    def _evaluate_amplicon(self, amplicon: Amplicon, f_hits: List[BlastHit], r_hits: List[BlastHit], p_hits: List[BlastHit]) -> Dict[str, Any]:
+        """[Sequence-Only Mode] YAML 파라미터를 적용한 정밀 판정 로직"""
+        candidates = self._find_amplicons(f_hits, r_hits)
+        
+        target_signals = []      # 메인 타겟 시그널
+        off_target_signals = []   # 위험한 오프타겟 시그널 (Probe 바인딩)
+        amplification_only = []   # 비특이 증폭 노이즈 (Probe 미바인딩)
+
+        f_len = len(amplicon.forward.sequence)
+        r_len = len(amplicon.reverse.sequence)
+
+        # YAML 설정값 로드 (없을 경우를 대비한 기본값 세팅)
+        min_cov = getattr(self.criteria, "min_query_coverage", 0.8)
+        min_id = getattr(self.criteria, "min_identity_threshold", 90.0)
+        tolerance = getattr(self.criteria, "end_match_tolerance", 1)
+
+        for idx, cand in enumerate(candidates):
+            # 1. 프라이머 증폭 가능성 체크 (Coverage & 3' End)
+            # Forward 체크
+            f_cov = cand.fwd_hit.length / f_len
+            f_3end = (cand.fwd_hit.qend >= f_len - tolerance)
+            f_valid = (f_cov >= min_cov) and f_3end and (cand.fwd_hit.pident >= min_id)
+
+            # Reverse 체크 (Reverse는 qstart가 1에 가까워야 3' 말단임)
+            r_cov = cand.rev_hit.length / r_len
+            r_3end = (cand.rev_hit.qstart <= 1 + tolerance)
+            r_valid = (r_cov >= min_cov) and r_3end and (cand.rev_hit.pident >= min_id)
+
+            # 💡 둘 중 하나라도 증폭 조건에 미달하면 PCR 노이즈로 보지 않고 스킵합니다.
+            if not (f_valid and r_valid):
+                continue
+
+            # 2. 프로브 바인딩 확인 및 리포트 생성
+            probe_binds = self._check_probe_binding(cand, p_hits)
+            binding_report = self._create_binding_report(cand, amplicon, p_hits if probe_binds else [])
+
+            # 3. 타겟 vs 오프타겟 분류
+            if idx == 0:
+                cand.is_target = True
+                if probe_binds:
+                    target_signals.append(binding_report)
+                else: 
+                    # 타겟 위치인데 프로브가 안 붙음 (변이가 너무 심하거나 설계 오류)
+                    cand.qc_log = "Main target locus found, but Probe binding failed."
+            else:
+                cand.is_target = False
+                if probe_binds:
+                    # 다른 위치에서 시그널 발생 (위험!)
+                    off_target_signals.append(binding_report)
+                else:
+                    # 다른 위치에서 증폭만 발생 (노이즈)
+                    amplification_only.append(binding_report)
+
+        # 4. 최종 QC 판정 (타겟 1개 필수, 오프타겟 및 노이즈 0개 필수)
+        is_passed = (len(target_signals) == 1) and \
+                    (len(off_target_signals) == 0) and \
+                    (len(amplification_only) == 0)
+            
+        return {
+            "passed": is_passed,
+            "target_count": len(target_signals),
+            "off_target_count": len(off_target_signals),
+            "noise_count": len(amplification_only),
+            "target_signals": target_signals,
+            "off_target_signals": off_target_signals,
+            "amplification_only": amplification_only,
+            "total_signal_count": len(target_signals) + len(off_target_signals)
+        }
+    
+    def _is_potential_amplification(self, hit: BlastHit, primer_len: int) -> bool:
+        """
+        YAML 설정값을 기반으로 실제 증폭 가능성을 판정합니다.
+        """
+        # 1. YAML에서 값 로드 (기본값 설정으로 안전성 확보)
+        min_cov = getattr(self.criteria, "min_query_coverage", 0.8)
+        min_id = getattr(self.criteria, "min_identity_threshold", 90.0)
+        tolerance = getattr(self.criteria, "end_match_tolerance", 1)
+
+        # 2. Query Coverage 체크
+        coverage = hit.length / primer_len
+        if coverage < min_cov:
+            return False
+
+        # 3. 3' 말단(3'-end) 결합 체크
+        is_3end_match = False
+        if hit.qseqid == "Fwd":
+            # Forward 프라이머의 끝(qend)이 프라이머 전체 길이 근처인지
+            is_3end_match = (hit.qend >= primer_len - tolerance)
+        elif hit.qseqid == "Rev":
+            # Reverse 프라이머는 qstart가 시작점(1) 근처여야 3' 말단 결합
+            is_3end_match = (hit.qstart <= 1 + tolerance)
+
+        # 4. 종합 판정
+        # Identity가 설정값(90%) 이상이고 3' 말단이 붙어있어야 '진짜 증폭 위험'
+        return is_3end_match and (hit.pident >= min_id)
+    
     def _parse_and_group_hits(self, stdout: str) -> Dict[str, List[BlastHit]]:
         grouped = {}
         for line in stdout.strip().splitlines():
             cols = line.split("\t")
-            if len(cols) < 12: continue
+            # 🚨 qseq, sseq를 포함하려면 최소 14개의 컬럼이 필요합니다.
+            if len(cols) < 14: 
+                continue
             
             raw_qseqid = cols[0]
-            if "|" not in raw_qseqid: continue
+            if "|" not in raw_qseqid: 
+                continue
             amp_id, oligo_type = raw_qseqid.split("|", 1)
 
             try:
                 sstart, send = int(cols[8]), int(cols[9])
-                hit = BlastHit(
-                    qseqid=oligo_type, sseqid=cols[1], pident=float(cols[2]), 
-                    length=int(cols[3]), qstart=int(cols[6]), qend=int(cols[7]),
-                    sstart=sstart, send=send
-                )
                 
-                if hit.pident >= self.criteria.min_identity:
-                    if amp_id not in grouped: grouped[amp_id] = []
+                # 1. BlastHit 객체 생성 (서열 정보 포함)
+                hit = BlastHit(
+                    qseqid=oligo_type, 
+                    sseqid=cols[1], 
+                    pident=float(cols[2]), 
+                    length=int(cols[3]), 
+                    qstart=int(cols[6]), 
+                    qend=int(cols[7]),
+                    sstart=sstart, 
+                    send=send,
+                    # 🔥 추가: BLAST가 매칭한 Query 및 Subject 서열
+                    qseq=cols[12], 
+                    sseq=cols[13]
+                )
+                # 2. 필터링 및 그룹화
+                # 팁: 프로브(Probe)는 프라이머보다 더 낮은 identity에서도 
+                # 바인딩할 수 있으므로, oligo_type에 따라 기준을 다르게 줄 수도 있습니다.
+                min_id = self.criteria.min_identity
+                if oligo_type == "Probe":
+                    # 프로브용 별도 기준이 있다면 적용 (예: 80.0)
+                    min_id = getattr(self.criteria, "probe_min_identity", min_id)
+
+                if hit.pident >= min_id:
+                    if amp_id not in grouped: 
+                        grouped[amp_id] = []
                     grouped[amp_id].append(hit)
-            except: continue
+                    
+            except Exception as e:
+                # 로깅을 추가하면 파싱 에러 발생 시 원인 파악이 쉽습니다.
+                # print(f"Error parsing line: {e}")
+                continue
+                
         return grouped
 
     def _find_amplicons(self, f_hits: List[BlastHit], r_hits: List[BlastHit]) -> List[OffTargetAmplicon]:
@@ -196,10 +340,8 @@ class BlastSpecificityChecker:
             for rh in r_hits:
                 if fh.sseqid != rh.sseqid: continue
                 if fh.strand == rh.strand: continue
-                
                 valid = False
                 start, end = 0, 0
-                
                 # Forward(+) & Reverse(-) 구도
                 if fh.strand == "+" and rh.strand == "-" and fh.genomic_end < rh.genomic_start: 
                     valid, start, end = True, fh.genomic_start, rh.genomic_end
@@ -214,6 +356,7 @@ class BlastSpecificityChecker:
                             chrom=fh.sseqid, start=start, end=end, 
                             product_size=size, fwd_hit=fh, rev_hit=rh
                         ))
+    
         return amplicons
 
     def _check_probe_binding(self, cand: OffTargetAmplicon, p_hits: List[BlastHit]) -> bool:
