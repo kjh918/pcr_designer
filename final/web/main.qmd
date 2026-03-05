@@ -10,13 +10,24 @@ title: "GENCURIX PRIMER SUITE"
 
 <div class="card-container">
 <a href="manual/main.html" class="design-card">
-<div class="icon">🧬</div>
+<div class="icon">📖</div>
 <div class="card-title">Manual</div>
-<p>TaqMan Probe & Primer Design</p>
+<p>User Guide & Pipeline Manual</p>
 </a>
 <a href="qpcr/main.html" class="design-card">
 <div class="icon">🧬</div>
 <div class="card-title">qPCR</div>
 <p>TaqMan Probe & Primer Design</p>
 </a>
+<a href="as_pcr/main.html" class="design-card">
+<div class="icon">🎯</div>
+<div class="card-title">AS-PCR</div>
+<p>Allele-Specific Primer Design</p>
+</a>
+<a href="ms_pcr/main.html" class="design-card">
+<div class="icon">🧬CH₃</div>
+<div class="card-title">MS-PCR</div>
+<p>Methylation-Specific Primer Design</p>
+</a>
 </div>
+```

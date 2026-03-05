@@ -234,14 +234,13 @@ hr.rule-light {
     color: #666; 
     font-size: 16px; 
 }
-
 .card-container {
-    display: flex;
-    gap: 25px;
-    justify-content: center; /* 카드를 가운데로 모음 */
-    margin: 50px auto 0 auto; /* 위쪽 마진 50px, 좌우 자동(가운데 정렬) */
-    flex-wrap: wrap;
-    max-width: 700px; /* 💡 카드 2개 너비(약 280px * 2) + 간격에 맞춰 제한 */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 🌟 핵심: 정확히 2열(Column)로 고정 */
+    gap: 25px; /* 카드 사이의 간격 */
+    max-width: 600px; /* 카드 2개 넓이(약 280*2) + 간격에 맞춘 최적 사이즈 */
+    margin: 50px auto 0 auto; /* 가운데 정렬 */
+    justify-content: center;
 }
 
 .design-card { 
@@ -251,13 +250,16 @@ hr.rule-light {
     border: 1px solid #e0e6ed; 
     border-radius: 12px; 
     padding: 40px 20px; 
-    width: 280px; 
+    width: 100%; /* 🌟 Grid 셀(칸)에 꽉 차게 변경 */
+    max-width: 280px; /* 단, 최대 가로 길이는 280px을 넘지 않게 제한 */
+    box-sizing: border-box; /* 패딩을 넓이에 포함시켜 삐져나감 방지 */
     text-align: center; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
     transition: all 0.3s ease; 
     display: flex; 
     flex-direction: column; 
     align-items: center;
+    margin: 0 auto; /* 셀 안에서 카드 자체를 가운데 정렬 */
 }
 .design-card:hover { 
     transform: translateY(-8px); 
@@ -282,7 +284,10 @@ hr.rule-light {
     margin: 0; 
     font-family: 'Roboto Condensed', sans-serif; 
 }
-
+.card-container > p, 
+.card-container > br {
+    display: none !important;
+}
 /* PDF 출력 시 적용되는 스타일 */
 @media print {
     /* 전체 레이아웃 고정 */

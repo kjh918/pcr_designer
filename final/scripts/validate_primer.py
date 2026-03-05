@@ -41,7 +41,6 @@ def design_manual_qpcr(
     # 사용자가 150-155를 넣었다면 인덱스로는 149:155가 됨
     rel_start = target_start - 1
     rel_end = target_end
-    print(1)
     # 3. Factory 실행
     factory = PCRFactory(config)
     

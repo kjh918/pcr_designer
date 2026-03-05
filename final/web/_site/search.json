@@ -1,5 +1,12 @@
 [
   {
+    "objectID": "ms_pcr/main.html",
+    "href": "ms_pcr/main.html",
+    "title": "TaqMan qPCR Design",
+    "section": "",
+    "text": "qPCR DESIGN\n\nNGS-TEAM PRIMER SUITE\n\n\nTarget Information\n\n\n\nREFERENCE GENOME  hg38 hg19 \nCHROMOSOME \n\n\nSTART \n\n\nEND \n\n\n\n\nREF \n\n\nALT \n\n\nSTRAND  Plus (+) Minus (-) \n\n※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)\n\n\n\nAdvanced Parameters\n\n\n\n\nPRIMER OPTIONS\n\n\nAMPLICON SIZE (MIN / MAX)\n\n \n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nPROBE OPTIONS\n\n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM DIFF (MIN / MAX)\n\n \n\nGC% (MIN / OPT / MAX)\n\n  \n\nCONSTRAINTS\n\n\nMax Poly-G \n\n\nMax 3’ End GC \n\n\nAvoid 5’ G  True False \n\n\n\n\n\n\nQC & SPECIFICITY OPTIONS\n\n\nTHERMODYNAMICS (Min dG)\n\n\nHairpin \n\n\nHomodimer \n\n\nHeterodimer \n\n\nSPECIFICITY (BLAST)\n\n\nMin Identity (%) \n\n\nMin Hit Length \n\n\nMax Alignments \n\n\nAMPLICON QC (Size / Check)\n\n\nMin Size \n\n\nMax Size \n\n\nUse In-Silico PCR  False True \n\n\nOLIGO CONSTRAINTS (QC Only)\n\n\nPrimer Max Tm Diff \n\n\n\n\n\n\nRUN\n\n\n\nDESIGN START\n\n\n\nExport (JSON)\n\n\nExport (HTML)\n\n\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nTm F (°C)\n\n\nTm R (°C)\n\n\nTm P (°C)\n\n\nGC F (%)\n\n\nGC R (%)\n\n\nGC P (%)\n\n\nSize (bp)\n\n\nGenomic Position\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
+  },
+  {
     "objectID": "manual/main.html",
     "href": "manual/main.html",
     "title": "Manual qPCR Design",
@@ -11,12 +18,19 @@
     "href": "main.html",
     "title": "GENCURIX PRIMER SUITE",
     "section": "",
-    "text": "Welcome to NGS-TEAM Suite\n\n\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n\n🧬\n\n\nManual\n\n\nTaqMan Probe & Primer Design\n\n \n\n🧬\n\n\nqPCR\n\n\nTaqMan Probe & Primer Design"
+    "text": "Welcome to NGS-TEAM Suite\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n📖\nManual\nUser Guide & Pipeline Manual\n\n\n🧬\nqPCR\nTaqMan Probe & Primer Design\n\n\n🎯\nAS-PCR\nAllele-Specific Primer Design\n\n\n🧬CH₃\nMS-PCR\nMethylation-Specific Primer Design"
   },
   {
     "objectID": "qpcr/main.html",
     "href": "qpcr/main.html",
     "title": "TaqMan qPCR Design",
+    "section": "",
+    "text": "qPCR DESIGN\n\nNGS-TEAM PRIMER SUITE\n\n\nTarget Information\n\n\n\nREFERENCE GENOME  hg38 hg19 \nCHROMOSOME \n\n\nSTART \n\n\nEND \n\n\n\n\nREF \n\n\nALT \n\n\nSTRAND  Plus (+) Minus (-) \n\n※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)\n\n\n\nAdvanced Parameters\n\n\n\n\nPRIMER OPTIONS\n\n\nAMPLICON SIZE (MIN / MAX)\n\n \n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nPROBE OPTIONS\n\n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM DIFF (MIN / MAX)\n\n \n\nGC% (MIN / OPT / MAX)\n\n  \n\nCONSTRAINTS\n\n\nMax Poly-G \n\n\nMax 3’ End GC \n\n\nAvoid 5’ G  True False \n\n\n\n\n\n\nQC & SPECIFICITY OPTIONS\n\n\nTHERMODYNAMICS (Min dG)\n\n\nHairpin \n\n\nHomodimer \n\n\nHeterodimer \n\n\nSPECIFICITY (BLAST)\n\n\nMin Identity (%) \n\n\nMin Hit Length \n\n\nMax Alignments \n\n\nAMPLICON QC (Size / Check)\n\n\nMin Size \n\n\nMax Size \n\n\nUse In-Silico PCR  False True \n\n\nOLIGO CONSTRAINTS (QC Only)\n\n\nPrimer Max Tm Diff \n\n\n\n\n\n\nRUN\n\n\n\nDESIGN START\n\n\n\nExport (JSON)\n\n\nExport (HTML)\n\n\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nTm F (°C)\n\n\nTm R (°C)\n\n\nTm P (°C)\n\n\nGC F (%)\n\n\nGC R (%)\n\n\nGC P (%)\n\n\nSize (bp)\n\n\nGenomic Position\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
+  },
+  {
+    "objectID": "as_pcr/main.html",
+    "href": "as_pcr/main.html",
+    "title": "AS-PCR Design",
     "section": "",
     "text": "qPCR DESIGN\n\nNGS-TEAM PRIMER SUITE\n\n\nTarget Information\n\n\n\nREFERENCE GENOME  hg38 hg19 \nCHROMOSOME \n\n\nSTART \n\n\nEND \n\n\n\n\nREF \n\n\nALT \n\n\nSTRAND  Plus (+) Minus (-) \n\n※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)\n\n\n\nAdvanced Parameters\n\n\n\n\nPRIMER OPTIONS\n\n\nAMPLICON SIZE (MIN / MAX)\n\n \n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM (MIN / OPT / MAX)\n\n  \n\nGC% (MIN / OPT / MAX)\n\n  \n\n\n\n\n\nPROBE OPTIONS\n\n\nLENGTH (MIN / OPT / MAX)\n\n  \n\nTM DIFF (MIN / MAX)\n\n \n\nGC% (MIN / OPT / MAX)\n\n  \n\nCONSTRAINTS\n\n\nMax Poly-G \n\n\nMax 3’ End GC \n\n\nAvoid 5’ G  True False \n\n\n\n\n\n\nQC & SPECIFICITY OPTIONS\n\n\nTHERMODYNAMICS (Min dG)\n\n\nHairpin \n\n\nHomodimer \n\n\nHeterodimer \n\n\nSPECIFICITY (BLAST)\n\n\nMin Identity (%) \n\n\nMin Hit Length \n\n\nMax Alignments \n\n\nAMPLICON QC (Size / Check)\n\n\nMin Size \n\n\nMax Size \n\n\nUse In-Silico PCR  False True \n\n\nOLIGO CONSTRAINTS (QC Only)\n\n\nPrimer Max Tm Diff \n\n\n\n\n\n\nRUN\n\n\n\nDESIGN START\n\n\n\nExport (JSON)\n\n\nExport (HTML)\n\n\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nTm F (°C)\n\n\nTm R (°C)\n\n\nTm P (°C)\n\n\nGC F (%)\n\n\nGC R (%)\n\n\nGC P (%)\n\n\nSize (bp)\n\n\nGenomic Position\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
   }

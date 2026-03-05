@@ -13,6 +13,10 @@ website:
         text: "Manual TaqMan qPCR"
       - href: qpcr/main.qmd
         text: "TaqMan qPCR"
+      - href: as_pcr/main.qmd
+        text: "Allele specific PCR (AS-PCR)"
+      - href: ms_pcr/main.qmd
+        text: "Methyl specific PCR (MS-PCR)"
         
 format:
   html:

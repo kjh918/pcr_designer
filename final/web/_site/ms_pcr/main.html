@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Manual qPCR Design – GENCURIX PRIMER SUITE</title>
+<title>TaqMan qPCR Design – GENCURIX PRIMER SUITE</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -95,7 +95,7 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="../manual/main.html" aria-current="page"> 
+    <a class="nav-link" href="../manual/main.html"> 
 <span class="menu-text">Manual TaqMan qPCR</span></a>
   </li>  
   <li class="nav-item">
@@ -107,7 +107,7 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Allele specific PCR (AS-PCR)</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../ms_pcr/main.html"> 
+    <a class="nav-link active" href="../ms_pcr/main.html" aria-current="page"> 
 <span class="menu-text">Methyl specific PCR (MS-PCR)</span></a>
   </li>  
 </ul>
@@ -127,7 +127,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Manual qPCR Design</h1>
+<h1 class="title">TaqMan qPCR Design</h1>
 </div>
 
 
@@ -148,35 +148,48 @@ ul.task-list li input[type="checkbox"] {
 <aside class="sidebar">
 <div class="sidebar-content">
 <h4 style="margin:0;" class="anchored">
-<b>Manual qPCR DESIGN</b>
+<b>qPCR DESIGN</b>
 </h4>
 <small>NGS-TEAM PRIMER SUITE</small>
 <hr class="rule">
 <div class="section-title">
-Manual Design Information
+Target Information
 </div>
 <hr class="rule-light">
-<div style="margin-bottom:15px;">
-<p><label class="small-label">DESIGN NAME (PROJECT ID)</label> <input type="text" class="input-tight" id="input-design-name" placeholder="e.g. BRCA1_Exon11_Manual"></p>
+<!--<div class="input-group">
+<label class="small-label">REFERENCE GENOME</label>
+<select id="input-ref-genome" class="form-select">
+<option value="hg38" selected>hg38 (GRCh38)</option>
+<option value="hg19">hg19 (GRCh37)</option>
+</select>
+</div>-->
+<p><label class="small-label" style="margin-top:10px;">REFERENCE GENOME</label> <select class="input-tight" id="input-ref-genome"> <option value="hg38">hg38</option> <option value="hg19">hg19</option> </select></p>
+<p><label class="small-label" style="margin-top:10px;">CHROMOSOME</label> <input class="input-tight" id="input-chrom" placeholder="e.g. chr17"></p>
+<div class="grid-2" style="margin-top:10px;">
+<div>
+<p><label class="small-label">START</label> <input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723640"></p>
+</div>
+<div>
+<p><label class="small-label">END</label> <input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723640"></p>
+</div>
 </div>
 <div class="grid-2" style="margin-top:10px;">
 <div>
-<p><label class="small-label">TARGET START (1-based)</label> <input type="number" class="input-tight" id="manual-target-start" placeholder="e.g. 150"></p>
+<p><label class="small-label">REF</label> <input type="text" class="input-tight" id="input-ref-base" placeholder="e.g. G"></p>
 </div>
 <div>
-<p><label class="small-label">TARGET END (1-based)</label> <input type="number" class="input-tight" id="manual-target-end" placeholder="e.g. 155"></p>
+<p><label class="small-label">ALT</label> <input type="text" class="input-tight" id="input-alt-base" placeholder="e.g. A"></p>
 </div>
 </div>
-<label class="small-label">RAW SEQUENCE (5’ -&gt; 3’)</label>
-<textarea id="manual-sequence" class="input-tight" style="width:100%; height:120px; font-family:monospace; text-transform:uppercase;" placeholder="ATGC 서열을 입력하세요..."></textarea>
+<p><label class="small-label" style="margin-top:10px;">STRAND</label> <select class="input-tight" id="input-strand"> <option value="+">Plus (+)</option> <option value="-">Minus (-)</option> </select></p>
+<div class="warn" style="margin-top:8px;">
+<p>※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)</p>
+</div>
 <hr class="rule">
 <div class="section-title">
 Advanced Parameters
 </div>
 <hr class="rule-light">
-<div style="margin-bottom:15px;">
-<p><label class="small-label">REFERENCE GENOME (FOR BLAST QC)</label> <select id="input-ref-genome" class="input-tight" style="width:100%;"> <option value="hg38">Human (hg38) - Run BLAST</option> <option value="none" selected="">None - Skip BLAST (Fast)</option> </select> <small style="color: #666; font-size: 0.8em;">* ‘None’ 선택 시 비특이 결합 체크를 생략합니다.</small></p>
-</div>
 <details class="custom-accordion">
 <summary>
 PRIMER OPTIONS
@@ -445,8 +458,8 @@ DESIGN PARAMETERS &amp; QC SUMMARY
 </div>
 </main>
 </div>
-<script src="./manual_app.js"></script>
-<script src="./manual_style.css"></script>
+<script src="app.js"></script>
+<script src="style.css"></script>
 
 
 </main></div>
