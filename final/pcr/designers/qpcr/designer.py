@@ -19,9 +19,6 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
     # ------------------------------------------------------------------
     # 유틸리티: Alignment 텍스트 다이어그램 생성
     # ------------------------------------------------------------------
-    @staticmethod
-    def _reverse_complement(seq: str) -> str:
-        return seq.translate(str.maketrans('ATGCatgcNn', 'TACGtacgNn'))[::-1]
 
     @staticmethod
     def _build_alignment_visual(ref_full: str, alt_full: str, fwd_seq: str, rev_seq: str, prb_seq: str) -> List[str]:

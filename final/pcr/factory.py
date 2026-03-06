@@ -20,10 +20,10 @@ from .designers.qpcr.designer import QPCRPrimerDesigner
 from .designers.qpcr.schema import QPCRDesignInput
 from .designers.qpcr.qc import QPCRQCExecutor
 
-# # AS-PCR (추후 활성화)
-# from .designers.as_pcr.designer import ASPCRPrimerDesigner
-# from .designers.as_pcr.schema import ASPCRDesignInput
-# from .designers.as_pcr.qc import ASPCRQCExecutor
+ # AS-PCR (추후 활성화)
+from .designers.as_pcr.designer import ASPCRPrimerDesigner
+from .designers.as_pcr.schema import ASPCRDesignInput
+from .designers.as_pcr.qc import ASPCRQCExecutor
 
 # # MS-PCR (추후 활성화)
 # from .designers.ms_pcr.designer import MSPCRPrimerDesigner
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────
 PIPELINE_MAP = {
     "qpcr":   (QPCRDesignInput, QPCRPrimerDesigner, QPCRQCExecutor),
-    # "as_pcr": (ASPCRDesignInput, ASPCRPrimerDesigner, ASPCRQCExecutor),
+    "aspcr": (ASPCRDesignInput, ASPCRPrimerDesigner, ASPCRQCExecutor),
     # "ms_pcr": (MSPCRDesignInput, MSPCRPrimerDesigner, MSPCRQCExecutor),
 }
 
@@ -141,7 +141,8 @@ class PCRFactory:
         # 4. Design 실행
         designer = DesignClass(design_input)
         output = designer.design()
-
+        print(output)
+        exit()
         if output.status != "success" or not output.amplicons:
             return output
             

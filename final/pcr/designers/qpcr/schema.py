@@ -3,7 +3,23 @@ pcr/designers/qpcr/schema.py
 TaqMan qPCR 전용 데이터 검증 스키마.
 """
 from pcr.designers.base.schema import BaseDesignInput, BaseDesignOutput
+from typing import Dict, Optional, List
+from pydantic import Field
+from pcr.designers.base.schema import BaseDesignInput, BaseDesignOutput
+from pcr.components.amplicon import Amplicon # 상속을 위해 임포트
 
+# ... (기존 ASPCRDesignInput 코드는 그대로 유지) ...
+
+class ASPCRAmplicon(Amplicon):
+    """
+    AS-PCR 전용 앰플리콘 모델. 
+    일반 Amplicon에 AS-PCR 분석 및 시각화용 메타데이터 필드를 추가합니다.
+    """
+    allele_type: Optional[str] = None
+    set_id: Optional[str] = None
+    fixed_prime: Optional[str] = None
+    alignment_visual: Optional[List[str]] = None
+    
 class QPCRDesignInput(BaseDesignInput):
     """
     [MODIFIED] 확장 포인트 마련:

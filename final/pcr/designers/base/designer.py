@@ -33,6 +33,10 @@ class BasePrimerDesigner(ABC):
         self.seq_args: Dict[str, Any]    = {}
         self.global_args: Dict[str, Any] = {}
         self._prepare_primer3_args()
+        
+    @staticmethod
+    def _reverse_complement(seq: str) -> str:
+        return seq.translate(str.maketrans('ATGCatgcNn', 'TACGtacgNn'))[::-1]
 
     # ------------------------------------------------------------------
     # 서브클래스 구현 포인트
