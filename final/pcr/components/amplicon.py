@@ -33,7 +33,7 @@ class Amplicon(BaseModel):
     # -------------------------------------------------------------------------
     pair_penalty: float = 0.0
     total_penalty: float = 0.0
-        
+    allele_type: Optional[str] = None
     is_qc_pass: bool = False
     qc_log: str = ""
     off_target_count: int = 0

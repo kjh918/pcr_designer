@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>TaqMan qPCR Design – GENCURIX PRIMER SUITE</title>
+<title>MS qPCR Design – GENCURIX PRIMER SUITE</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -96,19 +96,19 @@ ul.task-list li input[type="checkbox"] {
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../manual/main.html"> 
-<span class="menu-text">Manual TaqMan qPCR</span></a>
+<span class="menu-text">Manual qPCR</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../qpcr/main.html"> 
-<span class="menu-text">TaqMan qPCR</span></a>
+<span class="menu-text">qPCR</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../as_pcr/main.html"> 
-<span class="menu-text">Allele specific PCR (AS-PCR)</span></a>
+<span class="menu-text">AS-PCR</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../ms_pcr/main.html" aria-current="page"> 
-<span class="menu-text">Methyl specific PCR (MS-PCR)</span></a>
+<span class="menu-text">MS-PCR</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -127,7 +127,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">TaqMan qPCR Design</h1>
+<h1 class="title">MS qPCR Design</h1>
 </div>
 
 
@@ -148,157 +148,84 @@ ul.task-list li input[type="checkbox"] {
 <aside class="sidebar">
 <div class="sidebar-content">
 <h4 style="margin:0;" class="anchored">
-<b>qPCR DESIGN</b>
+<b>MS-PCR DESIGN</b>
 </h4>
 <small>NGS-TEAM PRIMER SUITE</small>
 <hr class="rule">
+<div id="mspcr-step1-panel" class="panel">
 <div class="section-title">
-Target Information
+MS-PCR Target Input
 </div>
 <hr class="rule-light">
-<!--<div class="input-group">
-<label class="small-label">REFERENCE GENOME</label>
-<select id="input-ref-genome" class="form-select">
-<option value="hg38" selected>hg38 (GRCh38)</option>
-<option value="hg19">hg19 (GRCh37)</option>
-</select>
-</div>-->
-<p><label class="small-label" style="margin-top:10px;">REFERENCE GENOME</label> <select class="input-tight" id="input-ref-genome"> <option value="hg38">hg38</option> <option value="hg19">hg19</option> </select></p>
-<p><label class="small-label" style="margin-top:10px;">CHROMOSOME</label> <input class="input-tight" id="input-chrom" placeholder="e.g. chr17"></p>
-<div class="grid-2" style="margin-top:10px;">
-<div>
-<p><label class="small-label">START</label> <input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723640"></p>
+<div style="margin-bottom:15px;">
+<p><label class="small-label">DESIGN NAME (PROJECT ID)</label> <input type="text" class="input-tight" id="mspcr-design-name" placeholder="e.g. MGMT_Promoter_Methylation"></p>
 </div>
-<div>
-<p><label class="small-label">END</label> <input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723640"></p>
+<label class="small-label">RAW SEQUENCE (5’ -&gt; 3’)</label>
+<textarea id="mspcr-raw-sequence" class="input-tight" style="width:100%; height:120px; font-family:monospace; text-transform:uppercase;" placeholder="프로모터 등 타겟 서열(ATGC)을 입력하세요..."></textarea>
+<div style="margin-top:15px;">
+<p><label class="small-label">TARGET CpG POSITIONS (1-based, Comma-separated)</label> <input type="text" class="input-tight" id="mspcr-target-cpgs" placeholder="e.g. 24, 58, 112 (비워두면 서열 내 모든 CG를 타겟으로 간주합니다)"> <small style="color: #666; font-size: 0.8em; display:block; margin-top:4px;"> * 분석하고 싶은 핵심 CpG(메틸화 여부를 판별할 기준점) 인덱스를 쉼표로 구분해 입력하세요. </small></p>
+</div>
+<div style="margin-top: 20px; text-align: right;">
+<button class="btn btn-primary" id="btn-convert-bisulfite" style="width: 100%; padding: 10px; font-weight: bold;">
+Generate Bisulfite Conversion
+</button>
 </div>
 </div>
-<div class="grid-2" style="margin-top:10px;">
-<div>
-<p><label class="small-label">REF</label> <input type="text" class="input-tight" id="input-ref-base" placeholder="e.g. G"></p>
-</div>
-<div>
-<p><label class="small-label">ALT</label> <input type="text" class="input-tight" id="input-alt-base" placeholder="e.g. A"></p>
-</div>
-</div>
-<p><label class="small-label" style="margin-top:10px;">STRAND</label> <select class="input-tight" id="input-strand"> <option value="+">Plus (+)</option> <option value="-">Minus (-)</option> </select></p>
-<div class="warn" style="margin-top:8px;">
-<p>※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)</p>
-</div>
-<hr class="rule">
+<div id="mspcr-conversion-panel" class="panel" style="display: none; margin-top: 20px;">
 <div class="section-title">
-Advanced Parameters
+Bisulfite Conversion Results
 </div>
 <hr class="rule-light">
-<details class="custom-accordion">
-<summary>
-PRIMER OPTIONS
-</summary>
-<div class="accordion-content">
-<label class="small-label">AMPLICON SIZE (MIN / MAX)</label>
-<div class="grid-2" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="min_amplicon_length" value="80"> <input type="number" class="input-tight" id="max_amplicon_length" value="200"></p>
-</div>
-<label class="small-label">LENGTH (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="primer_min_length" value="15"> <input type="number" class="input-tight" id="primer_opt_length" value="18"> <input type="number" class="input-tight" id="primer_max_length" value="25"></p>
-</div>
-<label class="small-label">TM (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="primer_min_tm" value="50" step="0.1"> <input type="number" class="input-tight" id="primer_opt_tm" value="55" step="0.1"> <input type="number" class="input-tight" id="primer_max_tm" value="60" step="0.1"></p>
-</div>
-<label class="small-label">GC% (MIN / OPT / MAX)</label>
-<div class="grid-3">
-<p><input type="number" class="input-tight" id="primer_min_gc" value="45"> <input type="number" class="input-tight" id="primer_opt_gc" value="50"> <input type="number" class="input-tight" id="primer_max_gc" value="65"></p>
-</div>
-</div>
-</details>
-<details class="custom-accordion">
-<summary>
-PROBE OPTIONS
-</summary>
-<div class="accordion-content">
-<label class="small-label">LENGTH (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="probe_min_length" value="20"> <input type="number" class="input-tight" id="probe_opt_length" value="25"> <input type="number" class="input-tight" id="probe_max_length" value="30"></p>
-</div>
-<label class="small-label">TM DIFF (MIN / MAX)</label>
-<div class="grid-2" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="min_primer_probe_tm_diff" value="5" step="0.1"> <input type="number" class="input-tight" id="max_primer_probe_tm_diff" value="10" step="0.1"></p>
-</div>
-<label class="small-label">GC% (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="probe_min_gc" value="35"> <input type="number" class="input-tight" id="probe_opt_gc" value="50"> <input type="number" class="input-tight" id="probe_max_gc" value="65"></p>
-</div>
-<label class="small-label" style="margin-top:12px;">CONSTRAINTS</label>
-<div class="grid-1" style="gap: 8px;">
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<p><span style="font-size:0.8em; color:#666;">Max Poly-G</span> <input type="number" class="input-tight" id="probe_max_poly_g" value="3" style="width: 60px;"></p>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<p><span style="font-size:0.8em; color:#666;">Max 3’ End GC</span> <input type="number" class="input-tight" id="probe_max_3_end_gc" value="2" style="width: 60px;"></p>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<p><span style="font-size:0.8em; color:#666;">Avoid 5’ G</span> <select class="input-tight" id="probe_avoid_5_prime_g" style="width: 60px;"> <option value="true" selected="">True</option> <option value="false">False</option> </select></p>
-</div>
-</div>
-</div>
-</details>
-<details class="custom-accordion">
-<summary>
-QC &amp; SPECIFICITY OPTIONS
-</summary>
-<div class="accordion-content">
-<label class="small-label">THERMODYNAMICS (Min dG)</label>
-<div class="grid-3" style="margin-bottom:12px;">
+<div class="grid-2" style="margin-bottom: 15px;">
 <div>
-<p><span style="font-size:0.8em; color:#666;">Hairpin</span> <input type="number" class="input-tight" id="qc_hairpin_min_dg" value="-5.0" step="0.1"></p>
+<div class="small-label">
+TOTAL CpG COUNT
+</div>
+<div id="mspcr-cpg-count" style="font-weight:900; color:#0275d8;">
+0
+</div>
 </div>
 <div>
-<p><span style="font-size:0.8em; color:#666;">Homodimer</span> <input type="number" class="input-tight" id="qc_homodimer_min_dg" value="-6.0" step="0.1"></p>
+<div class="small-label">
+TARGET CpG COUNT
 </div>
-<div>
-<p><span style="font-size:0.8em; color:#666;">Heterodimer</span> <input type="number" class="input-tight" id="qc_heterodimer_min_dg" value="-6.0" step="0.1"></p>
-</div>
-</div>
-<label class="small-label">SPECIFICITY (BLAST)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<div>
-<p><span style="font-size:0.8em; color:#666;">Min Identity (%)</span> <input type="number" class="input-tight" id="qc_min_identity" value="90.0" step="0.1"></p>
-</div>
-<div>
-<p><span style="font-size:0.8em; color:#666;">Min Hit Length</span> <input type="number" class="input-tight" id="qc_min_hit_length" value="13"></p>
-</div>
-<div>
-<p><span style="font-size:0.8em; color:#666;">Max Alignments</span> <input type="number" class="input-tight" id="qc_blast_max_alignments" value="50"></p>
-</div>
-</div>
-<label class="small-label">AMPLICON QC (Size / Check)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<div>
-<p><span style="font-size:0.8em; color:#666;">Min Size</span> <input type="number" class="input-tight" id="qc_min_amp_size" value="50"></p>
-</div>
-<div>
-<p><span style="font-size:0.8em; color:#666;">Max Size</span> <input type="number" class="input-tight" id="qc_max_amp_size" value="300"></p>
-</div>
-<div>
-<p><span style="font-size:0.8em; color:#666;">Use In-Silico PCR</span> <select class="input-tight" id="qc_use_ispcr_check"> <option value="false" selected="">False</option> <option value="true">True</option> </select></p>
-</div>
-</div>
-<label class="small-label">OLIGO CONSTRAINTS (QC Only)</label>
-<div class="grid-2" style="margin-bottom:12px;">
-<div>
-<p><span style="font-size:0.8em; color:#666;">Primer Max Tm Diff</span> <input type="number" class="input-tight" id="qc_primer_max_diff_tm" value="3.0" step="0.1"></p>
+<div id="mspcr-target-count" style="font-weight:900; color:#d9534f;">
+0
 </div>
 </div>
 </div>
-</details>
+<label class="small-label">METHYLATED TEMPLATE (M-Allele)</label>
+<div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">
+<ul>
+<li>Unmethylated C는 U(T)로 변환, 타겟 CpG의 C는 유지됩니다.
+</li></ul></div>
+<pre id="mspcr-meth-view" class="alignment-pre" style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; border-radius: 4px;"></pre>
+
+<label class="small-label" style="margin-top: 15px;">UNMETHYLATED TEMPLATE (U-Allele)</label>
+<div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">
+<ul>
+<li>모든 C가 U(T)로 변환됩니다.
+</li></ul></div>
+<pre id="mspcr-unmeth-view" class="alignment-pre" style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; border-radius: 4px;"></pre>
+
+<div style="margin-top: 20px;">
+<button class="btn btn-success" id="btn-proceed-design" style="width: 100%; padding: 10px; font-weight: bold;">
+Proceed to Primer Design (Step 2)
+</button>
+</div>
+</div>
+<div id="mspcr-step2-panel" style="display: none;">
+<div class="section-title">
+Step 2: MS-PCR Design Parameters
+</div>
+<hr class="rule-light">
+</div>
 <hr class="rule">
 <div class="section-title">
 RUN
 </div>
 <hr class="rule-light">
-<button class="btn-run" id="btn-run-qpcr">
+<button class="btn-run" id="btn-run-mspcr">
 DESIGN START
 </button>
 <div style="margin-top:10px; display:flex; gap:10px;">
@@ -318,15 +245,6 @@ DESIGN SUMMARY
 </div>
 <hr class="rule-light">
 <div class="grid-3">
-<div>
-<div class="small-label">
-CHROMOSOME
-</div>
-<div id="summary-chrom" style="font-weight:900;">
--
-</div>
-</div>
-<div>
 <div class="small-label">
 TARGET POSITION
 </div>
@@ -343,33 +261,15 @@ DESIGN DATE
 </div>
 </div>
 </div>
-<div class="grid-3" style="margin-top: 15px;">
-<div>
-<div class="small-label">
-REFERENCE GENOME
-</div>
-<div id="summary-reference" style="font-weight:900;">
--
-</div>
-</div>
-<div>
-<div class="small-label">
-MUTATION (REF &gt; ALT)
-</div>
-<div id="summary-mutation" style="font-weight:900; color: #d9534f;">
--
-</div>
-</div>
-<div>
 <div class="small-label">
 STATUS
 </div>
 <div id="summary-status" style="font-weight:900;">
 WAITING
 </div>
-</div>
-</div>
-</div>
+</main></div>
+</main></div>
+
 <div id="stats-panel" class="panel" style="display: none; margin-top: 20px; background-color: #f8f9fa;">
 <div class="panel-title" style="font-size: 13px; color: #555;">
 📊 DESIGN PIPELINE STATISTICS
@@ -456,13 +356,17 @@ DESIGN PARAMETERS &amp; QC SUMMARY
 </table>
 </div>
 </div>
-</main>
-</div>
-<script src="app.js"></script>
-<script src="style.css"></script>
 
 
-</main></div>
+<script src="./app.js"></script>
+<script src="./style.css"></script>
+
+
+
+
+
+
+
 
 
 

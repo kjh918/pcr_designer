@@ -130,10 +130,11 @@ def design_aspcr_primers(
         alt_plus = reverse_complement(alt) if strand == "-" else alt
         
         template_start_0based = max(0, start - 1 - padding)
+        template_end_0based = end + padding
         
         with pysam.FastaFile(fasta_path) as fasta:
             left_seq = fasta.fetch(chrom, template_start_0based, start - 1).upper()
-            right_seq = fasta.fetch(chrom, end, end + padding).upper()
+            right_seq = fasta.fetch(chrom, end, template_end_0based).upper()
             
         # 🔥 사용자 설정 (위치, 강도) 반영하여 템플릿 생성
         templates = _generate_aspcr_templates(
@@ -150,8 +151,6 @@ def design_aspcr_primers(
 
     # 4. Factory 실행
     factory = PCRFactory(config)
-    print(templates)
-    
     output = factory.run(
         assay_type=assay_type,
         name=task_name,
@@ -162,12 +161,12 @@ def design_aspcr_primers(
         reference_sequence=templates["wt"],
         top_k=top_k,
         run_qc=True,
-        overrides={"PRIMER_NUM_RETURN": 10},
-        template_genomic_start=template_start_0based,
+        overrides={"PRIMER_NUM_RETURN": 5},
+        template_genomic_start=template_start_0based, # 절대좌표 시작점 명시적 전달
         target_strand=strand,
         templates=templates,
         fixed_prime=fixed_prime,
-        mismatch_pos=mismatch_pos if mismatch_pos else None # Designer 객체로 전달
+        mismatch_pos=mismatch_pos if mismatch_pos else None 
     )
 
     if output.status != "success":
@@ -201,9 +200,11 @@ def design_aspcr_primers(
     results = []
     rank = 1
 
+    # 🔥 수정된 포맷팅: 덮어쓰기 방지 및 세트 레벨 래핑 적용
     for set_id, amplicons_in_set in sets_dict.items():
         set_qc_pass = all(getattr(amp, "is_qc_pass", False) for amp in amplicons_in_set) and len(amplicons_in_set) == 4
-        rep_amp = amplicons_in_set[0] 
+        rep_amp = amplicons_in_set[0]
+        alignment_data = getattr(rep_amp, "alignment_visual", ["Alignment data not available."])
         
         set_data = {
             "rank": rank,
@@ -212,55 +213,81 @@ def design_aspcr_primers(
             "fixed_prime": fixed_prime,
             "common_metrics": {
                 "pair_penalty": round(rep_amp.pair_penalty, 3),
-                "product_size": rep_amp.product_size
+                "product_size": rep_amp.product_size if hasattr(rep_amp, 'product_size') else None
             },
-            "alleles": {}
+            "alignment_text_block": "\n".join(alignment_data) if alignment_data else "",
+            "alleles": {} # 여기에 wt, alt, wt_mm, alt_mm 담김
         }
         
         for amp in amplicons_in_set:
-            allele_type = getattr(amp, "allele_type", "unknown")
-            alignment_data = getattr(amp, "alignment_visual", ["Alignment data not available."])
+            # 💡 Pydantic 제약 우회: id에서 allele_type 파싱
+            if "wt_mm" in amp.id:
+                allele_type = "wt_mm"
+            elif "alt_mm" in amp.id:
+                allele_type = "alt_mm"
+            elif "wt" in amp.id:
+                allele_type = "wt"
+            else:
+                allele_type = "alt"
             
-            fwd_tm = getattr(amp.forward, "tm", 0.0)
-            fwd_gc = getattr(amp.forward, "gc_percent", getattr(amp.forward, "gc", 0.0))
-            rev_tm = getattr(amp.reverse, "tm", 0.0)
-            rev_gc = getattr(amp.reverse, "gc_percent", getattr(amp.reverse, "gc", 0.0))
+            fwd = amp.forward
+            rev = amp.reverse
+            
+            fwd_tm = getattr(fwd, "tm", 0.0)
+            fwd_gc = getattr(fwd, "gc_percent", getattr(fwd, "gc", 0.0))
+            fwd_penalty = getattr(fwd, "penalty", 0.0)
+            
+            rev_tm = getattr(rev, "tm", 0.0)
+            rev_gc = getattr(rev, "gc_percent", getattr(rev, "gc", 0.0))
+            rev_penalty = getattr(rev, "penalty", 0.0)
+            
+            pair_penalty = getattr(amp, "pair_penalty", fwd_penalty + rev_penalty + abs(fwd_tm - rev_tm))
             amp_tm = getattr(amp, "tm", 0.0)
             amp_gc = getattr(amp, "gc_percent", getattr(amp, "gc", 0.0))
 
+            amp_seq = amp.template_sequence[fwd.start_index : rev.end_index] if amp.template_sequence else ""
+
             set_data["alleles"][allele_type] = {
                 "id": amp.id,
+                "pair_penalty": round(pair_penalty, 2),
                 "qc_info": {
                     "is_pass": getattr(amp, "is_qc_pass", False), 
                     "fail_reason": getattr(amp, "qc_log", getattr(amp, "qc_fail_reason", "None")),
                     "blast_details": getattr(amp, "blast_stats", None)
                 },
                 "amplicon_info": {
-                    "sequence": amp.template_sequence[amp.forward.start_index : amp.reverse.start_index + len(amp.reverse.sequence)],
-                    "tm": round(amp_tm, 2), "gc": round(amp_gc, 2),
-                    "genomic_pos": f"{chrom}:{amp.forward.region.start}-{amp.reverse.region.end}" if getattr(amp.forward, "region", None) else "Unknown"
+                    "sequence": amp_seq,
+                    "length": len(amp_seq),
+                    "tm": round(amp_tm, 2) if amp_tm else None, 
+                    "gc": round(amp_gc, 2) if amp_gc else None,
+                    "genomic_pos": f"{chrom}:{fwd.region.start}-{rev.region.end}" if getattr(fwd, "region", None) else "Unknown"
                 },
                 "oligos": {
                     "forward": {
-                        "sequence": amp.forward.sequence,
+                        "sequence": fwd.sequence,
                         "tm": round(fwd_tm, 2),
                         "gc": round(fwd_gc, 2),
-                        "is_allele_specific": getattr(amp.forward, "is_allele_specific", False),
-                        "terminal_base": getattr(amp.forward, "terminal_base", None),
-                        "mismatch_base": getattr(amp.forward, "mismatch_base", None),
-                        **format_region(amp.forward)
+                        "penalty": round(fwd_penalty, 2),
+                        "hairpin_tm": round(getattr(fwd, "hairpin_tm", 0.0), 2),     
+                        "homodimer_tm": round(getattr(fwd, "homodimer_tm", 0.0), 2), 
+                        "is_allele_specific": getattr(fwd, "is_allele_specific", False),
+                        "terminal_base": getattr(fwd, "terminal_base", None),
+                        "mismatch_base": getattr(fwd, "mismatch_base", None),
+                        **format_region(fwd)
                     },
                     "reverse": {
-                        "sequence": amp.reverse.sequence,
+                        "sequence": rev.sequence,
                         "tm": round(rev_tm, 2),
                         "gc": round(rev_gc, 2),
-                        "is_allele_specific": getattr(amp.reverse, "is_allele_specific", False),
-                        "terminal_base": getattr(amp.reverse, "terminal_base", None),
-                        "mismatch_base": getattr(amp.reverse, "mismatch_base", None),
-                        **format_region(amp.reverse)
+                        "penalty": round(rev_penalty, 2),
+                        "hairpin_tm": round(getattr(rev, "hairpin_tm", 0.0), 2),
+                        "homodimer_tm": round(getattr(rev, "homodimer_tm", 0.0), 2),
+                        "is_allele_specific": getattr(rev, "is_allele_specific", False),
+                        "terminal_base": getattr(rev, "terminal_base", None),
+                        "mismatch_base": getattr(rev, "mismatch_base", None),
+                        **format_region(rev)
                     }
-                },
-                "alignment_text_block": "\n".join(alignment_data) if alignment_data else ""
+                }
             }
         
         results.append(set_data)
@@ -290,7 +317,7 @@ if __name__ == "__main__":
     parser.add_argument("--strand", choices=["+", "-"], default="+")
     parser.add_argument("--genome", default="hg38")
     parser.add_argument("--fasta", help="Optional override")
-    parser.add_argument("-p", "--padding", type=int, default=100)
+    parser.add_argument("-p", "--padding", type=int, default=150)
     parser.add_argument("-k", "--top_k", type=int, default=5)
     parser.add_argument("--base_config", default="pcr/config/base_pcr.yaml")
     parser.add_argument("--system_config", default="pcr/config/system.yaml")
@@ -307,8 +334,8 @@ if __name__ == "__main__":
         genome=args.genome, fasta_path=args.fasta, padding=args.padding, top_k=args.top_k,
         base_yaml=args.base_config, system_yaml=args.system_config,
         fixed_prime=args.fixed_prime,
-        mismatch_pos=args.mismatch_pos,       # 🔥 전달 완료
-        mismatch_intensity=args.intensity     # 🔥 전달 완료
+        mismatch_pos=args.mismatch_pos,       
+        mismatch_intensity=args.intensity     
     )
     
     print(json.dumps(res, indent=2))

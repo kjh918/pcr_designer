@@ -1,8 +1,8 @@
 ---
-title: "TaqMan qPCR Design"
+title: "MS qPCR Design"
 resources:
-  - "app.js"
-  - "style.css"
+- "./app.js"
+- "./style.css"
 ---
 
 ```{=html}
@@ -10,17 +10,17 @@ resources:
 
 <aside class="sidebar">
 <div class="sidebar-content">
-  <h4 style="margin:0;"><b>qPCR DESIGN</b></h4>
-  <small>NGS-TEAM PRIMER SUITE</small>
-  <hr class="rule">
+<h4 style="margin:0;"><b>MS-PCR DESIGN</b></h4>
+<small>NGS-TEAM PRIMER SUITE</small>
+<hr class="rule">
 
-  {{< include partials/params.html >}}
+{{< include partials/params.html >}}
 
 <hr class="rule">
 
 <div class="section-title">RUN</div>
 <hr class="rule-light">
-<button class="btn-run" id="btn-run-qpcr">DESIGN START</button>
+<button class="btn-run" id="btn-run-mspcr">DESIGN START</button>
 
 <div style="margin-top:10px; display:flex; gap:10px;">
 <button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (JSON)</button>
@@ -33,5 +33,5 @@ resources:
 {{< include partials/result_panel.html >}}
 
 </div>
-<script src="app.js"></script>
-<script src="style.css"></script>
+<script src="./app.js"></script>
+<script src="./style.css"></script>

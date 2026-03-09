@@ -1,5 +1,5 @@
 /**
- * qpcr_app.js (refactor)
+ * mspcr_app.js (refactor)
  * - LocalStorage 자동 저장/복구
  * - FastAPI 통신
  * - 결과/메타 렌더링
@@ -15,12 +15,11 @@ const state = {
   lastPayload: null,   // 마지막 실행 payload
 };
 
-const STORAGE_PREFIX = "qpcr_";
+const STORAGE_PREFIX = "mspcr_";
 
 const TRACKED_INPUTS = [
   // Basic
-  "input-ref-genome", "input-chrom", "input-start", "input-end",
-  "input-ref-base", "input-alt-base", "input-strand",
+  "design_name", "raw_sequence", "input-target_start", "target_end", "reference",
 
   // Amplicon
   "min_amplicon_length", "max_amplicon_length",
@@ -30,15 +29,6 @@ const TRACKED_INPUTS = [
   "primer_min_tm", "primer_opt_tm", "primer_max_tm",
   "primer_min_gc", "primer_opt_gc", "primer_max_gc",
 
-  // Probe
-  "probe_min_length", "probe_opt_length", "probe_max_length",
-  "min_primer_probe_tm_diff", "max_primer_probe_tm_diff",
-  "probe_min_tm", "probe_opt_tm", "probe_max_tm",
-  "probe_min_gc", "probe_opt_gc", "probe_max_gc",
-
-  // Constraints
-  "probe_max_poly_g", "probe_max_3_end_gc", "probe_avoid_5_prime_g",
-
   // QC
   "qc_hairpin_min_dg", "qc_homodimer_min_dg", "qc_heterodimer_min_dg",
   "qc_min_identity", "qc_min_hit_length", "qc_blast_max_alignments",
@@ -46,14 +36,28 @@ const TRACKED_INPUTS = [
 ];
 
 // API endpoint (필요하면 환경에 맞게 바꾸기)
-const API_URL = "http://192.168.0.35:9000/api/design/qpcr";
+const API_URL = "http://192.168.0.35:9000/api/design/mspcr";
 
 /* -----------------------------
    1) Utils (DOM / format / read)
 ------------------------------ */
 
 const $ = (sel) => document.querySelector(sel);
+// manual_app.js에 이 함수를 추가하세요!
 
+function validatePayload(p) {
+    // 1. 서열 입력 확인
+    if (!p.raw_sequence || p.raw_sequence.length < 20) {
+        return "Please enter a valid DNA sequence (at least 80bp).";
+    }
+    
+    // 2. 타겟 좌표 확인
+    if (isNaN(p.target_start) || isNaN(p.target_end)) {
+        return "Target Start and End must be numbers.";
+    }
+    
+    return null; // 에러가 없으면 null 반환
+}
 function byId(id) {
   return document.getElementById(id);
 }
@@ -141,14 +145,13 @@ function restoreInputsFromStorage() {
 
 function buildPayload() {
   return {
-    // Basic
+    // Basice 
+    design_name: document.getElementById("input-design-name").value,
+    //raw_sequence: document.getElementById("mspcr-sequence").value,
+    raw_sequence: document.getElementById("mspcr-sequence").value.replace(/\s/g, "").toUpperCase(),
+    target_start: parseInt(document.getElementById("mspcr-target-start").value) || 0,
+    target_end: parseInt(document.getElementById("mspcr-target-end").value) || 0,
     reference: getVal("input-ref-genome", "string", "hg38"),
-    chrom: getVal("input-chrom", "string", "").trim(),
-    start: getVal("input-start", "int"),
-    end: getVal("input-end", "int"),
-    ref: getVal("input-ref-base", "string", "G").toUpperCase(),
-    alt: getVal("input-alt-base", "string", "A").toUpperCase(),
-    strand: getVal("input-strand", "string", "+"),
     top_k: 5,
 
     // Amplicon
@@ -167,29 +170,6 @@ function buildPayload() {
     primer_min_gc: getVal("primer_min_gc", "float", 35.0),
     primer_opt_gc: getVal("primer_opt_gc", "float", 50.0),
     primer_max_gc: getVal("primer_max_gc", "float", 65.0),
-
-    // Probe
-    probe_min_length: getVal("probe_min_length", "int", 20),
-    probe_opt_length: getVal("probe_opt_length", "int", 25),
-    probe_max_length: getVal("probe_max_length", "int", 30),
-
-    min_primer_probe_tm_diff: getVal("min_primer_probe_tm_diff", "float", 5.0),
-    max_primer_probe_tm_diff: getVal("max_primer_probe_tm_diff", "float", 10.0),
-
-    // Absolute probe Tm
-    probe_min_tm: getVal("probe_min_tm", "float", 65.0),
-    probe_opt_tm: getVal("probe_opt_tm", "float", 67.0),
-    probe_max_tm: getVal("probe_max_tm", "float", 70.0),
-
-    probe_min_gc: getVal("probe_min_gc", "float", 35.0),
-    probe_opt_gc: getVal("probe_opt_gc", "float", 50.0),
-    probe_max_gc: getVal("probe_max_gc", "float", 65.0),
-
-    // Constraints
-    probe_max_poly_g: getVal("probe_max_poly_g", "int", 3),
-    probe_max_3_end_gc: getVal("probe_max_3_end_gc", "int", 2),
-    probe_avoid_5_prime_g: getVal("probe_avoid_5_prime_g", "bool", true),
-
     // QC
     qc_hairpin_min_dg: getVal("qc_hairpin_min_dg", "float", -6.0),
     qc_homodimer_min_dg: getVal("qc_homodimer_min_dg", "float", -6.0),
@@ -198,20 +178,9 @@ function buildPayload() {
     qc_min_hit_length: getVal("qc_min_hit_length", "int", 13),
     qc_blast_max_alignments: getVal("qc_blast_max_alignments", "int", 50),
     qc_use_ispcr_check: getVal("qc_use_ispcr_check", "bool", false),
-    qc_primer_max_diff_tm: getVal("qc_primer_max_diff_tm", "float", 3.0),
-
-    // QC Probe (Constraints 재사용)
-    qc_probe_avoid_5_prime_g: getVal("probe_avoid_5_prime_g", "bool", true),
-    qc_probe_max_poly_g: getVal("probe_max_poly_g", "int", 3),
-    qc_probe_max_3_end_gc: getVal("probe_max_3_end_gc", "int", 2),
+    qc_primer_max_diff_tm: getVal("qc_primer_max_diff_tm", "float", 3.0)
+    
   };
-}
-
-function validatePayload(p) {
-  if (!p.chrom || !Number.isFinite(p.start)) {
-    return "Please fill in Chromosome and Position.";
-  }
-  return null;
 }
 
 /* -----------------------------
@@ -280,7 +249,6 @@ function renderMetadata(results, payload) {
     <div class="meta-report-grid">
       <div class="meta-card">
         <div class="card-header">📍 TARGET & AMPLICON</div>
-        <div class="card-item"><span>Reference</span> <b>${payload.reference}</b></div>
         <div class="card-item"><span>Mutation</span> <b class="text-danger">${payload.ref} > ${payload.alt}</b></div>
         <div class="card-item"><span>Amp Size</span> <b>${payload.min_amplicon_length}-${payload.max_amplicon_length} bp</b></div>
         <div class="card-item"><span>Filtered</span> <b>${filtered}</b> / <b>${total}</b> <span style="opacity:.7">(rejected ${rejected})</span></div>
@@ -321,11 +289,8 @@ function renderSummary(payload, results) {
   const now = new Date();
   const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  setText("summary-chrom", payload.chrom);
-  setText("summary-pos", `${payload.start} - ${payload.end}`);
   setText("summary-date", dateStr);
-  setText("summary-reference", payload.reference);
-  setText("summary-mutation", `${payload.ref} > ${payload.alt}`);
+  setText("summary-mutation", `${payload.ref}`);
 
   if (results?.status === "success") setStatus("COMPLETED", "green");
   else if (results?.status) setStatus("FAILED", "red");
@@ -421,7 +386,7 @@ function exportHTML() {
 ------------------------------ */
 
 async function runDesign() {
-  const runBtn = byId("btn-run-qpcr");
+  const runBtn = byId("btn-run-mspcr");
   if (!runBtn) return;
 
   // 저장 + payload
@@ -484,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
   restoreInputsFromStorage();
 
   // run
-  byId("btn-run-qpcr")?.addEventListener("click", (e) => {
+  byId("btn-run-mspcr")?.addEventListener("click", (e) => {
     e.preventDefault();
     runDesign();
   });
@@ -493,5 +458,5 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("btn-export-json")?.addEventListener("click", exportJSON);
   byId("btn-export-html")?.addEventListener("click", exportHTML);
 
-  console.log("✅ qPCR app ready.");
+  console.log("✅ Manual qPCR app ready.");
 });

@@ -23,7 +23,7 @@ class ASPCRDesignInput(BaseDesignInput):
         description="WT, ALT, WT_MM, ALT_MM 서열을 포함하는 딕셔너리"
     )
     fixed_prime: str = Field(
-        default="reverse", 
+        default="forward", 
         description="SNP 위치에 3' 말단을 고정할 프라이머 방향 ('forward' 또는 'reverse')"
     )
 

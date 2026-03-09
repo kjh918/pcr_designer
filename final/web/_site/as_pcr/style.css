@@ -2,7 +2,7 @@
 
 /* Alignment 패널 전용 */
 .alignment-pre {
-    background-color: #1e1e1e; /* 어두운 배경으로 가독성 향상 */
+    background-color: #fffdfd; /* 어두운 배경으로 가독성 향상 */
     color: #00ff41; /* 터미널 느낌의 녹색 혹은 흰색(#dcdcdc) */
     padding: 20px;
     border-radius: 6px;

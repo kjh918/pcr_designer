@@ -123,51 +123,111 @@ class BlastSpecificityChecker:
 
         # 🎯 필터링 없이 전체 리스트 반환 (프론트에서 is_qc_pass로 구분해서 그리게 함)
         return amplicons
-    
-    def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit]) -> Dict[str, Any]:
+    def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit], is_target: bool = False) -> Dict[str, Any]:
         """
         [Core] 타겟/오프타겟 영역의 Fwd/Rev/Probe 바인딩 상세 정보를 시각화 데이터로 구성합니다.
+        (객체를 직접 변조하지 않고 is_target 파라미터를 받아 안전하게 처리합니다)
         """
         
         # 1. Forward Primer Alignment
         f_report = self._generate_alignment_block(
-            name="Forward Primer",
-            query_seq=cand.fwd_hit.qseq,
-            subject_seq=cand.fwd_hit.sseq,
-            pident=cand.fwd_hit.pident
+            name="Forward Primer", query_seq=cand.fwd_hit.qseq, subject_seq=cand.fwd_hit.sseq, pident=cand.fwd_hit.pident
         )
 
         # 2. Reverse Primer Alignment
         r_report = self._generate_alignment_block(
-            name="Reverse Primer",
-            query_seq=cand.rev_hit.qseq,
-            subject_seq=cand.rev_hit.sseq,
-            pident=cand.rev_hit.pident
+            name="Reverse Primer", query_seq=cand.rev_hit.qseq, subject_seq=cand.rev_hit.sseq, pident=cand.rev_hit.pident
         )
 
-        # 3. Probe Alignment (바인딩된 경우에만)
+        # 3. Probe Alignment
         p_report = None
-        # cand 내부에 프로브 히트가 이미 저장되어 있다고 가정 (또는 p_hits에서 추출)
         target_p_hit = next((ph for ph in p_hits if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end), None)
-        
         if target_p_hit:
             p_report = self._generate_alignment_block(
-                name="TaqMan Probe",
-                query_seq=target_p_hit.qseq,
-                subject_seq=target_p_hit.sseq,
-                pident=target_p_hit.pident
+                name="TaqMan Probe", query_seq=target_p_hit.qseq, subject_seq=target_p_hit.sseq, pident=target_p_hit.pident
             )
 
         return {
             "location": f"{cand.chrom}:{cand.start}-{cand.end}",
             "product_size": cand.product_size,
-            "is_target": getattr(cand, "is_target", False),
+            "is_target": is_target, # 🔥 매개변수로 받아 안전하게 주입
             "fwd": f_report,
             "rev": r_report,
             "probe": p_report,
-            "full_sequence": cand.reference_sequence # 게놈에서 추출한 앰플리콘 전체 서열
+            "full_sequence": getattr(cand, "reference_sequence", "") 
         }
 
+    def _evaluate_amplicon(self, amplicon: Amplicon, f_hits: List[BlastHit], r_hits: List[BlastHit], p_hits: List[BlastHit]) -> Dict[str, Any]:
+        """[Sequence-Only Mode] 객체 변조 에러를 해결하고 프로브 유무를 동적으로 처리하는 정밀 판정 로직"""
+        candidates = self._find_amplicons(f_hits, r_hits)
+        
+        target_signals = []      
+        off_target_signals = []  
+        amplification_only = []  
+
+        f_len = len(amplicon.forward.sequence)
+        r_len = len(amplicon.reverse.sequence)
+        
+        # 🔥 추가: 현재 앰플리콘에 프로브가 포함되어 있는지 확인 (AS-PCR은 프로브 없음!)
+        has_probe = amplicon.probe is not None
+
+        min_cov = getattr(self.criteria, "min_query_coverage", 0.8)
+        min_id = getattr(self.criteria, "min_identity_threshold", 90.0)
+        tolerance = getattr(self.criteria, "end_match_tolerance", 1)
+
+        for idx, cand in enumerate(candidates):
+            f_cov = cand.fwd_hit.length / f_len
+            f_3end = (cand.fwd_hit.qend >= f_len - tolerance)
+            f_valid = (f_cov >= min_cov) and f_3end and (cand.fwd_hit.pident >= min_id)
+
+            r_cov = cand.rev_hit.length / r_len
+            r_3end = (cand.rev_hit.qstart <= 1 + tolerance)
+            r_valid = (r_cov >= min_cov) and r_3end and (cand.rev_hit.pident >= min_id)
+
+            if not (f_valid and r_valid):
+                continue
+
+            # 🔥 프로브가 없는 Assay(AS-PCR)면 묻지도 따지지도 않고 결합(True)한 것으로 간주!
+            probe_binds = self._check_probe_binding(cand, p_hits) if has_probe else True
+            
+            # 객체 조작 싹 지우고, is_target 변수로 내려보냄
+            is_target = (idx == 0)
+            binding_report = self._create_binding_report(cand, amplicon, p_hits if has_probe and probe_binds else [], is_target)
+
+            if is_target:
+                if probe_binds:
+                    target_signals.append(binding_report)
+            else:
+                if probe_binds:
+                    off_target_signals.append(binding_report)
+                else:
+                    amplification_only.append(binding_report)
+
+        # 최종 QC 판정 (타겟 1개 필수, 오프타겟 및 노이즈 0개 필수)
+        is_passed = (len(target_signals) == 1) and \
+                    (len(off_target_signals) == 0) and \
+                    (len(amplification_only) == 0)
+            
+        # 프론트에 보여줄 에러 사유 로직 분리
+        reason = ""
+        if not is_passed:
+            if len(target_signals) == 0:
+                reason = "Failed: Main target amplification failed" + (" or Probe missing." if has_probe else ".")
+            elif len(off_target_signals) > 0 or len(amplification_only) > 0:
+                reason = f"Failed: Off-target detected ({len(off_target_signals)} probe-binds, {len(amplification_only)} amp-only)."
+
+        return {
+            "passed": is_passed,
+            "reason": reason,
+            "target_count": len(target_signals),
+            "off_target_count": len(off_target_signals),
+            "noise_count": len(amplification_only),
+            "target_signals": target_signals,
+            "off_target_signals": off_target_signals,
+            "amplification_only": amplification_only,
+            "total_signal_count": len(target_signals) + len(off_target_signals)
+        }
+    
     def _generate_alignment_block(self, name: str, query_seq: str, subject_seq: str, pident: float) -> Dict[str, str]:
         """미스매치 시각화를 위한 문자열 블록 생성"""
         match_line = ""
@@ -188,65 +248,67 @@ class BlastSpecificityChecker:
         }
     
     def _evaluate_amplicon(self, amplicon: Amplicon, f_hits: List[BlastHit], r_hits: List[BlastHit], p_hits: List[BlastHit]) -> Dict[str, Any]:
-        """[Sequence-Only Mode] YAML 파라미터를 적용한 정밀 판정 로직"""
         candidates = self._find_amplicons(f_hits, r_hits)
         
-        target_signals = []      # 메인 타겟 시그널
-        off_target_signals = []   # 위험한 오프타겟 시그널 (Probe 바인딩)
-        amplification_only = []   # 비특이 증폭 노이즈 (Probe 미바인딩)
+        target_signals = []      
+        off_target_signals = []  
+        amplification_only = []  
 
         f_len = len(amplicon.forward.sequence)
         r_len = len(amplicon.reverse.sequence)
+        
+        # 🔥 추가: 현재 앰플리콘에 프로브가 포함되어 있는지 확인 (AS-PCR은 프로브 없음!)
+        has_probe = amplicon.probe is not None
 
-        # YAML 설정값 로드 (없을 경우를 대비한 기본값 세팅)
         min_cov = getattr(self.criteria, "min_query_coverage", 0.8)
         min_id = getattr(self.criteria, "min_identity_threshold", 90.0)
         tolerance = getattr(self.criteria, "end_match_tolerance", 1)
 
         for idx, cand in enumerate(candidates):
-            # 1. 프라이머 증폭 가능성 체크 (Coverage & 3' End)
-            # Forward 체크
             f_cov = cand.fwd_hit.length / f_len
             f_3end = (cand.fwd_hit.qend >= f_len - tolerance)
             f_valid = (f_cov >= min_cov) and f_3end and (cand.fwd_hit.pident >= min_id)
 
-            # Reverse 체크 (Reverse는 qstart가 1에 가까워야 3' 말단임)
             r_cov = cand.rev_hit.length / r_len
             r_3end = (cand.rev_hit.qstart <= 1 + tolerance)
             r_valid = (r_cov >= min_cov) and r_3end and (cand.rev_hit.pident >= min_id)
 
-            # 💡 둘 중 하나라도 증폭 조건에 미달하면 PCR 노이즈로 보지 않고 스킵합니다.
             if not (f_valid and r_valid):
                 continue
 
-            # 2. 프로브 바인딩 확인 및 리포트 생성
-            probe_binds = self._check_probe_binding(cand, p_hits)
-            binding_report = self._create_binding_report(cand, amplicon, p_hits if probe_binds else [])
+            # 🔥 프로브가 없는 Assay(AS-PCR)면 묻지도 따지지도 않고 결합(True)한 것으로 간주!
+            probe_binds = self._check_probe_binding(cand, p_hits) if has_probe else True
+            
+            # 객체 조작 싹 지우고, is_target 변수로 내려보냄
+            is_target = (idx == 0)
+            binding_report = self._create_binding_report(cand, amplicon, p_hits if has_probe and probe_binds else [], is_target)
 
-            # 3. 타겟 vs 오프타겟 분류
-            if idx == 0:
-                cand.is_target = True
+            if is_target:
                 if probe_binds:
                     target_signals.append(binding_report)
-                else: 
-                    # 타겟 위치인데 프로브가 안 붙음 (변이가 너무 심하거나 설계 오류)
-                    cand.qc_log = "Main target locus found, but Probe binding failed."
             else:
-                cand.is_target = False
                 if probe_binds:
-                    # 다른 위치에서 시그널 발생 (위험!)
                     off_target_signals.append(binding_report)
                 else:
-                    # 다른 위치에서 증폭만 발생 (노이즈)
                     amplification_only.append(binding_report)
 
-        # 4. 최종 QC 판정 (타겟 1개 필수, 오프타겟 및 노이즈 0개 필수)
+        # 최종 QC 판정 (타겟 1개 필수, 오프타겟 및 노이즈 0개 필수)
         is_passed = (len(target_signals) == 1) and \
                     (len(off_target_signals) == 0) and \
                     (len(amplification_only) == 0)
             
+        print(len(target_signals), len(off_target_signals), len(amplification_only))
+        # 프론트에 보여줄 에러 사유 로직 분리
+        reason = ""
+        if not is_passed:
+            if len(target_signals) == 0:
+                reason = "Failed: Main target amplification failed" + (" or Probe missing." if has_probe else ".")
+            elif len(off_target_signals) > 0 or len(amplification_only) > 0:
+                reason = f"Failed: Off-target detected ({len(off_target_signals)} probe-binds, {len(amplification_only)} amp-only)."
+
         return {
             "passed": is_passed,
+            "reason": reason,
             "target_count": len(target_signals),
             "off_target_count": len(off_target_signals),
             "noise_count": len(amplification_only),

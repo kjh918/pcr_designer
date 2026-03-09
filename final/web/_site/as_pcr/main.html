@@ -96,19 +96,19 @@ ul.task-list li input[type="checkbox"] {
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../manual/main.html"> 
-<span class="menu-text">Manual TaqMan qPCR</span></a>
+<span class="menu-text">Manual qPCR</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../qpcr/main.html"> 
-<span class="menu-text">TaqMan qPCR</span></a>
+<span class="menu-text">qPCR</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../as_pcr/main.html" aria-current="page"> 
-<span class="menu-text">Allele specific PCR (AS-PCR)</span></a>
+<span class="menu-text">AS-PCR</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../ms_pcr/main.html"> 
-<span class="menu-text">Methyl specific PCR (MS-PCR)</span></a>
+<span class="menu-text">MS-PCR</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -148,7 +148,7 @@ ul.task-list li input[type="checkbox"] {
 <aside class="sidebar">
 <div class="sidebar-content">
 <h4 style="margin:0;" class="anchored">
-<b>qPCR DESIGN</b>
+<b>AS-PCR DESIGN</b>
 </h4>
 <small>NGS-TEAM PRIMER SUITE</small>
 <hr class="rule">
@@ -182,6 +182,7 @@ Target Information
 </div>
 </div>
 <p><label class="small-label" style="margin-top:10px;">STRAND</label> <select class="input-tight" id="input-strand"> <option value="+">Plus (+)</option> <option value="-">Minus (-)</option> </select></p>
+<p><label class="small-label" style="margin-top:10px;">MISMATCH</label> <select class="input-tight" id="input-mismatch"> <option value="None">None</option> <option value="3">Third bp (3’ end)</option> <option value="2">Second bp (3’ end)</option> </select></p>
 <div class="warn" style="margin-top:8px;">
 <p>※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)</p>
 </div>
@@ -210,37 +211,6 @@ PRIMER OPTIONS
 <label class="small-label">GC% (MIN / OPT / MAX)</label>
 <div class="grid-3">
 <p><input type="number" class="input-tight" id="primer_min_gc" value="45"> <input type="number" class="input-tight" id="primer_opt_gc" value="50"> <input type="number" class="input-tight" id="primer_max_gc" value="65"></p>
-</div>
-</div>
-</details>
-<details class="custom-accordion">
-<summary>
-PROBE OPTIONS
-</summary>
-<div class="accordion-content">
-<label class="small-label">LENGTH (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="probe_min_length" value="20"> <input type="number" class="input-tight" id="probe_opt_length" value="25"> <input type="number" class="input-tight" id="probe_max_length" value="30"></p>
-</div>
-<label class="small-label">TM DIFF (MIN / MAX)</label>
-<div class="grid-2" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="min_primer_probe_tm_diff" value="5" step="0.1"> <input type="number" class="input-tight" id="max_primer_probe_tm_diff" value="10" step="0.1"></p>
-</div>
-<label class="small-label">GC% (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<p><input type="number" class="input-tight" id="probe_min_gc" value="35"> <input type="number" class="input-tight" id="probe_opt_gc" value="50"> <input type="number" class="input-tight" id="probe_max_gc" value="65"></p>
-</div>
-<label class="small-label" style="margin-top:12px;">CONSTRAINTS</label>
-<div class="grid-1" style="gap: 8px;">
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<p><span style="font-size:0.8em; color:#666;">Max Poly-G</span> <input type="number" class="input-tight" id="probe_max_poly_g" value="3" style="width: 60px;"></p>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<p><span style="font-size:0.8em; color:#666;">Max 3’ End GC</span> <input type="number" class="input-tight" id="probe_max_3_end_gc" value="2" style="width: 60px;"></p>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<p><span style="font-size:0.8em; color:#666;">Avoid 5’ G</span> <select class="input-tight" id="probe_avoid_5_prime_g" style="width: 60px;"> <option value="true" selected="">True</option> <option value="false">False</option> </select></p>
-</div>
 </div>
 </div>
 </details>
@@ -281,9 +251,6 @@ QC &amp; SPECIFICITY OPTIONS
 <div>
 <p><span style="font-size:0.8em; color:#666;">Max Size</span> <input type="number" class="input-tight" id="qc_max_amp_size" value="300"></p>
 </div>
-<div>
-<p><span style="font-size:0.8em; color:#666;">Use In-Silico PCR</span> <select class="input-tight" id="qc_use_ispcr_check"> <option value="false" selected="">False</option> <option value="true">True</option> </select></p>
-</div>
 </div>
 <label class="small-label">OLIGO CONSTRAINTS (QC Only)</label>
 <div class="grid-2" style="margin-bottom:12px;">
@@ -312,9 +279,16 @@ Export (HTML)
 </div></aside>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <main class="main">
+<div id="error-log-panel" class="panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; margin-bottom: 20px;">
+<div class="panel-title" style="color: #d9534f; font-size: 14px; font-weight: bold;">
+⚠️ PIPELINE STATUS &amp; LOGS
+</div>
+<hr class="rule-light" style="border-top-color: #f5c6c6;">
+<pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto;"></pre>
+</div>
 <div class="panel">
 <div class="panel-title">
-DESIGN SUMMARY
+DESIGN SUMMARY (AS-PCR)
 </div>
 <hr class="rule-light">
 <div class="grid-3">
@@ -384,55 +358,40 @@ WAITING
 </div>
 <div class="panel">
 <div class="panel-title">
-SEQUENCE ALIGNMENT (REF vs ALT)
+SEQUENCE ALIGNMENT (Mismatch Visualization)
 </div>
 <hr class="rule-light">
-<pre id="alignment-view" class="alignment-pre">Run the design to see sequence alignment.</pre>
+<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 13px; background: #2b2b2b; color: #f8f8f2; padding: 15px; border-radius: 5px; line-height: 1.5;"></pre>
 </div>
 <div class="panel">
 <div class="panel-title">
-CANDIDATE LIST
+AS-PCR CANDIDATE SETS
 </div>
 <hr class="rule-light">
 <div class="table-container">
 <table class="table" id="result-table">
 <thead>
 <tr>
-<th>
+<th style="width: 5%;">
 Rank
 </th>
-<th>
+<th style="width: 10%;">
+Set ID
+</th>
+<th style="width: 10%;">
+Allele
+</th>
+<th style="width: 25%;">
 Forward Primer (5’→3’)
 </th>
-<th>
+<th style="width: 25%;">
 Reverse Primer (5’→3’)
 </th>
-<th>
-Probe (5’→3’)
+<th style="width: 12%;">
+Tm (F/R) °C
 </th>
-<th>
-Tm F (°C)
-</th>
-<th>
-Tm R (°C)
-</th>
-<th>
-Tm P (°C)
-</th>
-<th>
-GC F (%)
-</th>
-<th>
-GC R (%)
-</th>
-<th>
-GC P (%)
-</th>
-<th>
-Size (bp)
-</th>
-<th>
-Genomic Position
+<th style="width: 13%;">
+GC (F/R) %
 </th>
 </tr>
 </thead>
@@ -463,6 +422,7 @@ DESIGN PARAMETERS &amp; QC SUMMARY
 
 
 </main></div>
+
 
 
 

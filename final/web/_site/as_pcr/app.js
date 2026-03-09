@@ -1,5 +1,5 @@
 /**
- * qpcr_app.js (refactor)
+ * app.js (refactor)
  * - LocalStorage 자동 저장/복구
  * - FastAPI 통신
  * - 결과/메타 렌더링
@@ -15,7 +15,7 @@ const state = {
   lastPayload: null,   // 마지막 실행 payload
 };
 
-const STORAGE_PREFIX = "qpcr_";
+const STORAGE_PREFIX = "aspcr";
 
 const TRACKED_INPUTS = [
   // Basic
@@ -30,15 +30,6 @@ const TRACKED_INPUTS = [
   "primer_min_tm", "primer_opt_tm", "primer_max_tm",
   "primer_min_gc", "primer_opt_gc", "primer_max_gc",
 
-  // Probe
-  "probe_min_length", "probe_opt_length", "probe_max_length",
-  "min_primer_probe_tm_diff", "max_primer_probe_tm_diff",
-  "probe_min_tm", "probe_opt_tm", "probe_max_tm",
-  "probe_min_gc", "probe_opt_gc", "probe_max_gc",
-
-  // Constraints
-  "probe_max_poly_g", "probe_max_3_end_gc", "probe_avoid_5_prime_g",
-
   // QC
   "qc_hairpin_min_dg", "qc_homodimer_min_dg", "qc_heterodimer_min_dg",
   "qc_min_identity", "qc_min_hit_length", "qc_blast_max_alignments",
@@ -46,7 +37,7 @@ const TRACKED_INPUTS = [
 ];
 
 // API endpoint (필요하면 환경에 맞게 바꾸기)
-const API_URL = "http://192.168.0.35:9000/api/design/qpcr";
+const API_URL = "http://192.168.0.35:9000/api/design/aspcr";
 
 /* -----------------------------
    1) Utils (DOM / format / read)
@@ -168,28 +159,6 @@ function buildPayload() {
     primer_opt_gc: getVal("primer_opt_gc", "float", 50.0),
     primer_max_gc: getVal("primer_max_gc", "float", 65.0),
 
-    // Probe
-    probe_min_length: getVal("probe_min_length", "int", 20),
-    probe_opt_length: getVal("probe_opt_length", "int", 25),
-    probe_max_length: getVal("probe_max_length", "int", 30),
-
-    min_primer_probe_tm_diff: getVal("min_primer_probe_tm_diff", "float", 5.0),
-    max_primer_probe_tm_diff: getVal("max_primer_probe_tm_diff", "float", 10.0),
-
-    // Absolute probe Tm
-    probe_min_tm: getVal("probe_min_tm", "float", 65.0),
-    probe_opt_tm: getVal("probe_opt_tm", "float", 67.0),
-    probe_max_tm: getVal("probe_max_tm", "float", 70.0),
-
-    probe_min_gc: getVal("probe_min_gc", "float", 35.0),
-    probe_opt_gc: getVal("probe_opt_gc", "float", 50.0),
-    probe_max_gc: getVal("probe_max_gc", "float", 65.0),
-
-    // Constraints
-    probe_max_poly_g: getVal("probe_max_poly_g", "int", 3),
-    probe_max_3_end_gc: getVal("probe_max_3_end_gc", "int", 2),
-    probe_avoid_5_prime_g: getVal("probe_avoid_5_prime_g", "bool", true),
-
     // QC
     qc_hairpin_min_dg: getVal("qc_hairpin_min_dg", "float", -6.0),
     qc_homodimer_min_dg: getVal("qc_homodimer_min_dg", "float", -6.0),
@@ -200,10 +169,6 @@ function buildPayload() {
     qc_use_ispcr_check: getVal("qc_use_ispcr_check", "bool", false),
     qc_primer_max_diff_tm: getVal("qc_primer_max_diff_tm", "float", 3.0),
 
-    // QC Probe (Constraints 재사용)
-    qc_probe_avoid_5_prime_g: getVal("probe_avoid_5_prime_g", "bool", true),
-    qc_probe_max_poly_g: getVal("probe_max_poly_g", "int", 3),
-    qc_probe_max_3_end_gc: getVal("probe_max_3_end_gc", "int", 2),
   };
 }
 
@@ -286,22 +251,9 @@ function renderMetadata(results, payload) {
         <div class="card-item"><span>Filtered</span> <b>${filtered}</b> / <b>${total}</b> <span style="opacity:.7">(rejected ${rejected})</span></div>
         <div class="help-text">
           * <b>Mutation:</b> Probe 서열 내부에 타겟 변이 부위를 포함하는 디자인인지 확인합니다.<br>
-          * <b>Amp Size:</b> qPCR 서열(80-200bp)이 이상적입니다.
+          * <b>Amp Size:</b> AS-PCR 서열(80-200bp)이 이상적입니다.
         </div>
       </div>
-
-      <div class="meta-card">
-        <div class="card-header">🔍 PROBE CONSTRAINTS</div>
-        <div class="card-item"><span>Avoid 5' G</span> <b>${payload.qc_probe_avoid_5_prime_g ? "YES" : "NO"}</b></div>
-        <div class="card-item"><span>Max Poly-G</span> <b>${payload.qc_probe_max_poly_g} nt</b></div>
-        <div class="card-item"><span>3' End GC</span> <b>Max ${payload.qc_probe_max_3_end_gc}</b></div>
-        <div class="help-text">
-          * <b>Avoid 5' G:</b> 5' 말단의 G는 형광을 소광(Quenching)시켜 감도를 떨어뜨립니다.<br>
-          * <b>Avoid 3' G-C Count &lt; 3 :</b> 결합력이 강한 GC 수가 적은 probe 선정으로 Non-specific binding 감소.<br>
-          * <b>Poly-G:</b> 4개 이상의 연속된 G는 G-quadruplex 구조를 형성할 위험이 있습니다.
-        </div>
-      </div>
-
       <div class="meta-card">
         <div class="card-header">🛡️ BLAST & SPECIFICITY</div>
         <div class="card-item"><span>Min Identity</span> <b>${payload.qc_min_identity}%</b></div>
@@ -344,7 +296,7 @@ function exportJSON() {
 
   const projectOutput = {
     project_info: {
-      name: `qPCR_Project_${state.lastResults.export_meta?.region?.name || "Design"}`,
+      name: `AS-PCR_Project_${state.lastResults.export_meta?.region?.name || "Design"}`,
       date: new Date().toISOString(),
       app_version: "1.0.0",
     },
@@ -358,7 +310,7 @@ function exportJSON() {
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = `qPCR_RawData_${Date.now()}.json`;
+  link.download = `AS-PCR_RawData_${Date.now()}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -390,7 +342,7 @@ function exportHTML() {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>qPCR Design Report - ${new Date().toLocaleString()}</title>
+  <title>AS-PCR Design Report - ${new Date().toLocaleString()}</title>
   <style>
     body { font-family: 'Nunito', sans-serif; padding: 20px; background: #f5f5f5; }
     ${styles}
@@ -411,7 +363,7 @@ function exportHTML() {
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = `qPCR_Report_${Date.now()}.html`;
+  link.download = `AS-PCR_Report_${Date.now()}.html`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -421,7 +373,7 @@ function exportHTML() {
 ------------------------------ */
 
 async function runDesign() {
-  const runBtn = byId("btn-run-qpcr");
+  const runBtn = byId("btn-run-aspcr");
   if (!runBtn) return;
 
   // 저장 + payload
@@ -484,7 +436,7 @@ document.addEventListener("DOMContentLoaded", () => {
   restoreInputsFromStorage();
 
   // run
-  byId("btn-run-qpcr")?.addEventListener("click", (e) => {
+  byId("btn-run-aspcr")?.addEventListener("click", (e) => {
     e.preventDefault();
     runDesign();
   });
@@ -493,5 +445,75 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("btn-export-json")?.addEventListener("click", exportJSON);
   byId("btn-export-html")?.addEventListener("click", exportHTML);
 
-  console.log("✅ qPCR app ready.");
+  console.log("✅ AS-PCR app ready.");
 });
+
+// 서버 응답 데이터(response.single_filtered_amplicons)를 렌더링하는 로직
+function renderAspcrTable(ampliconsData) {
+    const tbody = document.getElementById("candidate-tbody");
+    const alignmentView = document.getElementById("alignment-view");
+    
+    if (!ampliconsData || ampliconsData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:40px; color:#999;">No candidates found or all failed QC.</td></tr>`;
+        return;
+    }
+
+    let html = "";
+    let alignmentTexts = [];
+
+    // 각 Set를 순회합니다.
+    ampliconsData.forEach((set) => {
+        // 얼라인먼트 텍스트 수집 (Set별로 구분)
+        if (set.alignment_text_block) {
+            alignmentTexts.push(`[${set.set_id} ALIGNMENT]\n${set.alignment_text_block}`);
+        }
+
+        // 4가지 Allele 순서 고정
+        const alleleKeys = ["wt", "alt", "wt_mm", "alt_mm"];
+        
+        alleleKeys.forEach((key, index) => {
+            const alleleData = set.alleles[key];
+            if (!alleleData) return; // 데이터가 없으면 패스
+
+            const fwd = alleleData.oligos.forward;
+            const rev = alleleData.oligos.reverse;
+            
+            html += `<tr>`;
+            
+            // 🔥 [핵심] 첫 번째 행(wt)일 때만 Set 공통 정보(Rank, ID, QC)를 rowspan=4로 병합해서 출력!
+            if (index === 0) {
+                const qcBadge = set.set_qc_pass 
+                    ? `<span style="color:#5cb85c; font-weight:bold;">PASS</span>` 
+                    : `<span style="color:#d9534f; font-weight:bold;">FAIL</span>`;
+                    
+                html += `<td rowspan="4" style="vertical-align: middle; text-align: center; border-bottom: 2px solid #ddd;">${set.rank}</td>`;
+                html += `<td rowspan="4" style="vertical-align: middle; text-align: center; font-weight: bold; border-bottom: 2px solid #ddd;">${set.set_id}</td>`;
+                html += `<td rowspan="4" style="vertical-align: middle; text-align: center; border-bottom: 2px solid #ddd;">${qcBadge}</td>`;
+            }
+
+            // 개별 Allele 디자인 속성
+            let labelColor = key.includes("mm") ? "#d9534f" : "#0275d8"; // Mismatch는 빨간색, 기본은 파란색
+            let rowBottomBorder = (index === 3) ? `border-bottom: 2px solid #ddd;` : `border-bottom: 1px solid #eee;`;
+
+            html += `<td style="font-weight: bold; color: ${labelColor}; ${rowBottomBorder}">${key.toUpperCase()}</td>`;
+            html += `<td style="font-family: monospace; font-size: 13px; ${rowBottomBorder}">${fwd.sequence}</td>`;
+            html += `<td style="font-family: monospace; font-size: 13px; ${rowBottomBorder}">${rev.sequence}</td>`;
+            html += `<td style="${rowBottomBorder}">${fwd.tm.toFixed(1)} / ${rev.tm.toFixed(1)}</td>`;
+            html += `<td style="${rowBottomBorder}">${fwd.gc.toFixed(1)} / ${rev.gc.toFixed(1)}</td>`;
+            html += `<td style="font-weight: 500; ${rowBottomBorder}">${alleleData.pair_penalty.toFixed(2)}</td>`;
+            html += `<td style="font-size: 11px; color: #555; ${rowBottomBorder}">${alleleData.amplicon_info.genomic_pos}</td>`;
+            
+            html += `</tr>`;
+        });
+    });
+
+    // 테이블 삽입
+    tbody.innerHTML = html;
+
+    // 얼라인먼트 프리뷰 삽입 (전체 Set 텍스트를 모아서 뿌려줌)
+    if (alignmentTexts.length > 0) {
+        alignmentView.textContent = alignmentTexts.join("\n\n----------------------------------------------------------------------------------------------------------\n\n");
+    } else {
+        alignmentView.textContent = "No alignment data available.";
+    }
+}

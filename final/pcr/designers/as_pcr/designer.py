@@ -130,7 +130,7 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
         primer_kw = self.config.pcr_params.primer_kwargs
         n_primers = getattr(primer_kw, "n_primers", 5)
         self.global_args.update({
-            "PRIMER_PICK_LEFT_PRIMER": 1, "PRIMER_PICK_RIGHT_PRIMER": 1,
+            "PRIMER_PICK_LEFT_PRIMER": 1, "PRIMER_PICK_RIGHT_PRIMER": 1,"PRIMER_PICK_INTERNAL_PRIMER": 0,
             "PRIMER_NUM_RETURN": int(n_primers),
             "PRIMER_PRODUCT_SIZE_RANGE": [[primer_kw.min_amplicon_length, primer_kw.max_amplicon_length]],
             "PRIMER_EXPLAIN_FLAG": 1,
@@ -175,8 +175,7 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
             set_id = f"Set_{i}"
 
             # 4. 템플릿별 컴포넌트 파생
-            for ttype in ("wt", "alt", "wt_mm", "alt_mm"):
-                if ttype not in self.templates: continue
+            for ttype in ["wt", "alt", "wt_mm", "alt_mm"]:
                 tpl_seq = self.templates[ttype]
                 
                 # 서열 파싱
@@ -185,45 +184,9 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
                 rev_seq = self._parse_primer(tpl_seq, right_span[0], right_span[1], "reverse")
 
                 # 2. 진짜 통계치를 뽑기 위해 Primer3 입력값 세팅
-                check_args = {
-                    "SEQUENCE_ID": f"Set{i}_{ttype}",
-                    "SEQUENCE_TEMPLATE": tpl_seq,
-                    "SEQUENCE_PRIMER": fwd_seq,
-                    "SEQUENCE_RIGHT_PRIMER": rev_seq
-                }
-                
-                # 🔥 [핵심 수정] 기존에 세팅된 모든 환경 옵션을 그대로 가져옵니다!
-                import copy
-                check_global = copy.deepcopy(self.global_args)
-                # 그리고 Task만 check_primers로 살짝 바꿔줍니다.
-                check_global["PRIMER_TASK"] = "check_primers"
-                check_global["PRIMER_PICK_ANYWAY"] = 1
-                
-                # (옵션) check 모드에서 충돌을 일으킬 수 있는 사이즈 제한만 살짝 풀어줍니다.
-                check_global.pop("PRIMER_PRODUCT_SIZE_RANGE", None)
-                
-                try:
-                    # 완벽한 환경(salt, dNTP 등) 위에서 정확한 통계치가 뽑혀 나옵니다.
-                    stat_res = primer3.bindings.design_primers(check_args, check_global)
-                    print(stat_res)
-                    fwd = Primer.from_primer3(stat_res, 0, "LEFT")
-                    rev = Primer.from_primer3(stat_res, 0, "RIGHT")
-                    
-                    if not fwd or not rev:
-                        continue
-                        
-                    current_pair_penalty = float(stat_res.get("PRIMER_PAIR_0_PENALTY", 0.0))
-                    
-                    # check_primers는 상대 좌표를 주므로 원본 절대 좌표(Span)로 원복
-                    fwd.start_index = left_span[0]
-                    fwd.end_index = left_span[1] + 1
-                    rev.start_index = right_span[0]
-                    rev.end_index = right_span[1] + 1
-
-                except Exception as e:
-                    print(f"⚠️ [Primer3 Check Fail - {ttype}] 원인: {e}")
-                    continue
-
+                fwd = Primer.make_primer(sequence=fwd_seq, role="forward", start_index=left_span[0], end_index=left_span[1] + 1)
+                rev = Primer.make_primer(sequence=rev_seq, role="reverse", start_index=right_span[0], end_index=right_span[1] + 1)
+                current_pair_penalty = fwd.penalty + rev.penalty
                 # ==========================================================
                 # 공통 메타데이터 주입
                 # ==========================================================
@@ -247,15 +210,13 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
                 rev.is_allele_specific = not is_fwd_as
                 rev.terminal_base = rev_seq[-1] if not is_fwd_as else None
                 rev.mismatch_base = rev_seq[mm_offset] if (not is_fwd_as and mm_offset is not None) else None
-
-                if offset > 0:
-                    fwd.region = GenomicRegion(chrom=chrom, start=offset + left_span[0] + 1, end=offset + left_span[1] + 1, strand="+")
-                    rev.region = GenomicRegion(chrom=chrom, start=offset + right_span[0] + 1, end=offset + right_span[1] + 1, strand="-")
+            
+                fwd.region = GenomicRegion(chrom=chrom, start=offset + left_span[0] + 1, end=offset + left_span[1] + 1, strand="+")
+                rev.region = GenomicRegion(chrom=chrom, start=offset + right_span[0] + 1, end=offset + right_span[1] + 1, strand="-")
                 
                 alignment_view = self._build_alignment_visual(
                     self.templates, left_span, right_span, self.fixed_prime
                 )
-
                 amp = Amplicon(
                     id=f"{self.input.name}_{set_id}_{ttype}",
                     forward=fwd, reverse=rev, probe=None, 

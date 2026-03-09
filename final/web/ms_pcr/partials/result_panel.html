@@ -3,12 +3,41 @@
 <div class="panel-title">DESIGN SUMMARY</div>
 <hr class="rule-light">
 
-<div class="grid-3">
+<div class="panel" id="mspcr-conversion-panel" style="display: none; margin-top: 20px;">
+<div class="section-title">Bisulfite Conversion Results</div>
+<hr class="rule-light">
+
+<div class="grid-2" style="margin-bottom: 15px;">
 <div>
-<div class="small-label">CHROMOSOME</div>
-<div style="font-weight:900;" id="summary-chrom">-</div>
+<div class="small-label">TOTAL CpG COUNT</div>
+<div style="font-weight:900; color:#0275d8;" id="mspcr-cpg-count">0</div>
 </div>
 <div>
+<div class="small-label">TARGET CpG COUNT</div>
+<div style="font-weight:900; color:#d9534f;" id="mspcr-target-count">0</div>
+</div>
+</div>
+
+<label class="small-label">METHYLATED TEMPLATE (M-Allele)</label>
+<div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">* Unmethylated C는 U(T)로 변환, 타겟 CpG의 C는 유지됩니다.</div>
+<pre id="mspcr-meth-view" class="alignment-pre" style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; border-radius: 4px;"></pre>
+
+<label class="small-label" style="margin-top: 15px;">UNMETHYLATED TEMPLATE (U-Allele)</label>
+<div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">* 모든 C가 U(T)로 변환됩니다.</div>
+<pre id="mspcr-unmeth-view" class="alignment-pre" style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; border-radius: 4px;"></pre>
+
+<div style="margin-top: 20px;">
+<button class="btn btn-success" id="btn-proceed-design" style="width: 100%; padding: 10px; font-weight: bold;">
+Proceed to Primer Design (Step 2)
+</button>
+</div>
+</div>
+
+<div id="mspcr-step2-panel" style="display: none;">
+<div class="section-title">Step 2: MS-PCR Design Parameters</div>
+<hr class="rule-light">
+</div>
+<div class="grid-3">
 <div class="small-label">TARGET POSITION</div>
 <div style="font-weight:900;" id="summary-pos">-</div>
 </div>
@@ -17,16 +46,6 @@
 <div style="font-weight:900;" id="summary-date">-</div>
 </div>
 </div>
-<div class="grid-3" style="margin-top: 15px;">
-<div>
-<div class="small-label">REFERENCE GENOME</div>
-<div style="font-weight:900;" id="summary-reference">-</div>
-</div>
-<div>
-<div class="small-label">MUTATION (REF > ALT)</div>
-<div style="font-weight:900; color: #d9534f;" id="summary-mutation">-</div>
-</div>
-<div>
 <div class="small-label">STATUS</div>
 <div style="font-weight:900;" id="summary-status">WAITING</div>
 </div>

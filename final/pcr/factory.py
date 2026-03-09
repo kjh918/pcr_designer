@@ -26,9 +26,9 @@ from .designers.as_pcr.schema import ASPCRDesignInput
 from .designers.as_pcr.qc import ASPCRQCExecutor
 
 # # MS-PCR (추후 활성화)
-# from .designers.ms_pcr.designer import MSPCRPrimerDesigner
-# from .designers.ms_pcr.schema import MSPCRDesignInput
-# from .designers.ms_pcr.qc import MSPCRQCExecutor
+from .designers.ms_pcr.designer import MSPCRPrimerDesigner
+from .designers.ms_pcr.schema import MSPCRDesignInput
+from .designers.ms_pcr.qc import MSPCRQCExecutor
 
 # Ranker
 from .utils.ranker import ProbeCentricRanker
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 PIPELINE_MAP = {
     "qpcr":   (QPCRDesignInput, QPCRPrimerDesigner, QPCRQCExecutor),
     "aspcr": (ASPCRDesignInput, ASPCRPrimerDesigner, ASPCRQCExecutor),
-    # "ms_pcr": (MSPCRDesignInput, MSPCRPrimerDesigner, MSPCRQCExecutor),
+    "mspcr": (MSPCRDesignInput, MSPCRPrimerDesigner, MSPCRQCExecutor),
 }
 
 class PCRFactory:
@@ -99,6 +99,8 @@ class PCRFactory:
         reference_name: str = "hg38",
         template_sequence: Optional[str] = None,
         reference_sequence: Optional[str] = None,
+        template_genomic_start: Optional[int] = 0,
+        template_genomic_end: Optional[int] = 0, 
         top_k: int = 5,
         run_qc: bool = True,
         overrides: dict = None,
@@ -134,15 +136,14 @@ class PCRFactory:
             config=self.config,
             reference_name=reference_name,
             reference_sequence=reference_sequence,
+            template_genomic_start=template_genomic_start, # 💡 객체에 직접 꽂아줍니다!
+            template_genomic_end=template_genomic_end, # 💡 객체에 직접 꽂아줍니다!
             overrides=overrides or {},
             **extra_input_kwargs,
         )
-
         # 4. Design 실행
         designer = DesignClass(design_input)
         output = designer.design()
-        print(output)
-        exit()
         if output.status != "success" or not output.amplicons:
             return output
             
@@ -152,7 +153,6 @@ class PCRFactory:
         if run_qc:
             # Config에 이미 _resolve_genome_paths를 통해 blast_db가 주입된 상태임
             qc_executor = QCClass(self.config)
-            
             qc_passed_amplicons = qc_executor.execute(output.amplicons)
             
             # QC 통계 수집 (Executor 내부에 stats가 있다고 가정)
@@ -171,18 +171,21 @@ class PCRFactory:
         else:
             qc_passed_amplicons = output.amplicons
             output.log_messages.append("QC Skipped.")
-
-        # 6. Ranking
+            
+        # 6. Ranking (🔥 AS-PCR 모드 우회 처리 추가)
         if qc_passed_amplicons:
-            ranker = ProbeCentricRanker(probe_overlap_threshold=0.9)
-            final_amplicons = ranker.select_diverse_probes(qc_passed_amplicons, top_k=top_k)
-            output.amplicons = final_amplicons
-            output.log_messages.append(f"Ranker Selected: {len(final_amplicons)} (Top K: {top_k})")
+            if assay_type == "aspcr":
+                output.amplicons = qc_passed_amplicons
+                output.log_messages.append(f"AS-PCR Mode: Bypassed Probe Ranker. Total {len(qc_passed_amplicons)} amplicons kept.")
+            else:
+                ranker = ProbeCentricRanker(probe_overlap_threshold=0.9)
+                final_amplicons = ranker.select_diverse_probes(qc_passed_amplicons, top_k=top_k)
+                output.amplicons = final_amplicons
+                output.log_messages.append(f"Ranker Selected: {len(final_amplicons)} (Top K: {top_k})")
         else:
             output.amplicons = []
             output.status = "fail"
             output.error_msg = "All amplicons failed QC."
-            # QC 실패 사유 상세 추가
             if run_qc and getattr(qc_executor, "qc_stats", {}):
                 output.error_msg += f" Details: {qc_executor.qc_stats}"
 

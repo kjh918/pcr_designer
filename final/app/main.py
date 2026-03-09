@@ -8,6 +8,7 @@ import os
 # 라우터 임포트 (파일 분리됨)
 from app.routers import design_qpcr
 from app.routers import design_manual
+from app.routers import design_aspcr
 
 app = FastAPI(
     title="GCX - Primer Design API",
@@ -34,6 +35,7 @@ app.add_middleware(
 # 라우터 내부에서 경로를 정의했으므로 include만 하면 됩니다.
 app.include_router(design_qpcr.router)
 app.include_router(design_manual.router)
+app.include_router(design_aspcr.router)
 
 
 # -----------------------

@@ -10,6 +10,8 @@ class BaseDesignInput(BaseModel):
     template_sequence: str
     # [MODIFIED] process_results에서 사용되는 reference_sequence 추가
     reference_sequence: Optional[str] = None 
+    template_genomic_start:  Optional[int] = None 
+    template_genomic_end: Optional[int] = None 
     reference_name: str = "hg38"
     overrides: Dict[str, Any] = Field(default_factory=dict)
     

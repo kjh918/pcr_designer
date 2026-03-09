@@ -17,11 +17,16 @@
 #    --top_k 5 \
 #    --base_config /tmp/tmppkkzed98.yaml
 
-PYTHONPATH=. python3.11 scripts/design_aspcr.py \
-    --chrom chr7 \
-    --start 55174777 \
-    --end 55174777 \
-    --ref T \
-    --alt C \
-    --fasta /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa \
-    --top_k 5
+#PYTHONPATH=. python3.11 scripts/design_aspcr.py \
+#    --chrom chr7 \
+#    --start 55174777 \
+#    --end 55174777 \
+#    --ref T \
+#    --alt C \
+#    --fasta /storage/references_and_index/hg38/fasta/cbNIPT/hg38.fa \
+#    --top_k 5
+#PYTHONPATH=. python3.11 scripts/design_mspcr.py \
+#    --step 1 --seq "ATGCGCGCGATCGATCGATCGATCGCGC" --cpgs "5,26"
+    
+PYTHONPATH=. python3.11 scripts/design_mspcr.py \
+    --step 2 --seq "ATGCGCGCGATCGATCGATCGATCGCGCATGCGCGCGATCGATCGATCGATCGCGCATGCGCATGCGCGCGATCGATCGATCGATCGCGCGCGATCGATCGATCGATCATGCGCGCGATCGATCGATCGATCGCGCGCGCATGCGCGCGAATGCGCGCGATCGATCGATCGATCGCGCTCGATCGATCGATCGCGCATGCGCGCGATCGATCGATCGATCGCGC" --cpgs "26" -k 5 --name "MGMT_Promoter"
