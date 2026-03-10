@@ -140,7 +140,6 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
                     pair_penalty=m_pair_penalty,
                 )
                 m_amp.allele_type = "M"
-                m_amp.set_id = set_id
                 m_amp.is_qc_pass = True
 
             # --- U Allele Amplicon 생성 ---
@@ -166,7 +165,6 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
                     pair_penalty=u_pair_penalty,
                 )
                 u_amp.allele_type = "U"
-                u_amp.set_id = set_id
                 u_amp.is_qc_pass = True
 
             # 양쪽 모두 정상 생성되었을 때만 Set로 인정
