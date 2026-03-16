@@ -26,6 +26,18 @@ class MSPCRDesignInput(BaseDesignInput):
         description="List of 1-based indices of target CpG sites in the raw sequence"
     )
 
+    # 🔥 [추가] 3' 말단 윈도우 사이즈 (타겟이 프라이머 끝에서 몇 bp 이내에 와야 하는지)
+    window_size_3prime: int = Field(
+        default=3,
+        description="Allowed window size at the 3' end to contain the target CpG (e.g.,3 means within the last 4 bases)."
+    )
+
+    # 🔥 [추가] 프라이머 서열 내부에 포함되어야 할 최소 CpG 개수
+    min_cpg_count: int = Field(
+        default=1,
+        description="Minimum number of CpG sites required within the primer sequence."
+    )
+
     def __init__(self, **data):
         super().__init__(**data)
         

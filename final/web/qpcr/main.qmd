@@ -1,8 +1,6 @@
 ---
-title: "TaqMan qPCR Design"
-resources:
-  - "app.js"
-  - "style.css"
+page-layout: custom
+css: ./style.css   
 ---
 
 ```{=html}
@@ -10,11 +8,11 @@ resources:
 
 <aside class="sidebar">
 <div class="sidebar-content">
-  <h4 style="margin:0;"><b>qPCR DESIGN</b></h4>
-  <small>NGS-TEAM PRIMER SUITE</small>
-  <hr class="rule">
+<h4 style="margin:0;"><b>qPCR DESIGN</b></h4>
+<small>NGS-TEAM PRIMER SUITE</small>
+<hr class="rule">
 
-  {{< include partials/params.html >}}
+{{< include partials/params.html >}}
 
 <hr class="rule">
 
@@ -33,5 +31,4 @@ resources:
 {{< include partials/result_panel.html >}}
 
 </div>
-<script src="app.js"></script>
-<script src="style.css"></script>
+<script src="./app.js"></script>

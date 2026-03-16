@@ -1,0 +1,46 @@
+---
+page-layout: custom
+css: ./style.css     
+---
+
+```{=html}
+<div class="app-shell">
+
+<aside class="sidebar">
+<div class="sidebar-content">
+<h4 style="margin:0;"><b>QC DESIGNED PRIMERS</b></h4>
+<small>NGS-TEAM PRIMER SUITE</small>
+<hr class="rule">
+
+{{< include partials/params.html >}}
+
+<hr class="rule">
+
+<div class="section-title">RUN</div>
+<hr class="rule-light">
+<button class="btn-run" id="btn-run-mspcr">DESIGN START</button>
+
+<div style="margin-top:10px; display:flex; gap:10px;">
+<button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (JSON)</button>
+<button id="btn-export-html" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (HTML)</button>
+</div>
+</div> </aside>
+
+<main class="main-content" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #f8f9fa;">
+
+<div style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; padding: 15px; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+<h4 style="margin: 0 0 8px 0; color: #1e707a; font-weight: bold;">💡 Quick Guide</h4>
+<p style="margin: 0; font-size: 13px; color: #333; line-height: 1.5;">
+타겟 서열을 입력하고 메틸화를 분석할 핵심 CpG를 대괄호 <strong>[CG]</strong>로 감싸주세요.<br>
+<code style="background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 12px; color: #d9534f; margin-top: 6px; display: inline-block; border: 1px solid #e0e0e0;">예시: ATGCATGC[CG]ATGCAT</code>
+</p>
+</div>
+
+{{< include partials/result_panel.html >}}
+
+</main>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="./app.js"></script>

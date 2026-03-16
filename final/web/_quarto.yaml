@@ -3,12 +3,13 @@ project:
   output-dir: _site
 
 website:
-  title: "GENCURIX PRIMER SUITE"
   navbar:
     background: "#0056b3" # 젠큐릭스 느낌의 블루 계열 (수정 가능)
     left:
       - href: main.qmd
         text: "Home"
+      - href: qc/main.qmd
+        text: "QC"
       - href: manual/main.qmd
         text: "Manual qPCR"
       - href: qpcr/main.qmd

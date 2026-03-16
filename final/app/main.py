@@ -9,6 +9,7 @@ import os
 from app.routers import design_qpcr
 from app.routers import design_manual
 from app.routers import design_aspcr
+from app.routers import design_mspcr
 
 app = FastAPI(
     title="GCX - Primer Design API",
@@ -36,6 +37,7 @@ app.add_middleware(
 app.include_router(design_qpcr.router)
 app.include_router(design_manual.router)
 app.include_router(design_aspcr.router)
+app.include_router(design_mspcr.router)
 
 
 # -----------------------

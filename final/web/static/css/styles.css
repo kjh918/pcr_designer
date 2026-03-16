@@ -5,6 +5,19 @@
 
 
 html, body { height: 100%; }
+#quarto-document-content,
+#quarto-content,
+main.content,
+.page-columns {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+}
+
+/* -----------------------------------
+   1. App Shell (유지)
+------------------------------------ */
+html, body { height: 100%; }
 
 body {
     background-color: #f4f7f9;
@@ -12,6 +25,7 @@ body {
     font-family: 'Nunito', sans-serif;
     font-size: 12px;
     margin: 0;
+    padding: 0;
 }
 
 .app-shell {
@@ -20,23 +34,36 @@ body {
     min-height: 100vh;
     width: 100%;
     box-sizing: border-box;
-
-    padding: 24px;     /* 전체 바깥 여백 (여기만 사용) */
-    gap: 32px;         /* sidebar ↔ main 간격 (여기만 사용) */
-
+    height: 100vh;
+    padding: 0; /* 확실하게 0으로 덮어쓰기 */
+    margin: 0;
     overflow: hidden;
 }
+
 /* -----------------------------------
-   2. Sidebar (Target-Finder 스타일: 350px)
+   2. Sidebar (왼쪽 완벽 밀착)
 ------------------------------------ */
 .sidebar {
   width: 350px;
   background-color: #ffffff;
-  border: 1px solid #dee2e6;
-  border-radius: 0 12px 12px 0;  /* ✅ 왼쪽은 직각(붙는 느낌), 오른쪽만 둥글게 */
+  
+  /* 왼쪽 선은 없애고 우측, 상단, 하단만 테두리를 줍니다 */
+  border-right: 1px solid #dee2e6;
+  border-top: none; 
+  border-bottom: none; 
+  border-left: none; 
+  
+  /* 화면 끝에 붙으므로 왼쪽은 직각(0), 오른쪽은 필요시 둥글게 처리 */
+  border-radius: 0; 
+  
   padding: 24px;
-  margin: 24px 0 24px 0;         /* ✅ 좌우 margin 0 */
+  
+  /* 🚨 마진을 0으로 만들어 화면 맨 끝에 붙입니다 */
+  margin: 0; 
   flex-shrink: 0;
+  
+  /* 사이드바 내부 컨텐츠가 길어지면 안에서만 스크롤되도록 설정 */
+  overflow-y: auto; 
 }
 .sidebar-content {
     display: flex;

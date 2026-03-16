@@ -10,17 +10,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pcr.config.loader import load_pipeline_config
 from pcr.factory import PCRFactory
+# 🔥 대괄호 파싱을 위해 BasePrimerDesigner 호출
+from pcr.designers.base.designer import BasePrimerDesigner 
 
 # =====================================================================
 # [Module 1] Bisulfite Conversion 시뮬레이션 (Step 1)
 # =====================================================================
-def simulate_bisulfite_conversion(raw_sequence: str, target_cpg_indices: Optional[List[int]] = None) -> Dict[str, Any]:
+def simulate_bisulfite_conversion(clean_seq: str, target_indices: List[int]) -> Dict[str, Any]:
     """
-    [Step 1 전용] 서열을 받아 M-Allele(Methylated)과 U-Allele(Unmethylated)로 변환합니다.
+    [Step 1 전용] 순수 서열과 추출된 타겟 위치를 받아 M/U Allele로 변환합니다.
     - U-Allele: 모든 'C'가 'T'로 변환됨 (비메틸화 가정)
     - M-Allele: CpG 컨텍스트의 'C'는 'C'로 유지, 나머지 'C'는 'T'로 변환됨 (메틸화 가정)
     """
-    seq = raw_sequence.strip().upper().replace(" ", "")
+    seq = clean_seq.upper()
     
     u_allele = []
     m_allele = []
@@ -45,51 +47,48 @@ def simulate_bisulfite_conversion(raw_sequence: str, target_cpg_indices: Optiona
         else:
             m_allele.append(base)
 
-    # 사용자가 특정 타겟 CpG를 지정하지 않았다면, 서열 내 전체 CpG를 타겟으로 간주
-    valid_targets = target_cpg_indices if target_cpg_indices else cpg_positions
-
     return {
         "raw_sequence": seq,
         "m_allele": "".join(m_allele),
         "u_allele": "".join(u_allele),
         "total_cpg_count": len(cpg_positions),
-        "target_cpg_count": len(valid_targets),
+        "target_cpg_count": len(target_indices),
         "all_cpg_positions": cpg_positions,
-        "target_cpg_positions": valid_targets
+        "target_cpg_positions": target_indices # 대괄호로 지정된 진짜 타겟 위치
     }
 
 # =====================================================================
 # [Module 2] MS-PCR Primer Design 메인 파이프라인 (Step 2)
 # =====================================================================
-def design_manual_mspcr(
+def design_mspcr_primers(
     design_name: str,
-    raw_sequence: str,
-    target_cpg_indices: Optional[List[int]] = None, 
+    raw_sequence_with_brackets: str, # 🔥 숫자 인덱스 대신 대괄호 포함 서열
     genome: str = "hg38",
     top_k: int = 5,
+    window_size_3prime: int = 4,     # 🔥 [NEW] 3' 말단 윈도우 사이즈 파라미터 추가
+    min_cpg_count: int = 1,          # 🔥 [NEW] 프라이머 내 최소 CpG 개수 파라미터 추가
     base_yaml: str = "pcr/config/base_pcr.yaml",
     system_yaml: str = "pcr/config/system.yaml",
     qc_overrides: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    사용자가 입력한 Raw Sequence와 Target CpG를 기반으로 
+    사용자가 입력한 서열(대괄호 타겟 지정)을 기반으로 
     MS-PCR 프라이머(M-set, U-set)를 설계합니다.
     """
     assay_type = "mspcr"
     
-    # 1. Module 1 호출하여 변환 데이터 확보
-    conversion_info = simulate_bisulfite_conversion(raw_sequence, target_cpg_indices)
+    # 0. 대괄호 파싱을 통해 순수 서열과 타겟 위치 자동 추출
+    clean_seq, target_indices = BasePrimerDesigner.parse_sequence_with_brackets(raw_sequence_with_brackets)
     
-    # 타겟 구간 산출 (선택한 CpG들의 처음과 끝을 포함하는 범위)
-    targets = conversion_info["target_cpg_positions"]
-    print(targets)
+    if not target_indices:
+        return {"status": "fail", "reason": "Target not found. Please wrap your target CpG with brackets, e.g., [CG]"}
 
-    if not targets:
-        return {"status": "fail", "reason": "No CpG sites found in the provided sequence."}
+    # 1. Module 1 호출하여 변환 데이터(M/U 유무) 확보
+    conversion_info = simulate_bisulfite_conversion(clean_seq, target_indices)
     
     # 0-based 구간 계산
-    rel_start = min(targets) - 1
-    rel_end = max(targets) + 1 # CG의 G까지 포함
+    rel_start = min(target_indices) - 1
+    rel_end = max(target_indices)
 
     # 2. Config 로드
     user_overrides = {}
@@ -101,12 +100,19 @@ def design_manual_mspcr(
     # 3. Factory 실행
     factory = PCRFactory(config)
     
-    # MS-PCR 파이프라인으로 M과 U 두 개의 템플릿을 넘깁니다.
     templates = {
         "M": conversion_info["m_allele"],
         "U": conversion_info["u_allele"]
     }
-    print(templates)
+    
+    # Pydantic Input으로 넘겨주기 위한 추가 인자 (MS-PCR 전용)
+    extra_input_kwargs = {
+        "target_cpg_indices": target_indices,
+        "templates": templates,
+        "window_size_3prime": window_size_3prime, # 🔥 schema.py로 전달
+        "min_cpg_count": min_cpg_count            # 🔥 schema.py로 전달
+    }
+
     output = factory.run(
         assay_type=assay_type,
         name=design_name,
@@ -114,12 +120,12 @@ def design_manual_mspcr(
         target_end=rel_end,
         reference_name=genome,       
         template_sequence=conversion_info["raw_sequence"], # 원본
-        templates=templates,         # 🔥 M/U 변환 서열 전달
         top_k=top_k,
         run_qc=True,                 
-        overrides={"PRIMER_NUM_RETURN": 10},
+        overrides={"PRIMER_NUM_RETURN": 20},
         template_genomic_start=0,    
-        target_strand="+"            
+        target_strand="+",
+        **extra_input_kwargs         # 🔥 M/U 변환 서열 및 신규 파라미터 주입
     )
 
     if output.status != "success":
@@ -191,7 +197,7 @@ def design_manual_mspcr(
         "conversion_info": conversion_info, 
         "target_info": {
             "template_length": len(conversion_info["raw_sequence"]),
-            "target_range": f"{min(targets)}-{max(targets)}",
+            "target_range": f"{min(target_indices)}-{max(target_indices)}",
         },
         "results": results
     }
@@ -200,43 +206,40 @@ def design_manual_mspcr(
 # CLI 실행부 (argparse 적용)
 # =====================================================================
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MS-PCR Design Pipeline (Two-Step)")
+    parser = argparse.ArgumentParser(description="MS-PCR Design Pipeline (Two-Step with Brackets)")
     
     parser.add_argument("--step", type=int, choices=[1, 2], required=True, 
                         help="Step 1: Bisulfite Conversion only. Step 2: Full MS-PCR Design.")
     parser.add_argument("--name", type=str, default="MS-PCR_Manual_Target", help="Design Name / Project ID")
-    parser.add_argument("--seq", type=str, required=True, help="Raw sequence (5' -> 3')")
-    parser.add_argument("--cpgs", type=str, default="", help="Comma-separated 1-based indices of target CpGs (e.g., '24,58')")
+    parser.add_argument("--seq", type=str, required=True, help="Sequence with brackets, e.g., ATGC[CG]ATGC")
     parser.add_argument("--genome", type=str, default="hg38", help="Reference genome for BLAST")
-    parser.add_argument("-k", "--top_k", type=int, default=5, help="Number of candidate sets to return")
+    parser.add_argument("-k", "--top_k", type=int, default=10, help="Number of candidate sets to return")
+    parser.add_argument("--window", type=int, default=4, help="Allowed window size at the 3' end") # 🔥 CLI 인자 추가
+    parser.add_argument("--min_cpg", type=int, default=1, help="Minimum number of CpG sites required") # 🔥 CLI 인자 추가
     parser.add_argument("--base_config", type=str, default="pcr/config/base_pcr.yaml")
     parser.add_argument("--system_config", type=str, default="pcr/config/system.yaml")
 
     args = parser.parse_args()
 
-    # 타겟 CpG 인덱스 파싱
-    target_cpg_list = []
-    if args.cpgs:
-        try:
-            target_cpg_list = [int(x.strip()) for x in args.cpgs.split(",") if x.strip()]
-        except ValueError:
-            print(json.dumps({"status": "error", "reason": "Invalid --cpgs format. Please provide comma-separated integers."}))
-            sys.exit(1)
-
-    # 파이프라인 분기 처리
     if args.step == 1:
-        # Step 1: Conversion 시뮬레이션 결과만 JSON으로 반환
-        conversion_res = simulate_bisulfite_conversion(args.seq, target_cpg_list)
+        # Step 1: 파싱 후 Conversion 시뮬레이션 결과만 반환
+        clean_seq, target_indices = BasePrimerDesigner.parse_sequence_with_brackets(args.seq)
+        if not target_indices:
+            print(json.dumps({"status": "fail", "reason": "Missing brackets [] in sequence."}, indent=2))
+            sys.exit(1)
+            
+        conversion_res = simulate_bisulfite_conversion(clean_seq, target_indices)
         print(json.dumps({"status": "success", "step": 1, "conversion_info": conversion_res}, indent=2))
         
     elif args.step == 2:
-        # Step 2: 전체 프라이머 디자인 로직 수행
-        design_res = design_manual_mspcr(
+        # Step 2: 전체 프라이머 디자인
+        design_res = design_mspcr_primers(
             design_name=args.name,
-            raw_sequence=args.seq,
-            target_cpg_indices=target_cpg_list,
+            raw_sequence_with_brackets=args.seq,
             genome=args.genome,
             top_k=args.top_k,
+            window_size_3prime=args.window, # 🔥 전달
+            min_cpg_count=args.min_cpg,     # 🔥 전달
             base_yaml=args.base_config,
             system_yaml=args.system_config
         )

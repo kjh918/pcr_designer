@@ -19,6 +19,7 @@ class Amplicon(BaseModel):
     id: str = Field(..., description="Amplicon ID")
     forward: Primer
     reverse: Primer
+    set_id: Optional[str] = None
     probe: Optional[Probe] = None
         
     template_sequence: str = Field(..., description="전체 템플릿 서열 (Context 포함)")

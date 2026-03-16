@@ -1,8 +1,8 @@
 ---
-title: "MS qPCR Design"
+page-layout: custom
 resources:
-- "./app.js"
-- "./style.css"
+  - "./app.js"
+  - "./style.css"
 ---
 
 ```{=html}

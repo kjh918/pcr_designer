@@ -48,6 +48,35 @@ class BasePrimerDesigner(ABC):
         """
         pass
 
+    @staticmethod
+    def parse_sequence_with_brackets(raw_seq: str):
+        """
+        대괄호 표기법을 사용하여 순수 서열과 타겟 위치(1-based)를 반환합니다.
+        예: 'ATGC[CG]ATGC' (MS-PCR) -> 순수 서열, [5, 6] 반환
+        예: 'ATGC[A]TGC' (AS-PCR 변이) -> 순수 서열, [5] 반환
+        """
+        seq = raw_seq.replace(" ", "").replace("\n", "").upper()
+        clean_seq = ""
+        target_indices = []
+        
+        in_target = False
+        clean_idx = 0
+        
+        for char in seq:
+            if char == '[':
+                in_target = True
+            elif char == ']':
+                in_target = False
+            else:
+                # 🔥 'C' 검사 조건을 없애고, 괄호 안의 '모든' 염기 위치를 타겟으로 등록!
+                if in_target:
+                    target_indices.append(clean_idx + 1) 
+                
+                clean_seq += char
+                clean_idx += 1
+                
+        return clean_seq, target_indices
+    
     @abstractmethod
     def design(self) -> BaseDesignOutput:
         """메인 파이프라인. 서브클래스에서 반드시 구현."""

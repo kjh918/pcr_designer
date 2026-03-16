@@ -1,100 +1,73 @@
-<main class="main">
-<div class="panel">
-<div class="panel-title">DESIGN SUMMARY</div>
-<hr class="rule-light">
+<main class="main-content" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #f8f9fa;">
 
-<div class="panel" id="mspcr-conversion-panel" style="display: none; margin-top: 20px;">
-<div class="section-title">Bisulfite Conversion Results</div>
-<hr class="rule-light">
+<!-- 💡 Toggleable Quick Guide 박스 -->
+<details style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;">
+<summary style="padding: 12px 15px; margin: 0; color: #1e707a; font-weight: bold; font-size: 13px; cursor: pointer; outline: none; user-select: none;">
+💡 Quick Guide & Example (클릭해서 사용법 보기)
+</summary>
+<div style="padding: 0 15px 15px 20px; font-size: 13px; color: #333; line-height: 1.6; border-top: 1px dashed #b9dbe0; margin-top: 5px; padding-top: 10px;">
+<p style="margin-top: 0; margin-bottom: 10px;">
+MS-PCR 프라이머 디자인을 위해 <strong>분석할 핵심 CpG 사이트 하나를 대괄호 <code>[CG]</code>로 지정</strong>해야 합니다.
+</p>
+<ul style="margin: 0 0 12px 20px; padding: 0; color: #444;">
+<li>알고리즘이 지정된 <code>[CG]</code>를 타겟으로 M-Allele 및 U-Allele 템플릿을 생성합니다.</li>
+<li>도출된 모든 세트의 <strong>Forward Primer 3' 말단은 이 타겟에 고정(Anchoring)</strong>되어 강력한 특이성을 갖습니다.</li>
+<li>1개 세트당 M-Allele 쌍(빨간색)과 U-Allele 쌍(파란색)이 함께 도출됩니다.</li>
+</ul>
+<strong>올바른 입력 예시:</strong><br>
+<code style="background: #fff; padding: 6px 10px; border-radius: 3px; font-size: 12px; color: #d9534f; display: inline-block; margin-top: 6px; border: 1px solid #c5dcf1; word-break: break-all;">
+ACTGCTAGCTGATCGATCGATCGACTGAC<strong style="font-size:14px; color:#c9302c;">[CG]</strong>TCGATCGATCGACTGCATCGATCGATCGA...
+</code>
+</div>
+</details>
 
-<div class="grid-2" style="margin-bottom: 15px;">
+<!-- 1. STATUS & SUMMARY (상단 요약 바) -->
+<div style="background: white; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e0e0e0; margin-bottom: 20px;">
 <div>
-<div class="small-label">TOTAL CpG COUNT</div>
-<div style="font-weight:900; color:#0275d8;" id="mspcr-cpg-count">0</div>
-</div>
-<div>
-<div class="small-label">TARGET CpG COUNT</div>
-<div style="font-weight:900; color:#d9534f;" id="mspcr-target-count">0</div>
-</div>
-</div>
-
-<label class="small-label">METHYLATED TEMPLATE (M-Allele)</label>
-<div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">* Unmethylated C는 U(T)로 변환, 타겟 CpG의 C는 유지됩니다.</div>
-<pre id="mspcr-meth-view" class="alignment-pre" style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; border-radius: 4px;"></pre>
-
-<label class="small-label" style="margin-top: 15px;">UNMETHYLATED TEMPLATE (U-Allele)</label>
-<div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">* 모든 C가 U(T)로 변환됩니다.</div>
-<pre id="mspcr-unmeth-view" class="alignment-pre" style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; background: #fdfdfd; border: 1px solid #ccc; padding: 10px; border-radius: 4px;"></pre>
-
-<div style="margin-top: 20px;">
-<button class="btn btn-success" id="btn-proceed-design" style="width: 100%; padding: 10px; font-weight: bold;">
-Proceed to Primer Design (Step 2)
-</button>
-</div>
-</div>
-
-<div id="mspcr-step2-panel" style="display: none;">
-<div class="section-title">Step 2: MS-PCR Design Parameters</div>
-<hr class="rule-light">
-</div>
-<div class="grid-3">
-<div class="small-label">TARGET POSITION</div>
-<div style="font-weight:900;" id="summary-pos">-</div>
+<span style="font-size: 11px; font-weight: bold; color: #6c757d;">STATUS</span>
+<strong id="summary-status" style="margin-left: 8px; color: #2b384c;">WAITING</strong>
 </div>
 <div>
-<div class="small-label">DESIGN DATE</div>
-<div style="font-weight:900;" id="summary-date">-</div>
+<span style="font-size: 11px; font-weight: bold; color: #6c757d;">TARGET</span>
+<strong id="summary-mutation" style="margin-left: 8px; color: #d9534f;">-</strong>
 </div>
-</div>
-<div class="small-label">STATUS</div>
-<div style="font-weight:900;" id="summary-status">WAITING</div>
-</div>
-</div>
-</div>
-
-<div class="panel" id="stats-panel" style="display: none; margin-top: 20px; background-color: #f8f9fa;">
-<div class="panel-title" style="font-size: 13px; color: #555;">📊 DESIGN PIPELINE STATISTICS</div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="table-stats">
-<tbody id="stats-tbody">
-</tbody>
-</table>
+<div>
+<span style="font-size: 11px; font-weight: bold; color: #6c757d;">DESIGN DATE</span>
+<strong id="summary-date" style="margin-left: 8px;">-</strong>
 </div>
 </div>
 
-
-<div class="panel">
-<div class="panel-title">SEQUENCE ALIGNMENT (REF vs ALT)</div>
-<hr class="rule-light">
-<pre id="alignment-view" class="alignment-pre">Run the design to see sequence alignment.</pre>
+<!-- 2. METADATA & CONVERSION PANEL (결과 도출 시 JS가 여기에 채움) -->
+<div id="metadata-panel" style="display: none; margin-bottom: 20px;">
+<div id="metadata-table"></div>
 </div>
 
-<div class="panel">
-<div class="panel-title">CANDIDATE LIST</div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="table" id="result-table">
+<!-- 3. CANDIDATE LIST (프로브 싹 지우고 MS-PCR 테이블 규격에 맞춤) -->
+<div style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; margin-bottom: 20px; overflow: hidden;">
+<div style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-weight: bold; color: #333;">
+🧬 Candidate MS-PCR Sets
+</div>
+<div style="overflow-x: auto;">
+<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
 <thead>
-<tr>
-<th>Rank</th>
-<th>Forward Primer (5'→3')</th>
-<th>Reverse Primer (5'→3')</th>
-<th>Probe (5'→3')</th>
-<th>Tm F (°C)</th>
-<th>Tm R (°C)</th>
-<th>Tm P (°C)</th>
-<th>GC F (%)</th>
-<th>GC R (%)</th>
-<th>GC P (%)</th>
-<th>Size (bp)</th>
-<th>Genomic Position</th>
+<tr style="background: #e9ecef; color: #495057; border-bottom: 2px solid #dee2e6;">
+<th style="padding: 10px; text-align: center; width: 50px;">Rank</th>
+<th style="padding: 10px; text-align: center;">Allele</th>
+<th style="padding: 10px; text-align: left;">Forward Primer (5' → 3')</th>
+<th style="padding: 10px; text-align: left;">Reverse Primer (5' → 3')</th>
+<th style="padding: 10px; text-align: center;">Tm (F)</th>
+<th style="padding: 10px; text-align: center;">Tm (R)</th>
+<th style="padding: 10px; text-align: center;">GC% (F)</th>
+<th style="padding: 10px; text-align: center;">GC% (R)</th>
+<th style="padding: 10px; text-align: center;">Size</th>
+<th style="padding: 10px; text-align: center;">Penalty</th>
+<th style="padding: 10px; text-align: center;">QC</th>
 </tr>
 </thead>
 <tbody id="candidate-tbody">
 <tr>
-<td colspan="7" style="text-align:center; padding:40px; color:#999;">
-No candidates. Enter parameters and click 'Design Start'.
+<td colspan="10" style="text-align:center; padding:40px; color:#888;">
+No candidates. Enter parameters and click 'DESIGN START'.
 </td>
 </tr>
 </tbody>
@@ -102,13 +75,12 @@ No candidates. Enter parameters and click 'Design Start'.
 </div>
 </div>
 
-<div class="panel" id="metadata-panel" style="display: none; margin-top: 25px;">
-<div class="panel-title">DESIGN PARAMETERS & QC SUMMARY</div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="meta-full-table" id="metadata-table">
-</table>
+<!-- 4. SEQUENCE ALIGNMENT (M vs U) -->
+<div style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; margin-bottom: 20px;">
+<div style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-weight: bold; color: #333;">
+🔍 Sequence Alignment (M vs U)
 </div>
+<div style="padding: 15px; background: #2b2b2b; color: #a9b7c6; font-family: monospace; font-size: 12px; overflow-x: auto; white-space: pre; margin: 0;" id="alignment-view">Select a candidate set to view alignment...</div>
 </div>
 
 </main>

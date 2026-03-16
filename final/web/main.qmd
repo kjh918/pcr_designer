@@ -4,11 +4,16 @@ title: "GENCURIX PRIMER SUITE"
 
 ```{=html}
 <div class="welcome-section">
-<h1>Welcome to NGS-TEAM Suite</h1>
+<h1>Welcome to PrimerDesign Suite</h1>
 <p>분석 목적에 맞는 디자인 모듈을 선택해 주세요.</p>
 </div>
 
 <div class="card-container">
+<a href="qc/main.html" class="design-card">
+<div class="icon">🔍</div>
+<div class="card-title">QC</div>
+<p>Quality check pre-designed Primers</p>
+</a>
 <a href="manual/main.html" class="design-card">
 <div class="icon">📖</div>
 <div class="card-title">Manual</div>
@@ -25,7 +30,9 @@ title: "GENCURIX PRIMER SUITE"
 <p>Allele-Specific Primer Design</p>
 </a>
 <a href="ms_pcr/main.html" class="design-card">
-<div class="icon">🧬CH₃</div>
+<div class="icon">
+🧬<sup style="font-size: 0.5em; color: #0275d8; font-weight: bold; margin-left: -5px;">Me</sup>
+</div>
 <div class="card-title">MS-PCR</div>
 <p>Methylation-Specific Primer Design</p>
 </a>

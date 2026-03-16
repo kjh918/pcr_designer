@@ -209,7 +209,6 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
         num = res.get("PRIMER_PAIR_NUM_RETURNED", 0)
 
         amplicons = []
-        print(self.qc_stats )
         for i in range(num):
             fwd, rev, prb = Primer.from_primer3(res, i, "LEFT"), Primer.from_primer3(res, i, "RIGHT"), Probe.from_primer3(res, i)
             if fwd and rev and prb:
@@ -249,9 +248,6 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
                         ref_full=ref_seq, alt_full=alt_seq, 
                         fwd_seq=fwd.sequence, rev_seq=rev.sequence, prb_seq=prb.sequence
                     )
-                #print(alt_seq)
-                #print(ref_seq)
-                #exit()
                 amp = Amplicon(
                     id=f"{self.input.name}_P{probe_idx}_{i}",
                     forward=fwd, reverse=rev, probe=prb,

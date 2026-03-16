@@ -1,5 +1,5 @@
 ---
-title: "Manual qPCR Design"
+page-layout: custom
 resources:
 - "./manual_app.js"
 - "./manual_style.css"

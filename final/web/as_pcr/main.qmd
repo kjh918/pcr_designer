@@ -1,5 +1,5 @@
 ---
-title: "AS-PCR Design"
+page-layout: custom
 resources:
   - "app.js"
   - "style.css"

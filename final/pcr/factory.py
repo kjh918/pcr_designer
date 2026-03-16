@@ -146,7 +146,6 @@ class PCRFactory:
         output = designer.design()
         if output.status != "success" or not output.amplicons:
             return output
-            
         initial_count = len(output.amplicons)
 
         # 5. QC 실행
@@ -163,7 +162,6 @@ class PCRFactory:
             if qc_stats:
                 for reason, count in qc_stats.items():
                     print(f"   => Failed due to '{reason}': {count}")
-            
             output.log_messages.append(f"QC Passed: {len(qc_passed_amplicons)} / {initial_count}")
             if qc_stats:
                 output.log_messages.append(f"QC Fail Reasons: {qc_stats}")
@@ -174,7 +172,7 @@ class PCRFactory:
             
         # 6. Ranking (🔥 AS-PCR 모드 우회 처리 추가)
         if qc_passed_amplicons:
-            if assay_type == "aspcr":
+            if assay_type in ["aspcr","mspcr"]:
                 output.amplicons = qc_passed_amplicons
                 output.log_messages.append(f"AS-PCR Mode: Bypassed Probe Ranker. Total {len(qc_passed_amplicons)} amplicons kept.")
             else:
