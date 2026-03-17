@@ -1,47 +1,44 @@
 <div style="margin-bottom:15px;">
-<label class="small-label">DESIGN NAME (PROJECT ID)</label>
-<input type="text" class="input-tight" id="mspcr-design-name" placeholder="e.g. MGMT_Promoter_Methylation">
+<label class="small-label">PROJECT NAME (ID)</label>
+<input type="text" class="input-tight" id="qc-project-name" style="width:100%;" placeholder="e.g. KRAS_Mutation_QC">
 </div>
 
-<label class="small-label">RAW SEQUENCE (5' -> 3')</label>
-<textarea id="mspcr-raw-sequence" class="input-tight" style="width:100%; height:120px; font-family:monospace; text-transform:uppercase;" placeholder="서열및 메틸화 CpG Site를 입력하세요.\n e.g ATCGCGGGACGAGCGAGACAGAGGGAC[CG]CAAAACATTTAAGAGAGCACACA"></textarea>
+<!-- 1. SEQUENCE INPUTS -->
+<div class="panel-title" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+<span>1. INPUT SEQUENCES</span>
+<button id="btn-clear-seqs" style="font-size: 11px; padding: 2px 2px; cursor: pointer; background: #f8f9fa; border: 1px solid #ccc; border-radius: 3px; font-family: 'Nunito', sans-serif;">초기화</button>
+</div>
+<hr class="rule-light">
 
-
-<details class="custom-accordion">
-<summary>PRIMER OPTIONS</summary>
-<div class="accordion-content">
-
-<label class="small-label">AMPLICON SIZE (MIN / MAX)</label>
-<div class="grid-2" style="margin-bottom:12px;">
-<input type="number" class="input-tight" id="min_amplicon_length" value="80">
-<input type="number" class="input-tight" id="max_amplicon_length" value="200">
+<!-- 🔥 Quick Paste (스마트 붙여넣기) 영역 추가 -->
+<div style="background-color: #f1f8ff; padding: 12px; border-radius: 6px; border: 1px dashed #b8d4f1; margin-bottom: 20px;">
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 12px; color: #0275d8; margin-top: 0;">💡 Quick Paste (엑셀 복붙 지원)</label>
+<textarea id="qc-quick-paste" class="input-tight" style="width:100%; height:45px; font-family: 'Nunito', sans-serif; font-size: 12px; resize: none; border-color: #b8d4f1;" placeholder="엑셀의 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사해서 여기에 붙여넣으면 아래 칸들에 자동 분류됩니다."></textarea>
 </div>
 
-<label class="small-label">LENGTH (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<input type="number" class="input-tight" id="primer_min_length" value="15">
-<input type="number" class="input-tight" id="primer_opt_length" value="18">
-<input type="number" class="input-tight" id="primer_max_length" value="25">
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer (5' -> 3') <span style="color:red;">*</span></label>
+<input type="text" id="qc-forward-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 10px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. ATGCGTACGTAGCTAGCTA">
+
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer (5' -> 3') <span style="color:red;">*</span></label>
+<input type="text" id="qc-reverse-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 10px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. CGATCGATCGTACGTACG">
+
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe (5' -> 3') <span style="color:#888; font-weight: normal;">(Optional)</span></label>
+<input type="text" id="qc-probe-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 10px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. FAM-AGCTAGCTAGCTAG-BHQ1">
+
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Template Sequence <span style="color:#888; font-weight: normal;">(Optional, Amplicon Size 확인용)</span></label>
+<textarea id="qc-template-seq" class="input-tight seq-input" style="width:100%; height:80px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="원본 타겟 서열을 입력하면 정확한 Amplicon Size를 계산합니다."></textarea>
+
+<!-- 2. REFERENCE GENOME -->
+<div style="margin-bottom:15px; margin-top:15px;">
+<label class="small-label">REFERENCE GENOME</label>
+<select id="qc-ref-genome" class="input-tight" style="width:100%;">
+<option value="hg38">Human (hg38) - Run BLAST</option>
+<option value="none" selected>None - Skip BLAST (Thermodynamics Only)</option>
+</select>
+<small style="color: #666; font-size: 0.8em;">* 'None' 선택 시 비특이 결합 체크를 생략하고 2차 구조만 검사합니다.</small>
 </div>
 
-<label class="small-label">TM (MIN / OPT / MAX)</label>
-<div class="grid-3" style="margin-bottom:12px;">
-<input type="number" class="input-tight" id="primer_min_tm" value="50" step="0.1">
-<input type="number" class="input-tight" id="primer_opt_tm" value="55" step="0.1">
-<input type="number" class="input-tight" id="primer_max_tm" value="60" step="0.1">
-</div>
-
-<label class="small-label">GC% (MIN / OPT / MAX)</label>
-<div class="grid-3">
-<input type="number" class="input-tight" id="primer_min_gc" value="45">
-<input type="number" class="input-tight" id="primer_opt_gc" value="50">
-<input type="number" class="input-tight" id="primer_max_gc" value="65">
-</div>
-
-</div>
-</details>
-
-
+<!-- 3. QC & SPECIFICITY OPTIONS -->
 <details class="custom-accordion">
 <summary>QC & SPECIFICITY OPTIONS</summary>
 <div class="accordion-content">
@@ -87,6 +84,13 @@
 <div>
 <span style="font-size:0.8em; color:#666;">Max Size</span>
 <input type="number" class="input-tight" id="qc_max_amp_size" value="300">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Use In-Silico PCR</span>
+<select class="input-tight" id="qc_use_ispcr_check">
+    <option value="false" selected>False</option>
+    <option value="true">True</option>
+</select>
 </div>
 </div>
 

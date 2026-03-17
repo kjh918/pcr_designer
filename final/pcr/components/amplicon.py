@@ -57,6 +57,7 @@ class Amplicon(BaseModel):
     product_size: int = 0
     tm: float = 0.0
     gc: float = 0.0
+    cpg_count: int = 0
     region: Optional[GenomicRegion] = None
     genomic_pos: str = ""       # Amplicon 게놈 좌표 (chr:start-end)
     alignment_visual: List[str] = Field(default_factory=list, description="웹 UI 렌더링용 Alignment 다이어그램")    
@@ -91,7 +92,10 @@ class Amplicon(BaseModel):
                     self.tm = primer3.calc_tm(self.sequence, mv_conc=50, dv_conc=1.5, dntp_conc=0.6, dna_conc=50)
                     g_count = self.sequence.upper().count('G')
                     c_count = self.sequence.upper().count('C')
+                    cpg_count = self.sequence.upper().count('CG')
                     self.gc = round(((g_count + c_count) / len(self.sequence)) * 100, 2)
+                    self.cpg_count = cpg_count
+
                 except Exception:
                     self.tm = 0.0
                     self.gc = 0.0

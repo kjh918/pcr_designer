@@ -15,12 +15,11 @@ const state = {
   lastPayload: null,   // 마지막 실행 payload
 };
 
-const STORAGE_PREFIX = "qpcr_";
+const STORAGE_PREFIX = "manual_";
 
 const TRACKED_INPUTS = [
   // Basic
-  "input-ref-genome", "input-chrom", "input-start", "input-end",
-  "input-ref-base", "input-alt-base", "input-strand",
+  "design_name", "raw_sequence", "input-target_start", "target_end", "reference",
 
   // Amplicon
   "min_amplicon_length", "max_amplicon_length",
@@ -46,14 +45,28 @@ const TRACKED_INPUTS = [
 ];
 
 // API endpoint (필요하면 환경에 맞게 바꾸기)
-const API_URL = "http://192.168.0.35:9000/api/design/qpcr";
+const API_URL = "http://192.168.0.35:9000/api/design/manual/qpcr";
 
 /* -----------------------------
    1) Utils (DOM / format / read)
 ------------------------------ */
 
 const $ = (sel) => document.querySelector(sel);
+// manual_app.js에 이 함수를 추가하세요!
 
+function validatePayload(p) {
+    // 1. 서열 입력 확인
+    if (!p.raw_sequence || p.raw_sequence.length < 20) {
+        return "Please enter a valid DNA sequence (at least 20bp).";
+    }
+    
+    // 2. 타겟 좌표 확인
+    if (isNaN(p.target_start) || isNaN(p.target_end)) {
+        return "Target Start and End must be numbers.";
+    }
+    
+    return null; // 에러가 없으면 null 반환
+}
 function byId(id) {
   return document.getElementById(id);
 }
@@ -141,14 +154,13 @@ function restoreInputsFromStorage() {
 
 function buildPayload() {
   return {
-    // Basic
+    // Basice 
+    design_name: document.getElementById("input-design-name").value,
+    //raw_sequence: document.getElementById("manual-sequence").value,
+    raw_sequence: document.getElementById("manual-sequence").value.replace(/\s/g, "").toUpperCase(),
+    target_start: parseInt(document.getElementById("manual-target-start").value) || 0,
+    target_end: parseInt(document.getElementById("manual-target-end").value) || 0,
     reference: getVal("input-ref-genome", "string", "hg38"),
-    chrom: getVal("input-chrom", "string", "").trim(),
-    start: getVal("input-start", "int"),
-    end: getVal("input-end", "int"),
-    ref: getVal("input-ref-base", "string", "G").toUpperCase(),
-    alt: getVal("input-alt-base", "string", "A").toUpperCase(),
-    strand: getVal("input-strand", "string", "+"),
     top_k: 5,
 
     // Amplicon
@@ -205,13 +217,6 @@ function buildPayload() {
     qc_probe_max_poly_g: getVal("probe_max_poly_g", "int", 3),
     qc_probe_max_3_end_gc: getVal("probe_max_3_end_gc", "int", 2),
   };
-}
-
-function validatePayload(p) {
-  if (!p.chrom || !Number.isFinite(p.start)) {
-    return "Please fill in Chromosome and Position.";
-  }
-  return null;
 }
 
 /* -----------------------------
@@ -280,7 +285,6 @@ function renderMetadata(results, payload) {
     <div class="meta-report-grid">
       <div class="meta-card">
         <div class="card-header">📍 TARGET & AMPLICON</div>
-        <div class="card-item"><span>Reference</span> <b>${payload.reference}</b></div>
         <div class="card-item"><span>Mutation</span> <b class="text-danger">${payload.ref} > ${payload.alt}</b></div>
         <div class="card-item"><span>Amp Size</span> <b>${payload.min_amplicon_length}-${payload.max_amplicon_length} bp</b></div>
         <div class="card-item"><span>Filtered</span> <b>${filtered}</b> / <b>${total}</b> <span style="opacity:.7">(rejected ${rejected})</span></div>
@@ -321,11 +325,8 @@ function renderSummary(payload, results) {
   const now = new Date();
   const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  setText("summary-chrom", payload.chrom);
-  setText("summary-pos", `${payload.start} - ${payload.end}`);
   setText("summary-date", dateStr);
-  setText("summary-reference", payload.reference);
-  setText("summary-mutation", `${payload.ref} > ${payload.alt}`);
+  setText("summary-mutation", `${payload.ref}`);
 
   if (results?.status === "success") setStatus("COMPLETED", "green");
   else if (results?.status) setStatus("FAILED", "red");
@@ -493,5 +494,5 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("btn-export-json")?.addEventListener("click", exportJSON);
   byId("btn-export-html")?.addEventListener("click", exportHTML);
 
-  console.log("✅ qPCR app ready.");
+  console.log("✅ Manual qPCR app ready.");
 });

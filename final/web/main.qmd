@@ -15,11 +15,6 @@ title: "GENCURIX PRIMER SUITE"
 <p>Quality check pre-designed Primers</p>
 </a>
 <a href="manual/main.html" class="design-card">
-<div class="icon">📖</div>
-<div class="card-title">Manual</div>
-<p>User Guide & Pipeline Manual</p>
-</a>
-<a href="qpcr/main.html" class="design-card">
 <div class="icon">🧬</div>
 <div class="card-title">qPCR</div>
 <p>TaqMan Probe & Primer Design</p>

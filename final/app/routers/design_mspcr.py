@@ -140,7 +140,6 @@ async def design_mspcr_api(req: MspcrRequest):
             system_yaml=SYSTEM_YAML_PATH,
             qc_overrides=qc_overrides_dict
         )
-        
         # Step 7: 결과 데이터 포맷팅
         if raw_result.get("status") == "success":
             formatted_sets = raw_result.get("results", [])

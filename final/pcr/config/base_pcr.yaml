@@ -71,18 +71,22 @@ assay_overrides:
         avoid_5_prime_g: true
         max_probe_poly_g: 3
 
-  as_pcr:
+  aspcr:
     pcr_params:
       primer_kwargs:
         min_amplicon_length: 50
         max_amplicon_length: 200
       probe_kwargs: null   # AS-PCR은 probe 없음
 
-  ms_pcr:
+  mspcr:
     pcr_params:
       primer_kwargs:
-        min_gc: 20.0
-        max_gc: 55.0
+        opt_length: 25
+        min_length: 20
+        max_length: 30
+        min_gc: 10.0
+        opt_gc: 25.0
+        max_gc: 60.0
         opt_tm: 55.0
         min_tm: 50.0
         max_tm: 60.0

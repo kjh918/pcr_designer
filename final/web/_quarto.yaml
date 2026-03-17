@@ -11,8 +11,6 @@ website:
       - href: qc/main.qmd
         text: "QC"
       - href: manual/main.qmd
-        text: "Manual qPCR"
-      - href: qpcr/main.qmd
         text: "qPCR"
       - href: as_pcr/main.qmd
         text: "AS-PCR"

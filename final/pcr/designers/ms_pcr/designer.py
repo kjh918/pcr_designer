@@ -1,8 +1,9 @@
 """
 pcr/designers/ms_pcr/designer.py
 MS-PCR 전용 디자이너 클래스.
-M-Allele과 U-Allele 모두 타겟 CpG가 Forward 프라이머의 3' 말단(끝에서 3bp 이내)에 
-위치하도록 강제한 후, 가장 물리적 위치가 일치하고 열역학적 점수가 좋은 M과 U를 묶어 세트로 구성합니다.
+M-Allele은 타겟 CpG에 Forward 프라이머의 3' 말단을 정확히 고정하고, 
+U-Allele은 타겟 CpG가 Forward 프라이머의 3' 말단(default 3bp 이내)에 위치하도록 강제한 후, 
+가장 물리적 위치가 일치하고 열역학적 점수가 좋은 M과 U를 묶어 세트로 구성합니다.
 """
 import copy
 from typing import Dict, Any, List
@@ -33,11 +34,12 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
         if hasattr(self.config.pcr_params, "probe_kwargs"):
             self.config.pcr_params.probe_kwargs = None
 
-    def _run_engine_for_allele(self, allele_type: str, seq: str, cpg_idx: int, window_size: int = 4) -> List[Dict[str, Any]]:
+    def _run_engine_for_allele(self, allele_type: str, seq: str, cpg_idx: int, window_size: int = 1) -> List[Dict[str, Any]]:
         """
         Allele(M 또는 U)에 대해 프라이머를 탐색합니다.
         조건: Forward 프라이머의 3' 말단에서 최대 `window_size` 염기 이내에 타겟 CpG가 존재해야 합니다.
-        (예: window_size=4 이면, 끝에서 0번째, 1번째, 2번째, 3번째 자리 중 하나에 타겟이 오도록 강제)
+        - M의 경우 window_size=1로 고정하여 말단을 정확히 일치시킵니다.
+        - U의 경우 window_size=3 등으로 여유를 주어 말단 근처에 타겟이 포함되도록 합니다.
         """
         local_seq_args = copy.deepcopy(self.seq_args)
         local_global_args = copy.deepcopy(self.global_args)
@@ -47,7 +49,7 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
             local_seq_args.pop(key, None)
 
         primer_kw = self.config.pcr_params.primer_kwargs
-        n_primers = int(getattr(primer_kw, "n_candidates", 50))
+        n_primers = int(getattr(primer_kw, "n_candidates", 30))
         
         local_global_args.update({
             "PRIMER_PICK_LEFT_PRIMER": 1, 
@@ -60,7 +62,6 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
         candidates = []
         
         # 3' 말단을 타겟 위치(cpg_idx)부터 cpg_idx + window_size - 1 까지 이동하며 탐색
-        # [cpg_idx, cpg_idx + 3] 범위를 모두 커버합니다.
         for shift in range(window_size):
             end_pos = cpg_idx + shift
             if end_pos >= len(seq): break
@@ -71,7 +72,6 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
             try:
                 res = primer3.bindings.design_primers(local_seq_args, local_global_args)
                 num_ret = res.get('PRIMER_PAIR_NUM_RETURNED', 0)
-                
                 for i in range(num_ret):
                     fwd = Primer.from_primer3(res, i, "LEFT")
                     rev = Primer.from_primer3(res, i, "RIGHT")
@@ -142,13 +142,15 @@ class MSPCRPrimerDesigner(BasePrimerDesigner):
         chrom = self.input.reference_name
         offset = getattr(self.input, "template_genomic_start", 0)
 
-        # 3' 말단 윈도우 사이즈 설정 (타겟이 3' 끝에서부터 3bp 이내, 즉 [cpg_idx, cpg_idx + 3] 범위에 오도록 4로 설정)
-        window_size = 4
+        # U-Allele을 위한 3' 말단 윈도우 사이즈 설정 (API 입력이 없으면 기본 3으로 설정)
+        u_window_size = getattr(self.input, "window_size_3prime", 3)
 
         # Step 1: M과 U에 대해 독립적으로 최적의 후보군 탐색
-        m_candidates = self._run_engine_for_allele("M", self.templates["M"], cpg_idx, window_size)
-        u_candidates = self._run_engine_for_allele("U", self.templates["U"], cpg_idx, window_size)
-
+        # 🔥 M은 윈도우를 1로 고정하여 3' 말단에 정확히 일치시킴
+        m_candidates = self._run_engine_for_allele("M", self.templates["M"], cpg_idx, window_size=1)
+        # 🔥 U는 지정된 윈도우 사이즈(기본 3)만큼 탐색
+        u_candidates = self._run_engine_for_allele("U", self.templates["U"], cpg_idx, window_size=u_window_size)
+        print(u_candidates)
         if not m_candidates or not u_candidates:
             error_msg = f"Failed to design primers. Found M: {len(m_candidates)}, U: {len(u_candidates)}. Try relaxing GC/Tm constraints."
             return BaseDesignOutput(status="fail", error_msg=error_msg, amplicons=[])

@@ -65,7 +65,7 @@ def design_mspcr_primers(
     raw_sequence_with_brackets: str, # 🔥 숫자 인덱스 대신 대괄호 포함 서열
     genome: str = "hg38",
     top_k: int = 5,
-    window_size_3prime: int = 4,     # 🔥 [NEW] 3' 말단 윈도우 사이즈 파라미터 추가
+    window_size_3prime: int = 3,     # 🔥 [NEW] 3' 말단 윈도우 사이즈 파라미터 추가
     min_cpg_count: int = 1,          # 🔥 [NEW] 프라이머 내 최소 CpG 개수 파라미터 추가
     base_yaml: str = "pcr/config/base_pcr.yaml",
     system_yaml: str = "pcr/config/system.yaml",
@@ -167,7 +167,8 @@ def design_mspcr_primers(
                 "amplicon_info": {
                     "sequence": amp.sequence if hasattr(amp, "sequence") else "-",
                     "tm": round(amp.tm, 2) if hasattr(amp, "tm") else 0, 
-                    "gc": round(getattr(amp, "gc_percent", 0), 2)
+                    "gc": round(getattr(amp, "gc", 0), 2),
+                    "cpg_count": round(getattr(amp, "cpg_count", 0), 2)
                 },
                 "oligos": {
                     "forward": {
@@ -216,6 +217,7 @@ if __name__ == "__main__":
     parser.add_argument("-k", "--top_k", type=int, default=10, help="Number of candidate sets to return")
     parser.add_argument("--window", type=int, default=4, help="Allowed window size at the 3' end") # 🔥 CLI 인자 추가
     parser.add_argument("--min_cpg", type=int, default=1, help="Minimum number of CpG sites required") # 🔥 CLI 인자 추가
+    parser.add_argument("--max_diff_tm", type=int, default=5, help="Minimum diff amplicon temperature") # 🔥 CLI 인자 추가
     parser.add_argument("--base_config", type=str, default="pcr/config/base_pcr.yaml")
     parser.add_argument("--system_config", type=str, default="pcr/config/system.yaml")
 

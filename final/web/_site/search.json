@@ -1,0 +1,30 @@
+[
+  {
+    "objectID": "qc/main.html",
+    "href": "qc/main.html",
+    "title": "",
+    "section": "",
+    "text": "💡 Quick Guide\n\n\n타겟 서열을 입력하고 메틸화를 분석할 핵심 CpG를 대괄호 [CG]로 감싸주세요. 예시: ATGCATGC[CG]ATGCAT\n\n\n\n\n\nDESIGN SUMMARY\n\n\n\n\nBisulfite Conversion Results\n\n\n\n\n\nTOTAL CpG COUNT\n\n\n0\n\n\n\n\nTARGET CpG COUNT\n\n\n0\n\n\n\nMETHYLATED TEMPLATE (M-Allele)\n\n\nUnmethylated C는 U(T)로 변환, 타겟 CpG의 C는 유지됩니다.\n\n\n\nUNMETHYLATED TEMPLATE (U-Allele)\n\n\n모든 C가 U(T)로 변환됩니다.\n\n\n\n\n\nProceed to Primer Design (Step 2)\n\n\n\n\n\nStep 2: MS-PCR Design Parameters\n\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING"
+  },
+  {
+    "objectID": "as_pcr/main.html",
+    "href": "as_pcr/main.html",
+    "title": "",
+    "section": "",
+    "text": "⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\nDESIGN SUMMARY (AS-PCR)\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (Mismatch Visualization)\n\n\n\n\n\n\nAS-PCR CANDIDATE SETS\n\n\n\n\n\n\n\nRank\n\n\nSet ID\n\n\nAllele\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nTm (F/R) °C\n\n\nGC (F/R) %\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
+  },
+  {
+    "objectID": "main.html",
+    "href": "main.html",
+    "title": "GENCURIX PRIMER SUITE",
+    "section": "",
+    "text": "Welcome to PrimerDesign Suite\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n🔍\nQC\nQuality check pre-designed Primers\n\n\n🧬\nqPCR\nTaqMan Probe & Primer Design\n\n\n🎯\nAS-PCR\nAllele-Specific Primer Design\n\n\n\n🧬Me\n\nMS-PCR\nMethylation-Specific Primer Design"
+  },
+  {
+    "objectID": "manual/main.html",
+    "href": "manual/main.html",
+    "title": "",
+    "section": "",
+    "text": "DESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nTm F (°C)\n\n\nTm R (°C)\n\n\nTm P (°C)\n\n\nGC F (%)\n\n\nGC R (%)\n\n\nGC P (%)\n\n\nSize (bp)\n\n\nGenomic Position\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
+  }
+]
