@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from pcr.config.schema.pcr import PCRParams, PrimerKwargs, ProbeKwargs
-from scripts.design_qc import design_qc_primers 
+from scripts.design_qc import evaluate_qc_pipeline 
 
 # 🔹 라우터 객체 생성
 router = APIRouter(

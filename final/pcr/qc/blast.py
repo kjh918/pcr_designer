@@ -1,7 +1,7 @@
 """
 pcr/qc/blast.py
 NCBI BLAST+ 기반 특이성(Off-target) 검증 도구
-(자체 In-silico PCR 좌표 계산 로직 포함)
+(자체 In-silico PCR 좌표 계산 로직 및 Unified Amplicon Alignment 포함)
 """
 import subprocess
 import tempfile
@@ -151,31 +151,20 @@ class BlastSpecificityChecker:
         return grouped
 
     def _find_amplicons(self, f_hits: List[BlastHit], r_hits: List[BlastHit]) -> List[OffTargetAmplicon]:
-        """
-        🔥 [스마트 클러스터링]
-        가닥(Strand) 방향을 먼저 픽스하지 않고, 거리가 가까우면 무조건 앰플리콘 후보로 묶어줍니다.
-        나중에 방향성(Orientation)을 검증하여 사용자에게 친절한 에러를 제공합니다.
-        """
         amplicons = []
         for fh in f_hits:
             for rh in r_hits:
                 if fh.sseqid != rh.sseqid: continue
                 
-                # 단순히 거리가 가까운 것들을 모두 추출
                 start = min(fh.genomic_start, rh.genomic_start)
                 end = max(fh.genomic_end, rh.genomic_end)
                 size = end - start
                 
                 if size <= max(5000, getattr(self.criteria, "max_amp_size", 300)):
                     amplicons.append(OffTargetAmplicon(
-                        chrom=fh.sseqid, 
-                        start=start, 
-                        end=end, 
-                        product_size=size, 
-                        fwd_hit=fh, 
-                        rev_hit=rh,
-                        is_target=False,
-                        probe_binds=False
+                        chrom=fh.sseqid, start=start, end=end, 
+                        product_size=size, fwd_hit=fh, rev_hit=rh,
+                        is_target=False, probe_binds=False
                     ))
         return amplicons
 
@@ -195,7 +184,6 @@ class BlastSpecificityChecker:
         target_found = False
 
         for cand in candidates:
-            # 1. 방향성(Orientation) 판별: 마주보고 있는가(Convergent)?
             is_convergent = False
             is_same_strand = (cand.fwd_hit.strand == cand.rev_hit.strand)
             
@@ -206,7 +194,6 @@ class BlastSpecificityChecker:
                 if cand.rev_hit.genomic_start <= cand.fwd_hit.genomic_end:
                     is_convergent = True
 
-            # 2. 프라이머 결합 검증
             f_cov = cand.fwd_hit.length / f_len
             f_3end = (cand.fwd_hit.qend >= f_len - tolerance)
             f_valid = (f_cov >= min_cov) and f_3end and (cand.fwd_hit.pident >= min_id)
@@ -218,35 +205,29 @@ class BlastSpecificityChecker:
             if not (f_valid and r_valid):
                 continue
                 
-            # 3. 프로브 결합 여부 (프로브가 없으면 True 간주)
             cand.probe_binds = self._check_probe_binding(cand, p_hits) if has_probe else True
             
-            # 4. 진짜 타겟 식별
             if not target_found and cand.probe_binds:
                 cand.is_target = True
                 target_found = True
             
             binding_report = self._create_binding_report(cand, amplicon, p_hits if has_probe and cand.probe_binds else [])
             
-            # 에러 마킹
             if not (self.criteria.min_amp_size <= cand.product_size <= self.criteria.max_amp_size):
                 binding_report["size_error"] = True
             if not is_convergent:
                 binding_report["orientation_error"] = True
                 binding_report["is_same_strand"] = is_same_strand
 
-            # 5. 신호 분류
             if cand.is_target:
                 target_signals.append(binding_report)
             else:
-                # 🔥 오프타겟의 경우 PCR 증폭이 실제로 가능한(Convergent) 형태일 때만 기록 (노이즈 방지)
                 if is_convergent:
                     if cand.probe_binds:
                         off_target_signals.append(binding_report)
                     else:
                         amplification_only.append(binding_report)
 
-        # 6. 최종 QC 판정 로직
         is_passed = True
         reason = ""
         
@@ -257,7 +238,6 @@ class BlastSpecificityChecker:
             is_passed = False
             reason = f"Failed: Off-target detected ({len(off_target_signals)} probe-binds, {len(amplification_only)} amp-only)."
         else:
-            # 타겟은 1개인데 결함(방향 또는 사이즈)이 있는 경우 친절하게 에러 반환
             target_report = target_signals[0]
             if target_report.get("orientation_error"):
                 is_passed = False
@@ -276,52 +256,12 @@ class BlastSpecificityChecker:
             "amplification_only": amplification_only, "total_signal_count": len(target_signals) + len(off_target_signals)
         }
 
-    def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit]) -> Dict[str, Any]:
-        # BlastHit 객체 자체를 넘겨서 게놈 좌표 및 방향성 등의 상세 정보를 추출하게 함
-        f_report = self._generate_alignment_block("Forward Primer", cand.fwd_hit)
-        r_report = self._generate_alignment_block("Reverse Primer", cand.rev_hit)
-        
-        p_report = None
-        target_p_hit = next((ph for ph in p_hits if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end), None)
-        if target_p_hit:
-            p_report = self._generate_alignment_block("TaqMan Probe", target_p_hit)
+    def _rc(self, seq: str) -> str:
+        """역상보 서열 생성 유틸"""
+        return seq.translate(str.maketrans('ATGCatgcNn', 'TACGtacgNn'))[::-1]
 
-        ref_seq = self._fetch_sequence_from_genome(cand.chrom, cand.start - 1, cand.end)
-
-        return {
-            "location": f"{cand.chrom}:{cand.start}-{cand.end}",
-            "product_size": cand.product_size, 
-            "is_target": cand.is_target, 
-            "fwd": f_report, "rev": r_report, "probe": p_report,
-            "full_sequence": ref_seq
-        }
-
-    def _generate_alignment_block(self, name: str, hit: BlastHit) -> Dict[str, Any]:
-        """미스매치 시각화 및 실제 게놈 좌표 상세 정보를 포함하는 딕셔너리 생성"""
-        query_seq = hit.qseq
-        subject_seq = hit.sseq
-        match_line = "".join("|" if q == s else " " if q == "-" or s == "-" else "." for q, s in zip(query_seq, subject_seq))
-        
-        return {
-            "label": name, 
-            "query": query_seq, 
-            "match": match_line,
-            "subject": subject_seq, 
-            "identity": f"{hit.pident}%",
-            "chrom": hit.sseqid,
-            "strand": hit.strand,
-            "genomic_start": hit.genomic_start,
-            "genomic_end": hit.genomic_end,
-            "coordinate": f"{hit.sseqid}:{hit.genomic_start}-{hit.genomic_end} ({hit.strand})"
-        }
-
-    def _check_probe_binding(self, cand: OffTargetAmplicon, p_hits: List[BlastHit]) -> bool:
-        for ph in p_hits:
-            if ph.sseqid != cand.chrom: continue
-            if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end: return True
-        return False
-        
     def _fetch_sequence_from_genome(self, chrom: str, start: int, end: int) -> str:
+        """FASTA로부터 서열을 가져옵니다."""
         if not self.ref_fasta: return ""
         try:
             return self.ref_fasta.fetch(chrom, start, end).upper()
@@ -329,3 +269,135 @@ class BlastSpecificityChecker:
             alt = chrom.replace("chr", "") if "chr" in chrom else f"chr{chrom}"
             try: return self.ref_fasta.fetch(alt, start, end).upper()
             except: return ""
+
+    def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit]) -> Dict[str, Any]:
+        """
+        사용자 요청에 맞춘 완벽한 형태의 Unified Alignment Block을 구성합니다.
+        기존 스크립트와의 호환성을 위해 "query", "match", "subject" 속성도 개별 딕셔너리에 추가합니다.
+        """
+        fwd_seq = amplicon.forward.sequence
+        rev_seq = amplicon.reverse.sequence
+        prb_seq = amplicon.probe.sequence if amplicon.probe else ""
+
+        def get_bounds(hit, seq):
+            if hit.strand == "+":
+                return hit.genomic_start - (hit.qstart - 1), hit.genomic_end + (len(seq) - hit.qend)
+            else:
+                return hit.genomic_start - (len(seq) - hit.qend), hit.genomic_end + (hit.qstart - 1)
+
+        f_gstart, f_gend = get_bounds(cand.fwd_hit, fwd_seq)
+        r_gstart, r_gend = get_bounds(cand.rev_hit, rev_seq)
+
+        amp_gstart = min(f_gstart, r_gstart)
+        amp_gend = max(f_gend, r_gend)
+
+        target_p_hit = next((ph for ph in p_hits if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end), None)
+        if target_p_hit and prb_seq:
+            p_gstart, p_gend = get_bounds(target_p_hit, prb_seq)
+            amp_gstart = min(amp_gstart, p_gstart)
+            amp_gend = max(amp_gend, p_gend)
+
+        full_ref_seq = self._fetch_sequence_from_genome(cand.chrom, amp_gstart - 1, amp_gend)
+        if not full_ref_seq:
+            full_ref_seq = "N" * (amp_gend - amp_gstart + 1)
+        elif len(full_ref_seq) < (amp_gend - amp_gstart + 1):
+            full_ref_seq = full_ref_seq.ljust((amp_gend - amp_gstart + 1), 'N')
+
+        overall_match = [" "] * len(full_ref_seq)
+
+        def format_oligo(hit, seq):
+            h_gstart, _ = get_bounds(hit, seq)
+            offset = h_gstart - amp_gstart
+            
+            aligned_seq = seq.upper() if hit.strand == "+" else self._rc(seq.upper())
+            
+            if hit.strand == "+":
+                pad_left = hit.qstart - 1
+                pad_right = len(seq) - hit.qend
+            else:
+                pad_left = len(seq) - hit.qend
+                pad_right = hit.qstart - 1
+
+            formatted_input = ""
+            for i in range(len(aligned_seq)):
+                is_overhang = (i < pad_left) or (i >= len(seq) - pad_right)
+                ref_idx = offset + i
+                
+                if 0 <= ref_idx < len(full_ref_seq):
+                    ref_base = full_ref_seq[ref_idx]
+                    if aligned_seq[i].upper() == ref_base.upper() and ref_base.upper() != 'N':
+                        formatted_input += aligned_seq[i].upper()
+                        if not is_overhang:
+                            overall_match[ref_idx] = "|"
+                        else:
+                            formatted_input = formatted_input[:-1] + aligned_seq[i].lower()
+                            overall_match[ref_idx] = "."
+                    else:
+                        formatted_input += aligned_seq[i].lower()
+                        overall_match[ref_idx] = "."
+                else:
+                    formatted_input += aligned_seq[i].lower()
+
+            input_line = (" " * offset) + formatted_input
+            blast_line = (" " * (offset + pad_left)) + hit.qseq
+            
+            return input_line, blast_line
+
+        f_input, f_blast = format_oligo(cand.fwd_hit, fwd_seq)
+        r_input, r_blast = format_oligo(cand.rev_hit, rev_seq)
+        
+        match_line = "".join(overall_match)
+
+        lines = [
+            f"[Unified Amplicon Alignment | {cand.chrom}:{amp_gstart}-{amp_gend} | Size: {amp_gend - amp_gstart + 1}bp]",
+            f"REF_SEQ : {full_ref_seq}",
+            f"MATCH   : {match_line}",
+            f"FORWARD : {f_input} ({cand.fwd_hit.strand})",
+            f"F_BLAST : {f_blast}",
+            f"REVERSE : {r_input} ({cand.rev_hit.strand})",
+            f"R_BLAST : {r_blast}"
+        ]
+
+        if target_p_hit and prb_seq:
+            p_input, p_blast = format_oligo(target_p_hit, prb_seq)
+            lines.extend([
+                f"PROBE   : {p_input} ({target_p_hit.strand})",
+                f"P_BLAST : {p_blast}"
+            ])
+
+        # 🔥 여기서 'query', 'match', 'subject' 키를 추가하여 호환성 에러(KeyError)를 원천 차단합니다!
+        f_report = {
+            "label": "Forward Primer", "identity": f"{cand.fwd_hit.pident}%",
+            "chrom": cand.fwd_hit.sseqid, "strand": cand.fwd_hit.strand,
+            "coordinate": f"{cand.fwd_hit.sseqid}:{cand.fwd_hit.genomic_start}-{cand.fwd_hit.genomic_end} ({cand.fwd_hit.strand})",
+            "query": f_input, "match": match_line, "subject": f_blast
+        }
+        r_report = {
+            "label": "Reverse Primer", "identity": f"{cand.rev_hit.pident}%",
+            "chrom": cand.rev_hit.sseqid, "strand": cand.rev_hit.strand,
+            "coordinate": f"{cand.rev_hit.sseqid}:{cand.rev_hit.genomic_start}-{cand.rev_hit.genomic_end} ({cand.rev_hit.strand})",
+            "query": r_input, "match": match_line, "subject": r_blast
+        }
+        p_report = None
+        if target_p_hit:
+            p_report = {
+                "label": "TaqMan Probe", "identity": f"{target_p_hit.pident}%",
+                "chrom": target_p_hit.sseqid, "strand": target_p_hit.strand,
+                "coordinate": f"{target_p_hit.sseqid}:{target_p_hit.genomic_start}-{target_p_hit.genomic_end} ({target_p_hit.strand})",
+                "query": p_input, "match": match_line, "subject": p_blast
+            }
+
+        return {
+            "location": f"{cand.chrom}:{amp_gstart}-{amp_gend}",
+            "product_size": amp_gend - amp_gstart + 1, 
+            "is_target": cand.is_target, 
+            "fwd": f_report, "rev": r_report, "probe": p_report,
+            "full_sequence": full_ref_seq,
+            "unified_text_block": "\n".join(lines)
+        }
+
+    def _check_probe_binding(self, cand: OffTargetAmplicon, p_hits: List[BlastHit]) -> bool:
+        for ph in p_hits:
+            if ph.sseqid != cand.chrom: continue
+            if ph.genomic_start >= cand.start and ph.genomic_end <= cand.end: return True
+        return False

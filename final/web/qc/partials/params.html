@@ -1,32 +1,25 @@
-<div style="margin-bottom:15px;">
-<label class="small-label">PROJECT NAME (ID)</label>
-<input type="text" class="input-tight" id="qc-project-name" style="width:100%;" placeholder="e.g. KRAS_Mutation_QC">
-</div>
-
-<!-- 1. SEQUENCE INPUTS -->
-<div class="panel-title" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
-<span>1. INPUT SEQUENCES</span>
-<button id="btn-clear-seqs" style="font-size: 11px; padding: 2px 2px; cursor: pointer; background: #f8f9fa; border: 1px solid #ccc; border-radius: 3px; font-family: 'Nunito', sans-serif;">초기화</button>
-</div>
+<div class="section-title">INPUT SEQUENCES</div>
 <hr class="rule-light">
 
-<!-- 🔥 Quick Paste (스마트 붙여넣기) 영역 추가 -->
-<div style="background-color: #f1f8ff; padding: 12px; border-radius: 6px; border: 1px dashed #b8d4f1; margin-bottom: 20px;">
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 12px; color: #0275d8; margin-top: 0;">💡 Quick Paste (엑셀 복붙 지원)</label>
-<textarea id="qc-quick-paste" class="input-tight" style="width:100%; height:45px; font-family: 'Nunito', sans-serif; font-size: 12px; resize: none; border-color: #b8d4f1;" placeholder="엑셀의 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사해서 여기에 붙여넣으면 아래 칸들에 자동 분류됩니다."></textarea>
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">PROJECT NAME</label>
+<input type="text" class="input-tight" id="qc-design-name" placeholder="e.g. EGFR QC">
+
+<div style="background-color: #f1f8ff; padding: 10px 12px; border-radius: 6px; border: 1px dashed #b8d4f1; margin-bottom: 15px;">
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 11px; color: #0275d8; margin-top: 0; margin-bottom: 4px;">💡 Quick Paste (엑셀 복붙 지원)</label>
+<textarea id="qc-quick-paste" class="input-tight" style="width:100%; height:40px; font-family: 'Nunito', sans-serif; font-size: 12px; resize: none; border-color: #b8d4f1;" placeholder="엑셀의 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사해서 여기에 붙여넣으면 아래 칸들에 자동 분류됩니다."></textarea>
 </div>
 
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer (5' -> 3') <span style="color:red;">*</span></label>
-<input type="text" id="qc-forward-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 10px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. ATGCGTACGTAGCTAGCTA">
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer<span style="color:red;">*</span></label>
+<input type="text" id="qc-forward-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. ATGCGTACGTAGCTAGCTA">
 
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer (5' -> 3') <span style="color:red;">*</span></label>
-<input type="text" id="qc-reverse-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 10px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. CGATCGATCGTACGTACG">
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer<span style="color:red;">*</span></label>
+<input type="text" id="qc-reverse-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. CGATCGATCGTACGTACG">
 
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe (5' -> 3') <span style="color:#888; font-weight: normal;">(Optional)</span></label>
-<input type="text" id="qc-probe-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 10px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. FAM-AGCTAGCTAGCTAG-BHQ1">
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe<span style="color:#888; font-weight: normal;">(Optional)</span></label>
+<input type="text" id="qc-probe-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. FAM-AGCTAGCTAGCTAG-BHQ1">
 
 <label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Template Sequence <span style="color:#888; font-weight: normal;">(Optional, Amplicon Size 확인용)</span></label>
-<textarea id="qc-template-seq" class="input-tight seq-input" style="width:100%; height:80px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="원본 타겟 서열을 입력하면 정확한 Amplicon Size를 계산합니다."></textarea>
+<textarea id="qc-template-seq" class="input-tight seq-input" style="width:100%; height:70px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="원본 타겟 서열을 입력하면 정확한 Amplicon Size를 계산합니다."></textarea>
 
 <!-- 2. REFERENCE GENOME -->
 <div style="margin-bottom:15px; margin-top:15px;">
@@ -88,8 +81,8 @@
 <div>
 <span style="font-size:0.8em; color:#666;">Use In-Silico PCR</span>
 <select class="input-tight" id="qc_use_ispcr_check">
-    <option value="false" selected>False</option>
-    <option value="true">True</option>
+<option value="false" selected>False</option>
+<option value="true">True</option>
 </select>
 </div>
 </div>

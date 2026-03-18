@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 
 try:
     import primer3
+    import pysam 
 except ImportError:
     primer3 = None
 
@@ -65,20 +66,34 @@ def evaluate_qc_pipeline(
         
         if fwd_idx != -1 and rev_idx != -1 and rev_idx >= fwd_idx:
             amp_size = rev_idx + len(rev_rc) - fwd_idx
-            alignment_lines.append("[Input Template Matching]")
+            alignment_lines.append("[Input Template Alignment]")
             alignment_lines.append(f"TEMPLATE : {template_seq}")
-            alignment_lines.append(f"FORWARD  : {' ' * fwd_idx}{fwd_seq}")
-            alignment_lines.append(f"REVERSE_RC: {' ' * rev_idx}{rev_rc}")
+            
+            fwd_pad = " " * fwd_idx
+            fwd_match = " " * fwd_idx + "|" * len(fwd_seq)
+            alignment_lines.append(f"         : {fwd_match}")
+            alignment_lines.append(f"FORWARD  : {fwd_pad}{fwd_seq}")
+            
+            rev_pad = " " * rev_idx
+            rev_match = " " * rev_idx + "|" * len(rev_rc)
+            alignment_lines.append(f"         : {rev_match}")
+            alignment_lines.append(f"REV_RC   : {rev_pad}{rev_rc}")
             
             if probe_seq:
                 prb_idx = template_seq.find(probe_seq)
                 if prb_idx != -1:
-                    alignment_lines.append(f"PROBE    : {' ' * prb_idx}{probe_seq}")
+                    prb_pad = " " * prb_idx
+                    prb_match = " " * prb_idx + "|" * len(probe_seq)
+                    alignment_lines.append(f"         : {prb_match}")
+                    alignment_lines.append(f"PROBE    : {prb_pad}{probe_seq}")
                 else:
                     prb_rc = reverse_complement(probe_seq)
                     prb_idx = template_seq.find(prb_rc)
                     if prb_idx != -1:
-                        alignment_lines.append(f"PROBE_RC : {' ' * prb_idx}{prb_rc}")
+                        prb_pad = " " * prb_idx
+                        prb_match = " " * prb_idx + "|" * len(prb_rc)
+                        alignment_lines.append(f"         : {prb_match}")
+                        alignment_lines.append(f"PROBE_RC : {prb_pad}{prb_rc}")
 
     # -------------------------------------------------------------------------
     # 3. 임시 객체 생성 (열역학 프로퍼티 자동 정의)
@@ -102,8 +117,8 @@ def evaluate_qc_pipeline(
         role="INTERNAL",
         start_index=max(0, prb_idx),
         end_index=max(0, prb_idx) + len(probe_seq)
-    )
-    # 템플릿이 없으면 임시 가상 템플릿 생성
+    ) if probe_seq else None
+
     virtual_template = template_seq if template_seq else fwd_seq + ("N" * 20) + reverse_complement(rev_seq)
     
     amp = Amplicon(
@@ -116,7 +131,6 @@ def evaluate_qc_pipeline(
     )
 
     amp.product_size = amp_size if amp_size > 0 else len(virtual_template)
-    #amp.reference_name = genome if genome.lower() != "none" else None
 
     # -------------------------------------------------------------------------
     # 4. BLAST 특이성 검사 (가장 먼저 실행하여 진짜 Amplicon Size 및 위치 획득)
@@ -125,40 +139,47 @@ def evaluate_qc_pipeline(
     blast_qc_pass = True
     blast_qc_log = ""
     
-
-    blast_checker = BlastSpecificityChecker(config)
-    blast_checker.run([amp]) # 내부적으로 amp.blast_stats 및 is_qc_pass 업데이트됨
-    blast_details = getattr(amp, "blast_stats", None)
-    blast_qc_pass = getattr(amp, "is_qc_pass", True)
-    blast_qc_log = getattr(amp, "qc_log", "")
-
-
-    print(blast_details)
-    print(blast_qc_log)
-    
-    # 🔥 BLAST에서 진짜 타겟(On-target)을 찾은 경우 Amplicon 객체 업데이트
-    if blast_details and blast_details.get("target_signals"):
-        t_sig = blast_details["target_signals"][0]
+    if genome.lower() != "none":
+        blast_checker = BlastSpecificityChecker(config)
+        blast_checker.run([amp]) # 내부적으로 amp.blast_stats 및 is_qc_pass 업데이트됨
+        blast_details = getattr(amp, "blast_stats", None)
+        blast_qc_pass = getattr(amp, "is_qc_pass", True)
+        blast_qc_log = getattr(amp, "qc_log", "")
         
-        # 템플릿 없이도 진짜 증폭 사이즈와 위치를 확보함
-        amp.product_size = t_sig["product_size"]
-        amp.genomic_pos = t_sig["location"]
-        
-        # 시각화 텍스트블록 처리
-        if not template_seq:
-            alignment_lines = ["[BLAST On-Target Alignment (Derived from Reference Genome)]"]
-        else:
-            alignment_lines.append("\n[BLAST On-Target Alignment]")
+        # 🔥 BLAST에서 진짜 타겟(On-target)을 찾은 경우 Amplicon 객체 업데이트
+        if blast_details and blast_details.get("target_signals"):
+            t_sig = blast_details["target_signals"][0]
             
-        alignment_lines.append(f"Location: {t_sig['location']} (Size: {t_sig['product_size']}bp)")
-        
-        for key in ["fwd", "rev", "probe"]:
-            if t_sig.get(key):
-                blk = t_sig[key]
-                alignment_lines.append(f"\n--- {blk['label']} ({blk['identity']}) ---")
-                alignment_lines.append(f"Q: {blk['query']}")
-                alignment_lines.append(f"   {blk['match']}")
-                alignment_lines.append(f"S: {blk['subject']}")
+            # 템플릿 없이도 진짜 증폭 사이즈와 위치를 확보함
+            amp.product_size = t_sig["product_size"]
+            amp.genomic_pos = t_sig["location"]
+            
+            # 시각화 텍스트블록 처리
+            if not template_seq:
+                alignment_lines = ["[BLAST On-Target Alignment (Derived from Reference Genome)]"]
+            else:
+                alignment_lines.append("\n[BLAST On-Target Alignment]")
+                
+            alignment_lines.append(f"Location: {t_sig['location']} (Size: {t_sig['product_size']}bp)")
+            
+            for key in ["fwd", "rev", "probe"]:
+                if t_sig.get(key):
+                    blk = t_sig[key]
+                    alignment_lines.append(f"\n--- {blk['label']} ({blk['identity']}) ---")
+                    # 🔥 [수정됨] blast.py에서 추가한 'coordinate' 및 'text_block'을 UI로 표시해줍니다.
+                    if "coordinate" in blk:
+                        alignment_lines.append(f"Pos: {blk['coordinate']}")
+                    if "text_block" in blk:
+                        alignment_lines.append(blk["text_block"])
+                    else:
+                        alignment_lines.append(f"Q: {blk['query']}")
+                        alignment_lines.append(f"   {blk['match']}")
+                        alignment_lines.append(f"S: {blk['subject']}")
+    #print('\n'.join(alignment_lines))    
+    #exit()    
+    # -------------------------------------------------------------------------
+    # 5. Base QC 실행 및 병합
+    # -------------------------------------------------------------------------
     try:
         qc_executor = BaseQCExecutor(config)
         evaluated_amps = qc_executor.execute([amp])
@@ -177,9 +198,6 @@ def evaluate_qc_pipeline(
         base_qc_pass = False
         base_qc_log += f" [Tm Diff {round(tm_diff,1)} > {max_tm_diff}]"
 
-    # -------------------------------------------------------------------------
-    # 6. 최종 판정 (BaseQC와 BlastQC 병합)
-    # -------------------------------------------------------------------------
     amp.is_qc_pass = base_qc_pass and blast_qc_pass
     combined_logs = []
     if not base_qc_pass and base_qc_log: combined_logs.append(f"Thermo: {base_qc_log.strip()}")
@@ -187,7 +205,7 @@ def evaluate_qc_pipeline(
     amp.qc_log = " | ".join(combined_logs) if combined_logs else "Passed: Thermally stable and Specific."
 
     # -------------------------------------------------------------------------
-    # 7. 프론트엔드 호환 포맷팅 반환
+    # 6. 프론트엔드 호환 포맷팅 반환
     # -------------------------------------------------------------------------
     final_amp_size = amp.product_size if amp.product_size != len(virtual_template) else "N/A"
 
@@ -210,7 +228,7 @@ def evaluate_qc_pipeline(
             "is_pass": getattr(amp, "is_qc_pass", True),
             "fail_reason": getattr(amp, "qc_log", "") if not getattr(amp, "is_qc_pass", True) else ""
         },
-        "blast_stats": blast_details # 프론트에서 Off-target 개수 등을 시각화할 때 활용 가능
+        "blast_stats": blast_details 
     }
 
     return {
@@ -220,9 +238,6 @@ def evaluate_qc_pipeline(
         "single_filtered_amplicons": [formatted_item] if getattr(amp, "is_qc_pass", True) else []
     }
 
-# =====================================================================
-# CLI 실행부 (테스트용)
-# =====================================================================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run QC Pipeline for Provided Sequences")
     parser.add_argument("--name", type=str, default="QC_Project", help="Project Name")
@@ -230,7 +245,7 @@ if __name__ == "__main__":
     parser.add_argument("--rev", type=str, required=True, help="Reverse Primer Sequence")
     parser.add_argument("--probe", type=str, default="", help="Probe Sequence (Optional)")
     parser.add_argument("--template", type=str, default="", help="Template Sequence (Optional)")
-    parser.add_argument("--genome", type=str, default="none", help="Reference Genome for BLAST (hg38, mm10, none)")
+    parser.add_argument("--genome", type=str, default="hg38", help="Reference Genome for BLAST (hg38, mm10, none)")
     parser.add_argument("--base_config", type=str, default="pcr/config/base_pcr.yaml")
     parser.add_argument("--system_config", type=str, default="pcr/config/system.yaml")
     
