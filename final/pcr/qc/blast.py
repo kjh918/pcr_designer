@@ -249,11 +249,23 @@ class BlastSpecificityChecker:
                 is_passed = False
                 reason = f"Failed: Amplicon size ({target_report['product_size']}bp) is out of range ({self.criteria.min_amp_size}-{self.criteria.max_amp_size}bp)."
 
+        # 🔥 타겟과 오프타겟의 텍스트 블록을 모두 모아서 하나의 큰 스트링으로 합칩니다.
+        all_text_blocks = []
+        for sig in target_signals:
+            all_text_blocks.append(sig.get("unified_text_block", ""))
+        for sig in off_target_signals:
+            all_text_blocks.append(sig.get("unified_text_block", ""))
+        for sig in amplification_only:
+            all_text_blocks.append(sig.get("unified_text_block", ""))
+            
+        combined_text = "\n\n".join(filter(bool, all_text_blocks))
+
         return {
             "passed": is_passed, "reason": reason, "target_count": len(target_signals),
             "off_target_count": len(off_target_signals), "noise_count": len(amplification_only),
             "target_signals": target_signals, "off_target_signals": off_target_signals,
-            "amplification_only": amplification_only, "total_signal_count": len(target_signals) + len(off_target_signals)
+            "amplification_only": amplification_only, "total_signal_count": len(target_signals) + len(off_target_signals),
+            "combined_alignment_text": combined_text # 🔥 화면에 뿌려줄 최종 문자열
         }
 
     def _rc(self, seq: str) -> str:
@@ -273,7 +285,6 @@ class BlastSpecificityChecker:
     def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit]) -> Dict[str, Any]:
         """
         사용자 요청에 맞춘 완벽한 형태의 Unified Alignment Block을 구성합니다.
-        기존 스크립트와의 호환성을 위해 "query", "match", "subject" 속성도 개별 딕셔너리에 추가합니다.
         """
         fwd_seq = amplicon.forward.sequence
         rev_seq = amplicon.reverse.sequence
@@ -348,8 +359,11 @@ class BlastSpecificityChecker:
         
         match_line = "".join(overall_match)
 
+        # 🔥 타겟인지 오프타겟인지 명확히 구분하는 헤더 추가
+        title_prefix = "🎯 TARGET" if cand.is_target else "⚠️ NON-SPECIFIC"
+        
         lines = [
-            f"[Unified Amplicon Alignment | {cand.chrom}:{amp_gstart}-{amp_gend} | Size: {amp_gend - amp_gstart + 1}bp]",
+            f"[{title_prefix} Amplicon Alignment | {cand.chrom}:{amp_gstart}-{amp_gend} | Size: {amp_gend - amp_gstart + 1}bp]",
             f"REF_SEQ : {full_ref_seq}",
             f"MATCH   : {match_line}",
             f"FORWARD : {f_input} ({cand.fwd_hit.strand})",
@@ -365,7 +379,6 @@ class BlastSpecificityChecker:
                 f"P_BLAST : {p_blast}"
             ])
 
-        # 🔥 여기서 'query', 'match', 'subject' 키를 추가하여 호환성 에러(KeyError)를 원천 차단합니다!
         f_report = {
             "label": "Forward Primer", "identity": f"{cand.fwd_hit.pident}%",
             "chrom": cand.fwd_hit.sseqid, "strand": cand.fwd_hit.strand,

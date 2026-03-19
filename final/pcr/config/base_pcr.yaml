@@ -36,13 +36,13 @@ qc_criteria:
   hairpin_min_dg: -5.0
   homodimer_min_dg: -6.0
   heterodimer_min_dg: -6.0
-  min_identity: 90.0
-  min_hit_length: 13
-  blast_max_alignments: 50
+  min_identity: 80.0
+  min_hit_length: 10
+  blast_max_alignments: 20
   min_amp_size: 50
   max_amp_size: 300
   min_query_coverage: 0.8
-  min_identity_threshold: 90.0
+  min_identity_threshold: 80.0
   end_match_tolerance: 1
   use_ispcr_check: false
   primer:

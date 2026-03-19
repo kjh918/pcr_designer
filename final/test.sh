@@ -33,6 +33,6 @@
 
 PYTHONPATH=. python3.11 scripts/design_qc.py \
     --name test \
-    --fwd GGAGCTGAGGAAGGTG \
-    --rev GTCTACAAGGTCAGGGC \
-    --probe GCTTGGATCTGGCGC
+    --fwd GAAAATGACAAAGAACAGCTC \
+    --rev TAGCACTTACCTGTA \
+    #--probe CTGAAATCACTAAGCAGGAGA

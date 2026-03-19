@@ -7,7 +7,6 @@ from typing import Dict, Any, List, Optional
 
 try:
     import primer3
-    import pysam 
 except ImportError:
     primer3 = None
 
@@ -39,22 +38,15 @@ def evaluate_qc_pipeline(
 ) -> Dict[str, Any]:
     """
     웹(UI)에서 받은 서열 기반으로 열역학(BaseQC) 및 특이성(BlastQC) 검증을 통합 수행합니다.
-    (템플릿이 없는 경우 BLAST를 통해 앰플리콘 사이즈와 위치를 역추적합니다.)
     """
     assay_type = "qpcr"
     
-    # -------------------------------------------------------------------------
-    # 1. Config 로드 및 BLAST 제어
-    # -------------------------------------------------------------------------
     user_overrides = {}
     if qc_overrides:
         user_overrides["qc_criteria"] = qc_overrides
 
     config = load_pipeline_config(base_yaml, system_yaml, assay_type, user_overrides=user_overrides)
     
-    # -------------------------------------------------------------------------
-    # 2. 템플릿 매칭 (사전 위치 파악 - 템플릿이 주어진 경우에만)
-    # -------------------------------------------------------------------------
     amp_size = 0
     alignment_lines = []
     fwd_idx, rev_idx, prb_idx = 0, 0, 0
@@ -95,9 +87,6 @@ def evaluate_qc_pipeline(
                         alignment_lines.append(f"         : {prb_match}")
                         alignment_lines.append(f"PROBE_RC : {prb_pad}{prb_rc}")
 
-    # -------------------------------------------------------------------------
-    # 3. 임시 객체 생성 (열역학 프로퍼티 자동 정의)
-    # -------------------------------------------------------------------------
     fwd_primer = Primer.make_primer(
         sequence=fwd_seq,
         role="FORWARD",
@@ -132,54 +121,23 @@ def evaluate_qc_pipeline(
 
     amp.product_size = amp_size if amp_size > 0 else len(virtual_template)
 
-    # -------------------------------------------------------------------------
-    # 4. BLAST 특이성 검사 (가장 먼저 실행하여 진짜 Amplicon Size 및 위치 획득)
-    # -------------------------------------------------------------------------
     blast_details = None
     blast_qc_pass = True
     blast_qc_log = ""
     
     if genome.lower() != "none":
         blast_checker = BlastSpecificityChecker(config)
-        blast_checker.run([amp]) # 내부적으로 amp.blast_stats 및 is_qc_pass 업데이트됨
+        blast_checker.run([amp])
         blast_details = getattr(amp, "blast_stats", None)
         blast_qc_pass = getattr(amp, "is_qc_pass", True)
         blast_qc_log = getattr(amp, "qc_log", "")
         
-        # 🔥 BLAST에서 진짜 타겟(On-target)을 찾은 경우 Amplicon 객체 업데이트
-        if blast_details and blast_details.get("target_signals"):
-            t_sig = blast_details["target_signals"][0]
-            
-            # 템플릿 없이도 진짜 증폭 사이즈와 위치를 확보함
-            amp.product_size = t_sig["product_size"]
-            amp.genomic_pos = t_sig["location"]
-            
-            # 시각화 텍스트블록 처리
-            if not template_seq:
-                alignment_lines = ["[BLAST On-Target Alignment (Derived from Reference Genome)]"]
-            else:
-                alignment_lines.append("\n[BLAST On-Target Alignment]")
-                
-            alignment_lines.append(f"Location: {t_sig['location']} (Size: {t_sig['product_size']}bp)")
-            
-            for key in ["fwd", "rev", "probe"]:
-                if t_sig.get(key):
-                    blk = t_sig[key]
-                    alignment_lines.append(f"\n--- {blk['label']} ({blk['identity']}) ---")
-                    # 🔥 [수정됨] blast.py에서 추가한 'coordinate' 및 'text_block'을 UI로 표시해줍니다.
-                    if "coordinate" in blk:
-                        alignment_lines.append(f"Pos: {blk['coordinate']}")
-                    if "text_block" in blk:
-                        alignment_lines.append(blk["text_block"])
-                    else:
-                        alignment_lines.append(f"Q: {blk['query']}")
-                        alignment_lines.append(f"   {blk['match']}")
-                        alignment_lines.append(f"S: {blk['subject']}")
-    #print('\n'.join(alignment_lines))    
-    #exit()    
-    # -------------------------------------------------------------------------
-    # 5. Base QC 실행 및 병합
-    # -------------------------------------------------------------------------
+        if blast_details:
+            if blast_details.get("target_signals"):
+                t_sig = blast_details["target_signals"][0]
+                amp.product_size = t_sig["product_size"]
+                amp.genomic_pos = t_sig["location"]
+
     try:
         qc_executor = BaseQCExecutor(config)
         evaluated_amps = qc_executor.execute([amp])
@@ -191,7 +149,6 @@ def evaluate_qc_pipeline(
     base_qc_pass = getattr(amp, "is_qc_pass", True)
     base_qc_log = getattr(amp, "qc_log", "")
     
-    # 수동 Tm Diff 검사 추가
     max_tm_diff = qc_overrides.get("oligo", {}).get("max_tm_diff", 3.0) if qc_overrides else 3.0
     tm_diff = abs(amp.forward.tm - amp.reverse.tm)
     if tm_diff > max_tm_diff:
@@ -205,13 +162,12 @@ def evaluate_qc_pipeline(
     amp.qc_log = " | ".join(combined_logs) if combined_logs else "Passed: Thermally stable and Specific."
 
     # -------------------------------------------------------------------------
-    # 6. 프론트엔드 호환 포맷팅 반환
+    # 🔥 [사용자 제안 로직 적용] 모든 앰플리콘을 독립적인 배열 객체로 분류
     # -------------------------------------------------------------------------
-    final_amp_size = amp.product_size if amp.product_size != len(virtual_template) else "N/A"
-
-    formatted_item = {
-        "rank": 1,
-        "id": amp.id,
+    results_list = []
+    template_aln_str = "\n".join(alignment_lines)
+    
+    base_item = {
         "forward_primer": amp.forward.sequence,
         "reverse_primer": amp.reverse.sequence,
         "probe": amp.probe.sequence if amp.probe else "-",
@@ -221,21 +177,88 @@ def evaluate_qc_pipeline(
         "gc_f": round(getattr(amp.forward, "gc_percent", getattr(amp.forward, "gc", 0.0)), 2),
         "gc_r": round(getattr(amp.reverse, "gc_percent", getattr(amp.reverse, "gc", 0.0)), 2),
         "gc_p": round(getattr(amp.probe, "gc_percent", getattr(amp.probe, "gc", 0.0)), 2) if amp.probe else 0.0,
-        "amplicon_size": final_amp_size,
-        "genomic_pos": getattr(amp, "genomic_pos", "Unknown"),
-        "alignment_text_block": "\n".join(alignment_lines),
-        "qc_info": {
-            "is_pass": getattr(amp, "is_qc_pass", True),
-            "fail_reason": getattr(amp, "qc_log", "") if not getattr(amp, "is_qc_pass", True) else ""
-        },
         "blast_stats": blast_details 
     }
 
+    if blast_details and blast_details.get("total_signal_count", 0) > 0:
+        rank = 1
+        
+        # 1. Target Signals (정상)
+        for sig in blast_details.get("target_signals", []):
+            item = base_item.copy()
+            item["rank"] = rank
+            item["id"] = f"{amp.id}_Target_{rank}"
+            item["amplicon_size"] = sig.get("product_size", "N/A")
+            item["genomic_pos"] = sig.get("location", "Unknown")
+            
+            # 메인 타겟일 경우 입력한 템플릿 매칭 뷰를 위에 덧붙임
+            text_block = template_aln_str + ("\n\n" if template_aln_str else "") + sig.get("unified_text_block", "")
+            item["alignment_text_block"] = text_block
+            
+            item["qc_info"] = {
+                "is_pass": amp.is_qc_pass,
+                "fail_reason": amp.qc_log if not amp.is_qc_pass else "PASS: Specific and stable target."
+            }
+            results_list.append(item)
+            rank += 1
+            
+        # 2. Off-Target Signals (Probe 결합 포함된 비특이 앰플리콘)
+        for sig in blast_details.get("off_target_signals", []):
+            item = base_item.copy()
+            item["rank"] = rank
+            item["id"] = f"{amp.id}_OffTarget_{rank}"
+            item["amplicon_size"] = sig.get("product_size", "N/A")
+            item["genomic_pos"] = sig.get("location", "Unknown")
+            item["alignment_text_block"] = sig.get("unified_text_block", "")
+            item["qc_info"] = {
+                "is_pass": False,
+                "fail_reason": "FAIL: Off-Target Amplicon (Probe binds here!)"
+            }
+            results_list.append(item)
+            rank += 1
+            
+        # 3. Amplification Only Signals (Probe 없는 단순 증폭 노이즈)
+        for sig in blast_details.get("amplification_only", []):
+            item = base_item.copy()
+            item["rank"] = rank
+            item["id"] = f"{amp.id}_Noise_{rank}"
+            item["amplicon_size"] = sig.get("product_size", "N/A")
+            item["genomic_pos"] = sig.get("location", "Unknown")
+            item["alignment_text_block"] = sig.get("unified_text_block", "")
+            item["qc_info"] = {
+                "is_pass": False,
+                "fail_reason": "WARNING: Amplification only (No probe binding)"
+            }
+            results_list.append(item)
+            rank += 1
+
+    else:
+        # BLAST를 스킵했거나 Hit가 아예 없는 경우
+        item = base_item.copy()
+        item["rank"] = 1
+        item["id"] = amp.id
+        item["amplicon_size"] = amp.product_size if amp.product_size != len(virtual_template) else "N/A"
+        item["genomic_pos"] = getattr(amp, "genomic_pos", "Unknown")
+        item["alignment_text_block"] = template_aln_str
+        
+        fail_msg = amp.qc_log
+        if blast_details and blast_details.get("total_signal_count", 0) == 0:
+            fail_msg = "FAIL: No target found in reference genome."
+            item["qc_info"] = {"is_pass": False, "fail_reason": fail_msg}
+        else:
+            item["qc_info"] = {
+                "is_pass": getattr(amp, "is_qc_pass", True),
+                "fail_reason": fail_msg if not getattr(amp, "is_qc_pass", True) else ""
+            }
+            
+        results_list.append(item)
+
+    # 모든 리스트를 통째로 전달
     return {
         "status": "success",
-        "single_result": {"total_count": 1},
-        "single_total_amplicons": [formatted_item],
-        "single_filtered_amplicons": [formatted_item] if getattr(amp, "is_qc_pass", True) else []
+        "single_result": {"total_count": len(results_list)},
+        "single_total_amplicons": results_list,
+        "single_filtered_amplicons": results_list
     }
 
 if __name__ == "__main__":
