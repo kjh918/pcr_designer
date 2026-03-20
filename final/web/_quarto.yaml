@@ -10,7 +10,7 @@ website:
         text: "Home"
       - href: qc/main.qmd
         text: "QC"
-      - href: manual/main.qmd
+      - href: qpcr/main.qmd
         text: "qPCR"
       - href: as_pcr/main.qmd
         text: "AS-PCR"

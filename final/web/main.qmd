@@ -14,7 +14,7 @@ title: " "
 <div class="card-title">QC</div>
 <p>Quality check pre-designed Primers</p>
 </a>
-<a href="manual/main.html" class="design-card">
+<a href="qpcr/main.html" class="design-card">
 <div class="icon">🧬</div>
 <div class="card-title">qPCR</div>
 <p>TaqMan Probe & Primer Design</p>

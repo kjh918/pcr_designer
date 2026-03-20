@@ -281,7 +281,7 @@ if __name__ == "__main__":
             template_seq=args.template, genome=args.genome, qc_overrides=qc_overrides,
             base_yaml=args.base_config, system_yaml=args.system_config
         )
-        print(json.dumps(res, indent=2))
+        #print(json.dumps(res, indent=2)) 
         
     except Exception as e:
         print(json.dumps({"status": "fail", "reason": str(e)}, indent=2))
