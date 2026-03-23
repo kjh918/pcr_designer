@@ -1,10 +1,10 @@
 ---
-title: " "
+title: "PrimerDesign Suite"
 ---
 
 ```{=html}
 <div class="welcome-section">
-<h1>Welcome to PrimerDesign Suite</h1>
+<h1>Welcome</h1>
 <p>분석 목적에 맞는 디자인 모듈을 선택해 주세요.</p>
 </div>
 

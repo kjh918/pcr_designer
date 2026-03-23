@@ -3,7 +3,23 @@ from typing import Dict, Any, List, Optional, Literal
 from pcr.components.amplicon import Amplicon
 
 # =================================================================
-# [Input Schema]
+# [API Request Schema] 프론트엔드 데이터 수신용 뼈대
+# =================================================================
+class SequencesModel(BaseModel):
+    forward: str
+    reverse: str
+    probe: str = ""
+    template: str = ""
+
+class QCEvalInput(BaseModel):
+    project_name: str = "QC_Project"
+    sequences: SequencesModel
+    reference_genome: str = "none"
+    qc_criteria: Dict[str, Any] = Field(default_factory=dict)
+
+
+# =================================================================
+# [Input Schema] 코어 엔진용 입력
 # =================================================================
 class BaseDesignInput(BaseModel):
     name: str
@@ -57,6 +73,7 @@ class BaseDesignOutput(BaseModel):
     status: Literal["success", "fail", "error"] 
     log_messages: List[str] = []
     error_msg: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @property
     def passed_amplicons(self) -> List[Amplicon]:
@@ -71,12 +88,6 @@ class BaseDesignOutput(BaseModel):
         return len(self.passed_amplicons)
 
     def to_frontend_dict(self) -> Dict[str, Any]:
-        """
-        [Adapter Method]
-        Summary 객체와 Results 객체로 완벽히 분리된 계층형 JSON을 반환합니다.
-        QC 항목이 유연하게 확장될 수 있도록 Workflow 패턴을 적용했습니다.
-        """
-        # 🔥 개선 2: 명확한 Summary 객체 생성
         summary = DesignSummary(
             status=self.status,
             total_count=self.total_count,
@@ -87,53 +98,56 @@ class BaseDesignOutput(BaseModel):
         ).model_dump()
 
         if self.status != "success":
-            return {"summary": summary, "results": []}
+            return {
+                "status": self.status,
+                "summary": summary,
+                "metadata": self.metadata,
+                "results": []
+            }
 
         results_list = []
-        
         for rank, amp in enumerate(self.amplicons, start=1):
-            
-            # 🔥 개선 3: 유연한 QC 모듈 확장 (Workflow 패턴 지원)
-            # 앞으로 어떤 QC 체커(ex: SNPChecker, DimerChecker)가 추가되든, 
-            # 해당 체커가 amp.qc_metrics 딕셔너리에 결과를 담아두기만 하면 
-            # 여기서 스키마 수정 없이 알아서 블랙박스 형태로 빨아들여 포장합니다.
             dynamic_qc_details = getattr(amp, "qc_metrics", {})
-            
-            # (하위 호환성) 기존에 존재하던 blast_stats를 동적 모듈 시스템으로 병합
             if hasattr(amp, "blast_stats") and getattr(amp, "blast_stats"):
                 dynamic_qc_details["blast"] = getattr(amp, "blast_stats")
 
-            # Amplicon 하나당 독립적인 객체 1개를 생성 (데이터의 원형 보존)
+            # 🔥 [수정] Heterodimer는 두 객체 사이의 관계값이므로 여전히 Metrics나 QC Status에서 가져옵니다.
+            t_data = {}
+            qc_status = getattr(amp, "qc_status", None)
+            if qc_status and hasattr(qc_status, "modules") and "thermo" in qc_status.modules:
+                t_data = qc_status.modules["thermo"].metrics
+
+            # 헬퍼 함수: 객체의 속성을 안전하게 읽어옴 (getattr 사용)
+            def get_oligo_meta(obj):
+                if not obj: return {"tm": 0.0, "gc": 0.0, "cpg": 0, "hp": 0.0, "hd": 0.0}
+                return {
+                    "sequence": getattr(obj, "sequence", "-"),
+                    "tm": round(getattr(obj, "tm", 0.0), 2),
+                    "gc": round(getattr(obj, "gc_percent", 0.0), 2),
+                    "cpg_count": int(getattr(obj, "cpg_count", 0)),
+                    "hairpin_dg": round(getattr(obj, "hairpin_dg", 0.0), 2),
+                    "homodimer_dg": round(getattr(obj, "homodimer_dg", 0.0), 2)
+                }
+
             result_item = {
                 "rank": rank,
                 "id": amp.id,
-                
-                # 핵심 판정 결과
                 "qc_info": {
                     "is_pass": getattr(amp, "is_qc_pass", True),
                     "fail_reason": getattr(amp, "qc_log", "") if not getattr(amp, "is_qc_pass", True) else "PASS"
                 },
-                
-                # 올리고(Oligo) 정보 그룹화
                 "oligos": {
-                    "forward": {
-                        "sequence": amp.forward.sequence,
-                        "tm": round(amp.forward.tm, 2),
-                        "gc": round(getattr(amp.forward, "gc_percent", 0.0), 2)
+                    "forward": get_oligo_meta(amp.forward),
+                    "reverse": get_oligo_meta(amp.reverse),
+                    "probe": get_oligo_meta(amp.probe) if amp.probe else {
+                        "sequence": "-", "tm": 0, "gc": 0, "cpg_count": 0, "hairpin_dg": 0, "homodimer_dg": 0
                     },
-                    "reverse": {
-                        "sequence": amp.reverse.sequence,
-                        "tm": round(amp.reverse.tm, 2),
-                        "gc": round(getattr(amp.reverse, "gc_percent", 0.0), 2)
-                    },
-                    "probe": {
-                        "sequence": amp.probe.sequence if amp.probe else "-",
-                        "tm": round(amp.probe.tm, 2) if amp.probe else 0.0,
-                        "gc": round(getattr(amp.probe, "gc_percent", 0.0), 2) if amp.probe else 0.0
+                    "heterodimer": {
+                        "fr_dg": round(t_data.get("hetero_fr_dg", 0.0), 2),
+                        "fp_dg": round(t_data.get("hetero_fp_dg", 0.0), 2),
+                        "rp_dg": round(t_data.get("hetero_rp_dg", 0.0), 2)
                     }
                 },
-                
-                # 앰플리콘 정보 그룹화
                 "amplicon_info": {
                     "size": amp.product_size,
                     "tm": round(getattr(amp, "tm", 0.0), 2),
@@ -141,15 +155,13 @@ class BaseDesignOutput(BaseModel):
                     "genomic_pos": getattr(amp, "genomic_pos", "Unknown"),
                     "alignment_text_block": "\n".join(getattr(amp, "alignment_visual", []))
                 },
-                
-                # 🔥 무한히 확장 가능한 QC 상세 결과 컨테이너
                 "qc_details": dynamic_qc_details
             }
-            
             results_list.append(result_item)
 
-        # 최종 반환 구조: Summary와 Results의 완벽한 2단 분리
         return {
+            "status": self.status,
+            "metadata": self.metadata,
             "summary": summary,
             "results": results_list
         }

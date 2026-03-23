@@ -109,7 +109,7 @@ class BasePrimerDesigner(ABC):
         if self.input.overrides:
             self.global_args.update(self.input.overrides)
 
-    def _process_results(self, result: Dict[str, Any]) -> List[Amplicon]:
+    def _process_results(self, result: Dict[str, Any]) -> List[Amplicon]: 
         """Primer3 raw 결과 → Amplicon 리스트"""
         num = result.get('PRIMER_PAIR_NUM_RETURNED', 0)
         amplicons = []

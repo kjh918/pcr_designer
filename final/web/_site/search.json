@@ -7,13 +7,6 @@
     "text": "DESIGN SUMMARY\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (REF vs ALT)\n\n\nRun the design to see sequence alignment.\n\n\n\nCANDIDATE LIST\n\n\n\n\n\n\n\nRank\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nProbe (5’→3’)\n\n\nTm F (°C)\n\n\nTm R (°C)\n\n\nTm P (°C)\n\n\nGC F (%)\n\n\nGC R (%)\n\n\nGC P (%)\n\n\nSize (bp)\n\n\nGenomic Position\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
   },
   {
-    "objectID": "main.html",
-    "href": "main.html",
-    "title": "Welcome to PrimerDesign Suite",
-    "section": "",
-    "text": "분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n🔍\nQC\nQuality check pre-designed Primers\n\n\n🧬\nqPCR\nTaqMan Probe & Primer Design\n\n\n🎯\nAS-PCR\nAllele-Specific Primer Design\n\n\n\n🧬Me\n\nMS-PCR\nMethylation-Specific Primer Design"
-  },
-  {
     "objectID": "as_pcr/main.html",
     "href": "as_pcr/main.html",
     "title": "",
@@ -21,10 +14,17 @@
     "text": "⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\nDESIGN SUMMARY (AS-PCR)\n\n\n\n\n\nCHROMOSOME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\nSTATUS\n\n\nWAITING\n\n\n\n\n\n\n📊 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\nSEQUENCE ALIGNMENT (Mismatch Visualization)\n\n\n\n\n\n\nAS-PCR CANDIDATE SETS\n\n\n\n\n\n\n\nRank\n\n\nSet ID\n\n\nAllele\n\n\nForward Primer (5’→3’)\n\n\nReverse Primer (5’→3’)\n\n\nTm (F/R) °C\n\n\nGC (F/R) %\n\n\n\n\n\n\nNo candidates. Enter parameters and click ‘Design Start’.\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
   },
   {
+    "objectID": "main.html",
+    "href": "main.html",
+    "title": "PrimerDesign Suite",
+    "section": "",
+    "text": "Welcome\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n🔍\nQC\nQuality check pre-designed Primers\n\n\n🧬\nqPCR\nTaqMan Probe & Primer Design\n\n\n🎯\nAS-PCR\nAllele-Specific Primer Design\n\n\n\n🧬Me\n\nMS-PCR\nMethylation-Specific Primer Design"
+  },
+  {
     "objectID": "qc/main.html",
     "href": "qc/main.html",
     "title": "",
     "section": "",
-    "text": "💡 Quick Guide & Tutorial\n\n\n\n검증할 프라이머와 프로브 서열을 좌측 폼에 입력한 후 검증(QC)을 실행하세요.  Tip! 엑셀에서 서열 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사하여 좌측 ‘Quick Paste’ 칸에 붙여넣으면 자동으로 분류되어 입력됩니다. \n\n\n\n🧪 Tutorial Data (예제 서열)\n\n\n아래의 서열 3줄을 드래그하여 복사한 뒤, 좌측 Quick Paste 칸에 붙여넣고 실행해보세요. 이 예제를 실행하면 메인 타겟 외에 다른 위치(Off-target)에 비특이적으로 결합하는 앰플리콘 시그널이 어떻게 검출되고 리포트되는지 확인할 수 있습니다.\n\n\nGAAAATGACAAAGAACAGCTC TAGCACTTACCTGTGACTC CTGAAATCACTAAGCAGGAGA\n\n\n\n\n\n\n\n\n⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\n\nQC SUMMARY\n\n\n\n\n\n\nPROJECT NAME\n\n\n-\n\n\n\n\nTARGET POSITION\n\n\n-\n\n\n\n\nDATE\n\n\n-\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nAMPLICON SIZE\n\n\n-\n\n\n\n\nSTATUS\n\n\nREADY\n\n\n\n\n\n\n\n🔍 SEQUENCE ALIGNMENT & BINDING REPORT\n\n\nEnter sequences and run QC to view alignment...\n\n\n\n\n🧬 QC & SPECIFICITY RESULTS 스크롤하여 더 많은 결과 보기 ↓\n\n\n\n\n\n\n\n#\n\n\nForward Primer (5’ → 3’)\n\n\nReverse Primer (5’ → 3’)\n\n\nProbe (5’ → 3’)\n\n\nTm (F)\n\n\nTm (R)\n\n\nTm (P)\n\n\nGC% (F)\n\n\nGC% (R)\n\n\nGC% (P)\n\n\nSize\n\n\nPosition\n\n\nQC & Reason\n\n\n\n\n\n\nResult will appear here…\n\n\n\n\n\n\n\n\n\nDESIGN PARAMETERS & QC SUMMARY"
+    "text": "💡 Quick Guide & Tutorial\n\n\n\n검증할 프라이머와 프로브 서열을 좌측 폼에 입력한 후 검증(QC)을 실행하세요.  Tip! 엑셀에서 서열 한 행(Fwd, Rev, Probe 순서)을 복사하여 좌측 ‘Quick Paste’ 칸에 붙여넣으면 자동으로 분류됩니다. \n\n\n\n🧪 Tutorial Data (예제 서열)\n\n\n아래의 서열 박스 내부를 드래그하여 복사한 뒤, 좌측 Quick Paste 칸에 붙여넣고 실행해보세요.\n\n\n\n\n\n\n✅ 단일 타겟 (Specific)\n\n\n목표 유전자에만 1번 결합하는 이상적인 프라이머입니다.\n\n\nGCACATCGAGGCCAACACT TGAGAAAAGTGAACCTGCGGA TTGCCCGGACCTGGGATGC\n\n\n\n\n\n⚠️ 다중 결합 (Off-target)\n\n\n타겟 외에 다른 위치에도 비특이적으로 증폭되는 불량 예시입니다.\n\n\nGAAAATGACAAAGAACAGCTC TAGCACTTACCTGTGACTC CTGAAATCACTAAGCAGGAGA\n\n\n\n\n\n\n\n\n\n\n\n⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\n\n\n📊 QC ANALYSIS SUMMARY\n\n\nSTATUS READY\n\n\n\n\n\nPROJECT NAME\n\n\n-\n\n\n\n\nDATE\n\n\n-\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nPASS / TOTAL\n\n\n\n/ -\n\n\n\n\n\n\n\n\n📍 Input Sequences\n\n\n\n\nForward\n\n\n-\n\n\n\n\nReverse\n\n\n-\n\n\n\n\nProbe\n\n\n-\n\n\n\n\n\n\n\n⚙️ Applied QC Parameters\n\n\n\n\n\nThermodynamics\n\n\nHairpin: -\n\n\nHomodimer: -\n\n\nHeterodimer: -\n\n\nMax ΔTm: -\n\n\n\n\n\nSpecificity & Size\n\n\nMin Identity: -\n\n\nMin Hit Len: -\n\n\nMax Align: -\n\n\nAmp Size: -\n\n\n\n\n\nProbe QC\n\n\n5’ G: -\n\n\nPoly-G: -\n\n\nTm Diff: -\n\n\n\n\n\n\n\n\n\n🔍 SEQUENCE ALIGNMENT & BINDING REPORT\n\nEnter sequences and run QC to view alignment...\n\n\n\n\n🧬 QC & SPECIFICITY RESULTS\n\n\n\n\n\n\n\nBasic Information\n\n\nForward Primer Details\n\n\nReverse Primer Details\n\n\nProbe Details (TaqMan)\n\n\nHeterodimer (dG)\n\n\nAmplicon & QC\n\n\n\n\n\n#\n\n\nForward (5’-3’)\n\n\nReverse (5’-3’)\n\n\nProbe (5’-3’)\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nF-R\n\n\nF-P\n\n\nR-P\n\n\n\nSize\n\n\nAmp Tm\n\n\nPosition\n\n\nQC Result & Reason\n\n\n\n\n\n\n\nWaiting for QC execution…\n\n\n\n\n\n* HP : Hairpin (dG)   |   * HD : Homodimer / Heterodimer (dG)"
   }
 ]

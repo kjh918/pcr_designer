@@ -37,23 +37,45 @@ css: ./style.css
 <p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
 검증할 프라이머와 프로브 서열을 좌측 폼에 입력한 후 검증(QC)을 실행하세요.<br>
 <span style="display: inline-block; margin-top: 4px; padding: 4px 8px; background: #fff; border: 1px solid #b8d4f1; border-radius: 4px; color: #0275d8; font-size: 12px;">
-<strong>Tip!</strong> 엑셀에서 서열 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사하여 좌측 <strong>'Quick Paste'</strong> 칸에 붙여넣으면 자동으로 분류되어 입력됩니다.
+<strong>Tip!</strong> 엑셀에서 서열 한 행(Fwd, Rev, Probe 순서)을 복사하여 좌측 <strong>'Quick Paste'</strong> 칸에 붙여넣으면 자동으로 분류됩니다.
 </span>
 </p>
 
 <hr style="border: none; border-top: 1px dashed #b8d4f1; margin: 12px 0;">
 
 <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #1e707a;">🧪 Tutorial Data (예제 서열)</p>
-<p style="margin: 0 0 8px 0; font-size: 12px; color: #555; line-height: 1.4;">
-아래의 서열 3줄을 드래그하여 복사한 뒤, 좌측 <strong>Quick Paste</strong> 칸에 붙여넣고 실행해보세요.<br>
-이 예제를 실행하면 메인 타겟 외에 <strong>다른 위치(Off-target)에 비특이적으로 결합하는 앰플리콘 시그널</strong>이 어떻게 검출되고 리포트되는지 확인할 수 있습니다.
+<p style="margin: 0 0 12px 0; font-size: 12px; color: #555; line-height: 1.4;">
+아래의 서열 박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>Quick Paste</strong> 칸에 붙여넣고 실행해보세요.
 </p>
 
-<div style="background: #fff; padding: 10px 12px; border-radius: 4px; border: 1px solid #cddde6; font-family: 'Courier New', monospace; font-size: 13px; color: #d9534f; line-height: 1.6; user-select: all;">
+<!-- 예제 데이터 2단 분할 -->
+<div style="display: flex; gap: 15px;">
+
+<!-- 예제 1: PICK3CA E545K -->
+<!-- 예제 1: 정상 타겟 -->
+<div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
+<div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">✅ 단일 타겟 (Specific)</div>
+<div style="font-size: 11px; color: #666; margin-bottom: 8px;">목표 유전자에만 1번 결합하는 이상적인 프라이머입니다.</div>
+<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
+GCACATCGAGGCCAACACT<br>
+TGAGAAAAGTGAACCTGCGGA<br>
+TTGCCCGGACCTGGGATGC
+</div>
+</div>
+
+<!-- 예제 2: 오프 타겟 -->
+<div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
+<div style="font-weight: bold; color: #d9534f; font-size: 13px; margin-bottom: 5px;">⚠️ 다중 결합 (Off-target)</div>
+<div style="font-size: 11px; color: #666; margin-bottom: 8px;">타겟 외에 다른 위치에도 비특이적으로 증폭되는 불량 예시입니다.</div>
+<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
 GAAAATGACAAAGAACAGCTC<br>
 TAGCACTTACCTGTGACTC<br>
 CTGAAATCACTAAGCAGGAGA
 </div>
+</div>
+
+</div>
+
 </div>
 </details>
 
@@ -61,5 +83,8 @@ CTGAAATCACTAAGCAGGAGA
 {{< include partials/result_panel.html >}}
 
 </main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+</div>
+
+<script src="[https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js)"></script>
 <script src="./app.js"></script>

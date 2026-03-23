@@ -44,7 +44,6 @@ qc_criteria:
   min_query_coverage: 0.8
   min_identity_threshold: 80.0
   end_match_tolerance: 1
-  use_ispcr_check: false
   primer:
     max_diff_tm: 3.0
     min_diff_tm: 0.0

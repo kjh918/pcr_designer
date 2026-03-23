@@ -1,21 +1,29 @@
-<div class="section-title">INPUT SEQUENCES</div>
+<!-- 1. INPUT SEQUENCES -->
+<div class="section-title" style="display: flex; justify-content: space-between; align-items: flex-end;">
+<span>INPUT SEQUENCES</span>
+<div>
+<button id="btn-load-tutorial" style="background: #17a2b8; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer; padding: 3px 8px; margin-right: 5px;">🧪 Tutorial</button>
+<button id="btn-clear-seqs" style="font-size: 10px; padding: 3px 8px; cursor: pointer; background: #f8f9fa; border: 1px solid #ccc; border-radius: 3px;">초기화</button>
+</div>
+</div>
 <hr class="rule-light">
 
+<!-- 🔥 qc-design-name을 qc-project-name으로 수정 완료! -->
 <label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">PROJECT NAME</label>
-<input type="text" class="input-tight" id="qc-design-name" placeholder="e.g. EGFR QC">
+<input type="text" class="input-tight" id="qc-project-name" placeholder="e.g. EGFR QC" style="width:100%; margin-bottom: 15px;">
 
 <div style="background-color: #f1f8ff; padding: 10px 12px; border-radius: 6px; border: 1px dashed #b8d4f1; margin-bottom: 15px;">
 <label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 11px; color: #0275d8; margin-top: 0; margin-bottom: 4px;">💡 Quick Paste (엑셀 복붙 지원)</label>
 <textarea id="qc-quick-paste" class="input-tight" style="width:100%; height:40px; font-family: 'Nunito', sans-serif; font-size: 12px; resize: none; border-color: #b8d4f1;" placeholder="엑셀의 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사해서 여기에 붙여넣으면 아래 칸들에 자동 분류됩니다."></textarea>
 </div>
 
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer<span style="color:red;">*</span></label>
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer <span style="color:red;">*</span></label>
 <input type="text" id="qc-forward-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. ATGCGTACGTAGCTAGCTA">
 
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer<span style="color:red;">*</span></label>
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer <span style="color:red;">*</span></label>
 <input type="text" id="qc-reverse-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. CGATCGATCGTACGTACG">
 
-<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe<span style="color:#888; font-weight: normal;">(Optional)</span></label>
+<label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe <span style="color:#888; font-weight: normal;">(Optional)</span></label>
 <input type="text" id="qc-probe-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. FAM-AGCTAGCTAGCTAG-BHQ1">
 
 <label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Template Sequence <span style="color:#888; font-weight: normal;">(Optional, Amplicon Size 확인용)</span></label>
@@ -78,21 +86,41 @@
 <span style="font-size:0.8em; color:#666;">Max Size</span>
 <input type="number" class="input-tight" id="qc_max_amp_size" value="300">
 </div>
+</div>
+
+<!-- 🔥 새로 분리된 프라이머 QC 옵션 -->
+<label class="small-label">PRIMER CONSTRAINTS</label>
+<div class="grid-2" style="margin-bottom:12px;">
 <div>
-<span style="font-size:0.8em; color:#666;">Use In-Silico PCR</span>
-<select class="input-tight" id="qc_use_ispcr_check">
-<option value="false" selected>False</option>
-<option value="true">True</option>
-</select>
+<span style="font-size:0.8em; color:#666;">Tm Diff (Min)</span>
+<input type="number" class="input-tight" id="qc_primer_min_diff_tm" value="0.0" step="0.1">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Tm Diff (Max)</span>
+<input type="number" class="input-tight" id="qc_primer_max_diff_tm" value="3.0" step="0.1">
 </div>
 </div>
 
-<label class="small-label">OLIGO CONSTRAINTS (QC Only)</label>
-<div class="grid-2" style="margin-bottom:12px;">
+<!-- 🔥 새로 추가된 프로브 QC 옵션 -->
+<label class="small-label">PROBE CONSTRAINTS</label>
+<div class="grid-3" style="margin-bottom:12px;">
 <div>
-<span style="font-size:0.8em; color:#666;">Primer Max Tm Diff</span>
-<input type="number" class="input-tight" id="qc_primer_max_diff_tm" value="3.0" step="0.1">
+<span style="font-size:0.8em; color:#666;">Tm Diff (Min)</span>
+<input type="number" class="input-tight" id="qc_probe_min_tm_diff" value="5.0" step="0.1">
 </div>
+<div>
+<span style="font-size:0.8em; color:#666;">Tm Diff (Max)</span>
+<input type="number" class="input-tight" id="qc_probe_max_tm_diff" value="10.0" step="0.1">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Max Poly-G</span>
+<input type="number" class="input-tight" id="qc_probe_poly_g" value="3">
+</div>
+</div>
+<div style="margin-bottom:12px;">
+<label style="font-size: 11px; display: flex; align-items: center; gap: 5px;">
+<input type="checkbox" id="qc_probe_avoid_5g" checked> Avoid 5' G (5' 말단 G 회피)
+</label>
 </div>
 
 </div>

@@ -14,15 +14,11 @@ class BaseQCExecutor:
 
     # pcr/qc/executor.py (BaseQCExecutor)
 
-    def _setup_checkers(self, blast: bool=False):
+    def _setup_checkers(self, blast: bool=True):
         # 1. ThermoChecker는 항상 실행 (물리적 특성 체크)
         self.checkers.append(ThermoChecker(self.config.qc_criteria))
-        if blast:
-            self.checkers.append(BlastSpecificityChecker(self.config))
-        else:
-            import logging
-            logging.getLogger(__name__).info("🚀 BLAST DB path is None. Skipping BlastSpecificityChecker.")
-    
+        self.checkers.append(BlastSpecificityChecker(self.config))
+        
     def execute(self, amplicons: List[Amplicon]) -> List[Amplicon]:
         """
         [Core Method] 자식 클래스의 super().execute()가 찾아올 목표 메서드입니다.

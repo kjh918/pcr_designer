@@ -1,93 +1,163 @@
 <!-- 세로 정렬 및 가로/세로 반응형(min-width: 0)을 완벽하게 지원하는 전체 래퍼 -->
 <div style="display: flex; flex-direction: column; width: 100%; gap: 20px; padding-bottom: 40px; min-width: 0; box-sizing: border-box;">
+
+<!-- 1. 파이프라인 로그 패널 -->
 <div class="panel" id="error-log-panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; padding: 15px; border-radius: 4px; border-top: 1px solid #eccbc0; border-right: 1px solid #eccbc0; border-bottom: 1px solid #eccbc0; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
 <div class="panel-title" style="color: #d9534f; font-size: 14px; font-weight: bold;">⚠️ PIPELINE STATUS & LOGS</div>
 <hr class="rule-light" style="border-top-color: #f5c6c6; margin: 10px 0;">
 <pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto; width: 100%; box-sizing: border-box;"></pre>
 </div>
 
-<!-- 2. 디자인 요약 패널 (반응형 Grid 구조 반영) -->
-<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 15px; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
-<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #333;">QC SUMMARY</div>
-<hr class="rule-light" style="margin: 10px 0;">
+<!-- 2. 디자인 요약 패널 (중복 제거 완료 - 단 1개만 존재합니다!) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
 
-<!-- 창이 좁아지면 자동으로 줄바꿈 되도록 auto-fit 및 minmax 적용 -->
-<div class="grid-3" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-<div>
-<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px;">PROJECT NAME</div>
-<div style="font-weight:900;" id="summary-project">-</div>
-</div>
-<div>
-<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px;">TARGET POSITION</div>
-<div style="font-weight:900;" id="summary-pos">-</div>
-</div>
-<div>
-<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px;">DATE</div>
-<div style="font-weight:900;" id="summary-date">-</div>
-</div>
-<div>
-<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px;">REFERENCE GENOME</div>
-<div style="font-weight:900;" id="summary-reference">-</div>
-</div>
-<div>
-<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px;">AMPLICON SIZE</div>
-<div style="font-weight:900; color: #1e707a;" id="summary-size">-</div>
-</div>
-<div>
-<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px;">STATUS</div>
-<div style="font-weight:900;" id="summary-status">READY</div>
-</div>
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px;">
+<div class="panel-title" style="font-size: 14px; font-weight: bold; color: #1e707a;">📊 QC ANALYSIS SUMMARY</div>
+<div style="text-align: right;">
+<span style="font-size: 11px; color: #888; margin-right: 10px;">STATUS</span>
+<span id="summary-status" style="font-size: 12px; font-weight: 900; background: #e9ecef; padding: 4px 10px; border-radius: 12px; color: #333;">READY</span>
 </div>
 </div>
 
-<!-- 3. 시퀀스 정렬(Alignment) 뷰어 -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+<div>
+<div style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">PROJECT NAME</div>
+<div style="font-weight: 900; font-size: 14px; color: #333;" id="summary-project">-</div>
+</div>
+<div>
+<div style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">DATE</div>
+<div style="font-weight: bold; font-size: 13px; color: #555;" id="summary-date">-</div>
+</div>
+<div>
+<div style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">REFERENCE GENOME</div>
+<div style="font-weight: bold; font-size: 13px; color: #555;" id="summary-reference">-</div>
+</div>
+<div>
+<div style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">PASS / TOTAL</div>
+<div style="font-weight: 900; font-size: 14px; color: #0275d8;" id="summary-counts">- / -</div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px;">
+<!-- 왼쪽: 시퀀스 입력값 -->
+<div>
+<div style="font-size: 11px; font-weight: bold; color: #495057; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;">📍 Input Sequences</div>
+<table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+<tr><td style="padding: 6px 0; color: #6c757d; font-weight: bold; width: 60px;">Forward</td><td style="padding: 6px 0; font-family: monospace; color: #333;" id="summary-seq-fwd">-</td></tr>
+<tr><td style="padding: 6px 0; color: #6c757d; font-weight: bold;">Reverse</td><td style="padding: 6px 0; font-family: monospace; color: #333;" id="summary-seq-rev">-</td></tr>
+<tr><td style="padding: 6px 0; color: #6c757d; font-weight: bold;">Probe</td><td style="padding: 6px 0; font-family: monospace; color: #333;" id="summary-seq-prb">-</td></tr>
+</table>
+</div>
+
+<!-- 오른쪽: 3개의 QC 파라미터 카드 (Probe QC 포함) -->
+<div>
+<div style="font-size: 11px; font-weight: bold; color: #495057; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;">⚙️ Applied QC Parameters</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 11px;">
+
+<!-- Thermodynamics -->
+<div style="background: #fff; border: 1px solid #e9ecef; border-radius: 4px; padding: 8px;">
+<div style="color: #d9534f; font-weight: bold; margin-bottom: 4px;">Thermodynamics</div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Hairpin:</span> <b id="summary-qc-hairpin">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Homodimer:</span> <b id="summary-qc-homo">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Heterodimer:</span> <b id="summary-qc-hetero">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-top: 4px; border-top: 1px dashed #eee; padding-top: 4px;"><span style="color:#666;">Max ΔTm:</span> <b id="summary-qc-tmdiff">-</b></div>
+</div>
+
+<!-- Specificity & Size -->
+<div style="background: #fff; border: 1px solid #e9ecef; border-radius: 4px; padding: 8px;">
+<div style="color: #1e707a; font-weight: bold; margin-bottom: 4px;">Specificity & Size</div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Min Identity:</span> <b id="summary-qc-ident">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Min Hit Len:</span> <b id="summary-qc-hitlen">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Max Align:</span> <b id="summary-qc-aligns">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-top: 4px; border-top: 1px dashed #eee; padding-top: 4px;"><span style="color:#666;">Amp Size:</span> <b id="summary-qc-ampsize">-</b></div>
+</div>
+
+<!-- Probe QC -->
+<div style="background: #fff; border: 1px solid #e9ecef; border-radius: 4px; padding: 8px;">
+<div style="color: #6f42c1; font-weight: bold; margin-bottom: 4px;">Probe QC</div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">5' G:</span> <b id="summary-qc-probe-5g">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 2px;"><span style="color:#666;">Poly-G:</span> <b id="summary-qc-probe-polyg">-</b></div>
+<div style="display: flex; justify-content: space-between; margin-top: 4px; border-top: 1px dashed #eee; padding-top: 4px;"><span style="color:#666;">Tm Diff:</span> <b id="summary-qc-probe-tmdiff">-</b></div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- 3. 시퀀스 정렬 뷰어 -->
 <div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
 <div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
 🔍 SEQUENCE ALIGNMENT & BINDING REPORT
 </div>
-<!-- 가로 스크롤 허용 및 박스 사이즈 제어 -->
-<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 12px; background: #2b2b2b; color: #a9b7c6; padding: 15px; margin: 0; line-height: 1.5; min-height: 100px; width: 100%; box-sizing: border-box;">Enter sequences and run QC to view alignment...</pre>
+<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 12px; background: #2b2b2b; color: #a9b7c6; padding: 15px; margin: 0; line-height: 1.5; min-height: 120px; width: 100%; box-sizing: border-box;">Enter sequences and run QC to view alignment...</pre>
 </div>
 
-<!-- 4. 메인 결과 테이블 패널 -->
+<!-- 4. 메인 결과 테이블 (확장형) -->
 <div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
-<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333; display: flex; justify-content: space-between; align-items: center;">
 <span>🧬 QC & SPECIFICITY RESULTS</span>
-<span style="font-size: 11px; font-weight: normal; color: #666;">스크롤하여 더 많은 결과 보기 ↓</span>
 </div>
 
-<!-- 픽셀 고정 높이(500px) 대신 화면 세로 비율(50vh) 사용, 넓이 100% 보장 -->
-<div class="table-container" style="max-height: 50vh; overflow-y: auto; overflow-x: auto; width: 100%;">
-<table class="table" style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 1400px;">
+<div class="table-container" style="max-height: 60vh; overflow-y: auto; overflow-x: auto; width: 100%;">
+<table class="table" style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; min-width: 2200px;">
 <thead style="position: sticky; top: 0; z-index: 10;">
+<!-- 1층 헤더: 대분류 -->
+<tr style="background: #f1f3f5; color: #495057;">
+<th colspan="4" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd;">Basic Information</th>
+<th colspan="5" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #e7f5ff;">Forward Primer Details</th>
+<th colspan="5" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #fff5f5;">Reverse Primer Details</th>
+<th colspan="5" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #f3f0ff;">Probe Details (TaqMan)</th>
+<th colspan="3" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #fff9db;">Heterodimer (dG)</th>
+<th colspan="4" style="border-bottom: 1px solid #dee2e6;">Amplicon & QC</th>
+</tr>
+<!-- 2층 헤더: 소분류 -->
 <tr style="background: #e9ecef; color: #495057;">
-<th style="padding: 10px; text-align: center; width: 40px; border-bottom: 2px solid #dee2e6; border-right: 1px solid #dee2e6; background: #e9ecef;">#</th>
-<th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Forward Primer (5' → 3')</th>
-<th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Reverse Primer (5' → 3')</th>
-<th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Probe (5' → 3')</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Tm (F)</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Tm (R)</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Tm (P)</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">GC% (F)</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">GC% (R)</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">GC% (P)</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Size</th>
-<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6; background: #e9ecef;">Position</th>
-<th style="padding: 10px; text-align: left; width: 250px; border-bottom: 2px solid #dee2e6; background: #e9ecef;">QC & Reason</th>
+<th style="padding: 8px; text-align: center; width: 40px; border-bottom: 2px solid #dee2e6;">#</th>
+<th style="padding: 8px; text-align: left; width: 180px; border-bottom: 2px solid #dee2e6;">Forward (5'-3')</th>
+<th style="padding: 8px; text-align: left; width: 180px; border-bottom: 2px solid #dee2e6;">Reverse (5'-3')</th>
+<th style="padding: 8px; text-align: left; width: 180px; border-bottom: 2px solid #dee2e6; border-right: 2px solid #adb5bd;">Probe (5'-3')</th>
+
+<!-- Fwd -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">Tm</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">GC%</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">CpG</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">HP</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">HD</th>
+
+<!-- Rev -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">Tm</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">GC%</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">CpG</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">HP</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">HD</th>
+
+<!-- Probe -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">Tm</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">GC%</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">CpG</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">HP</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">HD</th>
+
+<!-- Hetero -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">F-R</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">F-P</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">R-P</th>
+
+<!-- Amp/QC -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 60px;">Size</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 60px;">Amp Tm</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 120px;">Position</th>
+<th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6;">QC Result & Reason</th>
 </tr>
 </thead>
 <tbody id="candidate-tbody">
-<tr><td colspan="13" style="text-align:center; padding:40px; color:#888;">Result will appear here...</td></tr>
+<!-- 늘어난 컬럼(26개)에 맞춰 colspan 26 설정 -->
+<tr><td colspan="26" style="text-align:center; padding:60px; color:#888; font-size: 13px;">Waiting for QC execution...</td></tr>
 </tbody>
 </table>
+<span style="font-size: 11px; font-weight: normal; color: #666;">* HP : Hairpin (dG) &nbsp;&nbsp;|&nbsp;&nbsp; * HD : Homodimer / Heterodimer (dG)</span>
 </div>
-</div>
-
-<!-- 5. 메타데이터 패널 (결과가 나오면 표시됨) -->
-<div class="panel" id="metadata-panel" style="display: none; background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 60px; box-sizing: border-box;">
-<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #333;">DESIGN PARAMETERS & QC SUMMARY</div>
-<hr class="rule-light" style="margin: 10px 0;">
-<div id="metadata-table"></div>
 </div>
 
 </div>
