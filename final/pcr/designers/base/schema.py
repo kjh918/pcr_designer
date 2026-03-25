@@ -1,3 +1,4 @@
+import copy
 from pydantic import BaseModel, Field, model_validator
 from typing import Dict, Any, List, Optional, Literal
 from pcr.components.amplicon import Amplicon
@@ -77,7 +78,16 @@ class BaseDesignOutput(BaseModel):
 
     @property
     def passed_amplicons(self) -> List[Amplicon]:
-        return [amp for amp in self.amplicons if getattr(amp, "is_qc_pass", False)]
+        passed = []
+        for amp in self.amplicons:
+            qs = getattr(amp, "qc_status", None)
+            if qs is not None:
+                if qs.is_pass: 
+                    passed.append(amp)
+            else:
+                if getattr(amp, "is_qc_pass", False): 
+                    passed.append(amp)
+        return passed
 
     @property
     def total_count(self) -> int:
@@ -107,17 +117,28 @@ class BaseDesignOutput(BaseModel):
 
         results_list = []
         for rank, amp in enumerate(self.amplicons, start=1):
-            dynamic_qc_details = getattr(amp, "qc_metrics", {})
-            if hasattr(amp, "blast_stats") and getattr(amp, "blast_stats"):
-                dynamic_qc_details["blast"] = getattr(amp, "blast_stats")
+            dynamic_qc_details = getattr(amp, "qc_metrics", {}).copy()
+            
+            # 🔥 BLAST 다이어트 코드 제거: 이제 BlastSpecificityChecker에서 알아서 최적화된 결과만 넘깁니다.
+            blast_stats = getattr(amp, "blast_stats", {})
+            if blast_stats:
+                dynamic_qc_details["blast"] = blast_stats
 
-            # 🔥 [수정] Heterodimer는 두 객체 사이의 관계값이므로 여전히 Metrics나 QC Status에서 가져옵니다.
             t_data = {}
             qc_status = getattr(amp, "qc_status", None)
             if qc_status and hasattr(qc_status, "modules") and "thermo" in qc_status.modules:
                 t_data = qc_status.modules["thermo"].metrics
 
-            # 헬퍼 함수: 객체의 속성을 안전하게 읽어옴 (getattr 사용)
+            if qc_status is not None:
+                final_is_pass = qc_status.is_pass
+                final_fail_reason = " | ".join(qc_status.fail_reasons) if not final_is_pass else "PASS"
+            else:
+                final_is_pass = getattr(amp, "is_qc_pass", True)
+                final_fail_reason = getattr(amp, "qc_log", "PASS") if not final_is_pass else "PASS"
+
+            if getattr(amp, "is_qc_pass", None) is False:
+                final_is_pass = False
+                final_fail_reason = getattr(amp, "qc_log", final_fail_reason)
             def get_oligo_meta(obj):
                 if not obj: return {"tm": 0.0, "gc": 0.0, "cpg": 0, "hp": 0.0, "hd": 0.0}
                 return {
@@ -133,8 +154,8 @@ class BaseDesignOutput(BaseModel):
                 "rank": rank,
                 "id": amp.id,
                 "qc_info": {
-                    "is_pass": getattr(amp, "is_qc_pass", True),
-                    "fail_reason": getattr(amp, "qc_log", "") if not getattr(amp, "is_qc_pass", True) else "PASS"
+                    "is_pass": final_is_pass,
+                    "fail_reason": final_fail_reason if not final_is_pass else "PASS"
                 },
                 "oligos": {
                     "forward": get_oligo_meta(amp.forward),

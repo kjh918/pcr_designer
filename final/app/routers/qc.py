@@ -40,7 +40,20 @@ async def design_qc_api(req: QCEvalInput):
             "max_amp_size": req_qc.get("max_amp_size", 300),
             "max_amp_len": req_qc.get("max_amp_size", 300),
             "use_ispcr_check": req_qc.get("use_ispcr_check", False),
-            "primer": { "max_diff_tm": req_qc.get("primer", {}).get("max_diff_tm", 3.0) }
+            
+            # 🔥 프라이머 오버라이드
+            "primer": { 
+                "min_diff_tm": req_qc.get("primer", {}).get("min_diff_tm", 0.0),
+                "max_diff_tm": req_qc.get("primer", {}).get("max_diff_tm", 3.0) 
+            },
+            
+            # 🔥 프로브 오버라이드 (선택하신 Canvas 코드와 변수명을 정확히 일치시킴)
+            "probe": {
+                "min_primer_probe_tm_diff": req_qc.get("probe", {}).get("min_primer_probe_tm_diff", 5.0),
+                "max_primer_probe_tm_diff": req_qc.get("probe", {}).get("max_primer_probe_tm_diff", 10.0),
+                "max_probe_poly_g": req_qc.get("probe", {}).get("max_probe_poly_g", 3),
+                "avoid_5_prime_g": req_qc.get("probe", {}).get("avoid_5_prime_g", True)
+            }
         }
 
         # 스크립트 실행 (Base Schema 형태 반환)
@@ -62,26 +75,6 @@ async def design_qc_api(req: QCEvalInput):
             blast_data = item.get("qc_details", {}).get("blast", {})
             if not blast_data: continue
             
-            # TODO : [Blast 결과 자체 수정 ]
-            # 전체 텍스트 덩어리 제거
-            #blast_data.pop("combined_alignment_text", None)
-            
-            # 각 Signal 마다 있는 중복 텍스트 덩어리 제거
-            #for sig_group in ["target_signals", "off_target_signals", "amplification_only"]:
-            #    for sig in blast_data.get(sig_group, []):
-            #        sig.pop("unified_text_block", None)
-            #        sig.pop("full_sequence", None)
-            #        sig.pop("match", None)
-            #        sig.pop("query", None)
-            #        sig.pop("subject", None)
-            #        # fwd, rev, probe 내부의 query/match/subject 제거
-            #        for probe_type in ["fwd", "rev", "probe"]:
-            #            if probe_type in sig:
-            #                sig[probe_type].pop("query", None)
-            #                sig[probe_type].pop("match", None)
-            #                sig[probe_type].pop("subject", None)
-
-        # 🔥 최종 응답 포맷 (군더더기 없는 완벽한 단일 계층)
         final_output = {
             "status": raw_result.get("status", "error"),
             "metadata": {
@@ -96,7 +89,6 @@ async def design_qc_api(req: QCEvalInput):
             },
             "results": results_list
         }
-        print(final_output)
         if final_output["status"] == "success":
             print(f"✅ QC Success. Passed {final_output['summary'].get('passed_count', 0)} / {final_output['summary'].get('total_count', 0)}")
         return final_output

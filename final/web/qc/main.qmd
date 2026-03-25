@@ -31,7 +31,7 @@ css: ./style.css
 
 <!-- 🔥 토글(Toggle) 기능이 적용된 Quick Guide & Tutorial -->
 <details style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; padding: 12px 15px; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" open>
-<summary style="color: #1e707a; font-weight: bold; font-size: 14px; cursor: pointer; outline: none;">💡 Quick Guide & Tutorial</summary>
+<summary style="color: #1e707a; font-weight: bold; font-size: 14px; cursor: pointer; outline: none;">💡 Quick Guiparde & Tutorial</summary>
 
 <div style="margin-top: 12px;">
 <p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
@@ -45,7 +45,9 @@ css: ./style.css
 
 <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #1e707a;">🧪 Tutorial Data (예제 서열)</p>
 <p style="margin: 0 0 12px 0; font-size: 12px; color: #555; line-height: 1.4;">
-아래의 서열 박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>Quick Paste</strong> 칸에 붙여넣고 실행해보세요.
+아래의 서열은 <strong>PIK3CA</strong> 유전자의 내부 엑손 영역입니다.<br>
+PIK3CA는 chr3에 위치한 유전자로, chr22에도 높은 서열 일치율을 보이는 <strong>유사 유전자(Pseudogene)</strong> 영역이 존재합니다.<br>
+박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>Quick Paste</strong> 칸에 붙여넣고 실행해보세요.
 </p>
 
 <!-- 예제 데이터 2단 분할 -->
@@ -57,9 +59,9 @@ css: ./style.css
 <div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">✅ 단일 타겟 (Specific)</div>
 <div style="font-size: 11px; color: #666; margin-bottom: 8px;">목표 유전자에만 1번 결합하는 이상적인 프라이머입니다.</div>
 <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
-GCACATCGAGGCCAACACT<br>
-TGAGAAAAGTGAACCTGCGGA<br>
-TTGCCCGGACCTGGGATGC
+GAAAATGACAAAGAACAGCTC<br>
+TAGCACTTACCTGTGACTC<br>
+CTCTGAAATCACTAAGCAGGAGAAA
 </div>
 </div>
 
@@ -68,9 +70,9 @@ TTGCCCGGACCTGGGATGC
 <div style="font-weight: bold; color: #d9534f; font-size: 13px; margin-bottom: 5px;">⚠️ 다중 결합 (Off-target)</div>
 <div style="font-size: 11px; color: #666; margin-bottom: 8px;">타겟 외에 다른 위치에도 비특이적으로 증폭되는 불량 예시입니다.</div>
 <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
-GAAAATGACAAAGAACAGCTC<br>
-TAGCACTTACCTGTGACTC<br>
-CTGAAATCACTAAGCAGGAGA
+AAATGACAAAGAACAGCTC<br>
+TAGCACTTACCTGTGA<br>
+ATCACTGCGCAGGAGAA
 </div>
 </div>
 

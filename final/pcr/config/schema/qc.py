@@ -33,7 +33,7 @@ class CommonSpecificityCriteria(BaseModel):
     blast_identity_threshold: float = Field(90.0, alias="min_identity")
     blast_word_size: int = Field(12, alias="word_size")
     min_amp_size: int = Field(50, alias="min_amp_len")
-    max_amp_size: int = Field(1000, alias="max_amp_len")
+    max_amp_size: int = Field(3000, alias="max_amp_len")
 
     model_config = {"populate_by_name": True}
 
@@ -73,6 +73,8 @@ class QCCriteria(BaseModel):
     probe: ProbeQCCriteria = Field(default_factory=ProbeQCCriteria)
     as_pcr: Optional[ASPCRQCCriteria] = None
         
+    use_ispcr_check: bool = True
+
     model_config = {"populate_by_name": True, "extra": "ignore"}
         
 # =============================================================================
@@ -158,3 +160,37 @@ class OffTargetAmplicon(BaseModel):
     rev_hit: Optional[BlastHit] = None
     is_target: bool = False
     probe_binds: bool = False
+
+class OligoBindingReport(BaseModel):
+    """개별 프라이머/프로브의 결합 상태 리포트"""
+    label: str
+    identity: str
+    chrom: str
+    strand: str
+    coordinate: str
+
+class AmpliconSignalReport(BaseModel):
+    """특정 위치에 결합하여 증폭된 단일 앰플리콘 시그널 리포트"""
+    location: str
+    product_size: int
+    is_target: bool
+    fwd: OligoBindingReport
+    rev: OligoBindingReport
+    probe: Optional[OligoBindingReport] = None
+    unified_text_block: str = ""
+    # 오류 판별을 위한 내부 플래그
+    size_error: bool = False
+    orientation_error: bool = False
+    is_same_strand: bool = False
+
+class BlastResultReport(BaseModel):
+    """BLAST 특이성 검사 최종 종합 리포트"""
+    passed: bool
+    reason: str
+    target_count: int = 0
+    off_target_count: int = 0
+    noise_count: int = 0
+    target_signals: List[AmpliconSignalReport] = Field(default_factory=list)
+    off_target_signals: List[AmpliconSignalReport] = Field(default_factory=list)
+    amplification_only: List[AmpliconSignalReport] = Field(default_factory=list)
+    total_signal_count: int = 0

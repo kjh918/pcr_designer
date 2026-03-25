@@ -13,7 +13,8 @@ try:
 except ImportError:
     pysam = None
 
-from pcr.config.schema.qc import BlastHit, OffTargetAmplicon
+# 🔥 AmpliconQCStatus 임포트 추가
+from pcr.config.schema.qc import BlastHit, OffTargetAmplicon, AmpliconQCStatus
 from pcr.config.schema.app import PipelineConfig
 from pcr.components.amplicon import Amplicon
 
@@ -94,18 +95,42 @@ class BlastSpecificityChecker:
 
                 result_data = self._evaluate_amplicon(amp, f_hits, r_hits, p_hits)
                 amp.blast_stats = result_data
-                amp.is_qc_pass = result_data["passed"]
                 
-                if amp.is_qc_pass:
-                    amp.qc_log = "Passed: Specific target confirmed."
-                else:
-                    amp.qc_log = result_data.get("reason", "Failed: Specificity issue.")
+                # 🔥 [핵심 수정] 낡은 변수 직접 덮어쓰기 방식을 버리고, 표준 qc_status 통일 규격을 사용합니다.
+                if not hasattr(amp, "qc_status") or amp.qc_status is None:
+                    amp.qc_status = AmpliconQCStatus()
+                
+                is_pass = result_data["passed"]
+                messages = [] if is_pass else [result_data.get("reason", "Failed: Specificity issue.")]
+                
+                amp.qc_status.add_result(
+                    module_name="blast",
+                    is_pass=is_pass,
+                    messages=messages,
+                    metrics={
+                        "target_count": result_data.get("target_count", 0),
+                        "off_target_count": result_data.get("off_target_count", 0),
+                        "noise_count": result_data.get("noise_count", 0)
+                    }
+                )
+                
+                # 하위 호환성을 위해 qc_status 상태를 기본 속성에 동기화
+                amp.is_qc_pass = amp.qc_status.is_pass
+                amp.qc_log = " | ".join(amp.qc_status.fail_reasons)
 
         except Exception as e:
             print(f"❌ BLAST Execution Failed: {e}")
             for amp in amplicons:
-                amp.is_qc_pass = False
-                amp.qc_log = f"Error: BLAST analysis failed ({str(e)})"
+                if not hasattr(amp, "qc_status") or amp.qc_status is None:
+                    amp.qc_status = AmpliconQCStatus()
+                
+                amp.qc_status.add_result(
+                    module_name="blast",
+                    is_pass=False,
+                    messages=[f"BLAST Error: {str(e)}"]
+                )
+                amp.is_qc_pass = amp.qc_status.is_pass
+                amp.qc_log = " | ".join(amp.qc_status.fail_reasons)
 
         return amplicons
 
@@ -160,7 +185,7 @@ class BlastSpecificityChecker:
                 end = max(fh.genomic_end, rh.genomic_end)
                 size = end - start
                 
-                if size <= max(5000, getattr(self.criteria, "max_amp_size", 300)):
+                if size <= max(500, getattr(self.criteria, "max_amp_size", 300)):
                     amplicons.append(OffTargetAmplicon(
                         chrom=fh.sseqid, start=start, end=end, 
                         product_size=size, fwd_hit=fh, rev_hit=rh,
@@ -249,23 +274,16 @@ class BlastSpecificityChecker:
                 is_passed = False
                 reason = f"Failed: Amplicon size ({target_report['product_size']}bp) is out of range ({self.criteria.min_amp_size}-{self.criteria.max_amp_size}bp)."
 
-        # 🔥 타겟과 오프타겟의 텍스트 블록을 모두 모아서 하나의 큰 스트링으로 합칩니다.
-        all_text_blocks = []
-        for sig in target_signals:
-            all_text_blocks.append(sig.get("unified_text_block", ""))
-        for sig in off_target_signals:
-            all_text_blocks.append(sig.get("unified_text_block", ""))
-        for sig in amplification_only:
-            all_text_blocks.append(sig.get("unified_text_block", ""))
-            
-        combined_text = "\n\n".join(filter(bool, all_text_blocks))
-
         return {
-            "passed": is_passed, "reason": reason, "target_count": len(target_signals),
-            "off_target_count": len(off_target_signals), "noise_count": len(amplification_only),
-            "target_signals": target_signals, "off_target_signals": off_target_signals,
-            "amplification_only": amplification_only, "total_signal_count": len(target_signals) + len(off_target_signals),
-            "combined_alignment_text": combined_text # 🔥 화면에 뿌려줄 최종 문자열
+            "passed": is_passed, 
+            "reason": reason, 
+            "target_count": len(target_signals),
+            "off_target_count": len(off_target_signals), 
+            "noise_count": len(amplification_only),
+            "target_signals": target_signals, 
+            "off_target_signals": off_target_signals,
+            "amplification_only": amplification_only, 
+            "total_signal_count": len(target_signals) + len(off_target_signals)
         }
 
     def _rc(self, seq: str) -> str:
@@ -284,7 +302,8 @@ class BlastSpecificityChecker:
 
     def _create_binding_report(self, cand: OffTargetAmplicon, amplicon: Amplicon, p_hits: List[BlastHit]) -> Dict[str, Any]:
         """
-        사용자 요청에 맞춘 완벽한 형태의 Unified Alignment Block을 구성합니다.
+        프론트엔드 UI 표출(Amplicon block)에 필요한 텍스트(unified_text_block) 1개만 남기고 
+        무거운 서열들은 제거된 경량화 버전
         """
         fwd_seq = amplicon.forward.sequence
         rev_seq = amplicon.reverse.sequence
@@ -359,7 +378,6 @@ class BlastSpecificityChecker:
         
         match_line = "".join(overall_match)
 
-        # 🔥 타겟인지 오프타겟인지 명확히 구분하는 헤더 추가
         title_prefix = "🎯 TARGET" if cand.is_target else "⚠️ NON-SPECIFIC"
         
         lines = [
@@ -382,31 +400,29 @@ class BlastSpecificityChecker:
         f_report = {
             "label": "Forward Primer", "identity": f"{cand.fwd_hit.pident}%",
             "chrom": cand.fwd_hit.sseqid, "strand": cand.fwd_hit.strand,
-            "coordinate": f"{cand.fwd_hit.sseqid}:{cand.fwd_hit.genomic_start}-{cand.fwd_hit.genomic_end} ({cand.fwd_hit.strand})",
-            "query": f_input, "match": match_line, "subject": f_blast
+            "coordinate": f"{cand.fwd_hit.sseqid}:{cand.fwd_hit.genomic_start}-{cand.fwd_hit.genomic_end} ({cand.fwd_hit.strand})"
         }
         r_report = {
             "label": "Reverse Primer", "identity": f"{cand.rev_hit.pident}%",
             "chrom": cand.rev_hit.sseqid, "strand": cand.rev_hit.strand,
-            "coordinate": f"{cand.rev_hit.sseqid}:{cand.rev_hit.genomic_start}-{cand.rev_hit.genomic_end} ({cand.rev_hit.strand})",
-            "query": r_input, "match": match_line, "subject": r_blast
+            "coordinate": f"{cand.rev_hit.sseqid}:{cand.rev_hit.genomic_start}-{cand.rev_hit.genomic_end} ({cand.rev_hit.strand})"
         }
         p_report = None
         if target_p_hit:
             p_report = {
                 "label": "TaqMan Probe", "identity": f"{target_p_hit.pident}%",
                 "chrom": target_p_hit.sseqid, "strand": target_p_hit.strand,
-                "coordinate": f"{target_p_hit.sseqid}:{target_p_hit.genomic_start}-{target_p_hit.genomic_end} ({target_p_hit.strand})",
-                "query": p_input, "match": match_line, "subject": p_blast
+                "coordinate": f"{target_p_hit.sseqid}:{target_p_hit.genomic_start}-{target_p_hit.genomic_end} ({target_p_hit.strand})"
             }
 
         return {
             "location": f"{cand.chrom}:{amp_gstart}-{amp_gend}",
             "product_size": amp_gend - amp_gstart + 1, 
             "is_target": cand.is_target, 
-            "fwd": f_report, "rev": r_report, "probe": p_report,
-            "full_sequence": full_ref_seq,
-            "unified_text_block": "\n".join(lines)
+            "fwd": f_report, 
+            "rev": r_report, 
+            "probe": p_report,
+            "unified_text_block": "\n".join(lines) 
         }
 
     def _check_probe_binding(self, cand: OffTargetAmplicon, p_hits: List[BlastHit]) -> bool:

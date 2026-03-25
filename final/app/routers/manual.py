@@ -13,8 +13,8 @@ from pcr.config.schema.pcr import PCRParams, PrimerKwargs, ProbeKwargs
 from scripts.validate_primer import design_manual_qpcr 
 
 router = APIRouter(
-    prefix="/api/design/manual",
-    tags=["manual"]
+    prefix="/api/design/qpcr",
+    tags=["qpcr"]
 )
 # routers/design_manual.py
 

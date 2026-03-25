@@ -149,9 +149,9 @@ ul.task-list li input[type="checkbox"] {
 <label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 11px; color: #0275d8; margin-top: 0; margin-bottom: 4px;">💡 Quick Paste (엑셀 복붙 지원)</label>
 <textarea id="qc-quick-paste" class="input-tight" style="width:100%; height:40px; font-family: 'Nunito', sans-serif; font-size: 12px; resize: none; border-color: #b8d4f1;" placeholder="엑셀의 한 행(Fwd, Rev, Probe, Template 순서)을 통째로 복사해서 여기에 붙여넣으면 아래 칸들에 자동 분류됩니다."></textarea>
 </div>
-<p><label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer <span style="color:red;">*</span></label> <input type="text" id="qc-forward-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. ATGCGTACGTAGCTAGCTA"></p>
-<p><label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer <span style="color:red;">*</span></label> <input type="text" id="qc-reverse-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. CGATCGATCGTACGTACG"></p>
-<p><label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe <span style="color:#888; font-weight: normal;">(Optional)</span></label> <input type="text" id="qc-probe-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. FAM-AGCTAGCTAGCTAG-BHQ1"></p>
+<p><label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Forward Primer <span style="color:red;">*</span></label> <input type="text" id="qc-forward-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. GAAAATGACAAAGAACAGCTC"></p>
+<p><label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Reverse Primer <span style="color:red;">*</span></label> <input type="text" id="qc-reverse-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. TAGCACTTACCTGTGACTC"></p>
+<p><label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Probe <span style="color:#888; font-weight: normal;">(Optional)</span></label> <input type="text" id="qc-probe-seq" class="input-tight seq-input" style="width:100%; margin-bottom: 5px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="e.g. CTGAAATCACTAAGCAGGAGA"></p>
 <label class="small-label" style="font-family: 'Nunito', sans-serif; font-size: 13px;">Template Sequence <span style="color:#888; font-weight: normal;">(Optional, Amplicon Size 확인용)</span></label>
 <textarea id="qc-template-seq" class="input-tight seq-input" style="width:100%; height:70px; font-family: 'Nunito', sans-serif; font-size: 13px; text-transform:uppercase;" placeholder="원본 타겟 서열을 입력하면 정확한 Amplicon Size를 계산합니다."></textarea>
 <!-- 2. REFERENCE GENOME -->
@@ -248,7 +248,7 @@ Export (HTML)
 <!-- 🔥 토글(Toggle) 기능이 적용된 Quick Guide & Tutorial -->
 <details style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; padding: 12px 15px; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" open="">
 <summary style="color: #1e707a; font-weight: bold; font-size: 14px; cursor: pointer; outline: none;">
-💡 Quick Guide &amp; Tutorial
+💡 Quick Guiparde &amp; Tutorial
 </summary>
 <div style="margin-top: 12px;">
 <p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
@@ -259,10 +259,11 @@ Export (HTML)
 🧪 Tutorial Data (예제 서열)
 </p>
 <p style="margin: 0 0 12px 0; font-size: 12px; color: #555; line-height: 1.4;">
-아래의 서열 박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>Quick Paste</strong> 칸에 붙여넣고 실행해보세요.
+아래의 서열은 <strong>PIK3CA</strong> 유전자의 내부 엑손 영역입니다.<br> PIK3CA는 chr3에 위치한 유전자로, chr22에도 높은 서열 일치율을 보이는 <strong>유사 유전자(Pseudogene)</strong> 영역이 존재합니다.<br> 박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>Quick Paste</strong> 칸에 붙여넣고 실행해보세요.
 </p>
 <!-- 예제 데이터 2단 분할 -->
 <div style="display: flex; gap: 15px;">
+<!-- 예제 1: PICK3CA E545K -->
 <!-- 예제 1: 정상 타겟 -->
 <div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
 <div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">
@@ -272,7 +273,7 @@ Export (HTML)
 목표 유전자에만 1번 결합하는 이상적인 프라이머입니다.
 </div>
 <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
-<p>GCACATCGAGGCCAACACT<br> TGAGAAAAGTGAACCTGCGGA<br> TTGCCCGGACCTGGGATGC</p>
+<p>GAAAATGACAAAGAACAGCTC<br> TAGCACTTACCTGTGACTC<br> CTCTGAAATCACTAAGCAGGAGAAA</p>
 </div>
 </div>
 <!-- 예제 2: 오프 타겟 -->
@@ -284,7 +285,7 @@ Export (HTML)
 타겟 외에 다른 위치에도 비특이적으로 증폭되는 불량 예시입니다.
 </div>
 <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
-<p>GAAAATGACAAAGAACAGCTC<br> TAGCACTTACCTGTGACTC<br> CTGAAATCACTAAGCAGGAGA</p>
+<p>AAATGACAAAGAACAGCTC<br> TAGCACTTACCTGTGA<br> ATCACTGCGCAGGAGAA</p>
 </div>
 </div>
 </div>
@@ -573,9 +574,7 @@ Waiting for QC execution…
 </tr>
 </tbody>
 </table>
-<div style="padding: 10px 15px; background: #f8f9fa; border-top: 1px solid #dee2e6;">
 <p><span style="font-size: 11px; font-weight: normal; color: #666;">* HP : Hairpin (dG) &nbsp;&nbsp;|&nbsp;&nbsp; * HD : Homodimer / Heterodimer (dG)</span></p>
-</div>
 </div>
 </div>
 </div>

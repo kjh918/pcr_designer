@@ -82,7 +82,8 @@ class QPCRProbeChecker:
     def run(self, amplicons: List[Amplicon]) -> List[Amplicon]:
         avoid_5g = getattr(self.probe_crit, "avoid_5_prime_g", True)
         max_poly_g = getattr(self.probe_crit, "max_probe_poly_g", 3)
-        
+        min_probe_diff = getattr(self.probe_crit, "min_primer_probe_tm_diff", 5.0)
+        max_probe_diff = getattr(self.probe_crit, "max_primer_probe_tm_diff", 10.0)
         hp_limit = getattr(self.criteria, "hairpin_min_dg", -5.0)
         hd_limit = getattr(self.criteria, "homodimer_min_dg", -6.0)
         he_limit = getattr(self.criteria, "heterodimer_min_dg", -6.0)
@@ -101,8 +102,12 @@ class QPCRProbeChecker:
                 is_pass = False; msgs.append("Probe 5' starts with 'G'")
             
             max_pr_tm = max(amp.forward.tm, amp.reverse.tm)
-            if amp.probe.tm <= max_pr_tm:
-                is_pass = False; msgs.append(f"Probe Tm({round(amp.probe.tm,1)}) ≤ Max Primer Tm({round(max_pr_tm,1)})")
+            target_min_tm = max_pr_tm + min_probe_diff
+            target_max_tm = max_pr_tm + max_probe_diff
+            
+            if not (target_min_tm <= amp.probe.tm <= target_max_tm):
+                is_pass = False
+                msgs.append(f"Probe Tm ({round(amp.probe.tm,1)}℃) out of range. Expected: {round(target_min_tm,1)}~{round(target_max_tm,1)}℃ (Max Primer + {min_probe_diff}~{max_probe_diff}℃)")
             
             if "G" * (max_poly_g + 1) in p_seq:
                 is_pass = False; msgs.append(f"Probe contains Poly-G (>{max_poly_g})")

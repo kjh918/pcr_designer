@@ -16,11 +16,8 @@ from pcr.config.loader import load_pipeline_config
 from pcr.components.primer import Primer, Probe
 from pcr.components.amplicon import Amplicon
 
-# 🔥 복잡한 수동 BLAST 로직은 모두 제거하고, 
-# 똑똑해진 QPCRQCExecutor와 스키마만 가져옵니다!
 from pcr.designers.base.schema import BaseDesignOutput
 from pcr.designers.qpcr.qc import QPCRQCExecutor
-
 
 def reverse_complement(seq: str) -> str:
     return seq.translate(str.maketrans('ATGCatgcNn', 'TACGtacgNn'))[::-1]
@@ -44,10 +41,14 @@ def evaluate_qc_pipeline(
         user_overrides["qc_criteria"] = qc_overrides
 
     config = load_pipeline_config(base_yaml, system_yaml, assay_type, user_overrides=user_overrides)
-    
+
+    # 🔥 [수정됨] Pydantic 에러를 유발하던 config.pcr_params.reference_name 강제 할당 코드를 제거했습니다.
+    # 대신 아래에서 blast_db_path 자체를 None으로 끄는 방식으로 제어합니다.
+
     # [In-Memory Override] BLAST 시스템 경로 동적 할당
     if hasattr(config, "system") and hasattr(config.system, "paths"):
         if genome.lower() == "none":
+            # BLAST를 돌리지 않으려면 DB 경로를 None으로 날려버립니다.
             config.system.paths.blast_db_path = None
         else:
             old_db = getattr(config.system.paths, "blast_db_path", "")
@@ -95,7 +96,6 @@ def evaluate_qc_pipeline(
 
     virtual_template = template_seq if template_seq else fwd_seq + ("N" * 20) + reverse_complement(rev_seq)
     
-    # 💡 1. 스크립트의 역할: 사용자가 준 서열로 "단 1개의 Amplicon"만 조립합니다.
     amp = Amplicon(
         id=f"{project_name}_1", set_id=project_name,
         forward=fwd_primer, reverse=rev_primer, probe=probe_obj,
@@ -110,17 +110,10 @@ def evaluate_qc_pipeline(
     except Exception:
         pass
 
-
-    # =====================================================================
-    # 💡 2. 아키텍처의 꽃: 파이프라인(Executor) 호출 및 Schema 패키징
-    # =====================================================================
     try:
-        # 단 1줄! QPCRQCExecutor가 내부적으로 BLAST를 돌리고, 
-        # Hit가 5개라면 5개로 증식(Explode)시킨 앰플리콘 리스트를 반환합니다.
         qc_executor = QPCRQCExecutor(config)
         evaluated_amps = qc_executor.execute([amp])
         
-        # 증식되어 검증까지 완료된 리스트를 스키마에 던져 넣으면 프론트용 JSON이 튀어나옵니다.
         output_schema = BaseDesignOutput(
             status="success",
             amplicons=evaluated_amps
@@ -140,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("--probe", type=str, default="")
     parser.add_argument("--template", type=str, default="")
     parser.add_argument("--genome", type=str, default="hg38")
-    parser.add_argument("--base_config", type=str, default="pcr/designers/qpcr/config.yaml")
+    parser.add_argument("--base_config", type=str, default="pcr/config/base_pcr.yaml")
     parser.add_argument("--system_config", type=str, default="pcr/config/system.yaml")
     args = parser.parse_args()
 

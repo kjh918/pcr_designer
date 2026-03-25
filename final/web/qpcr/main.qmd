@@ -1,8 +1,6 @@
 ---
 page-layout: custom
-resources:
-- "./manual_app.js"
-- "./manual_style.css"
+css: ./style.css     
 ---
 
 ```{=html}
@@ -14,7 +12,7 @@ resources:
 <small>NGS-TEAM PRIMER SUITE</small>
 <hr class="rule">
 
-{{< include partials/manual_params.html >}}
+{{< include partials/params.html >}}
 
 <hr class="rule">
 
@@ -29,9 +27,53 @@ resources:
 
 </aside>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-{{< include partials/manual_result_panel.html >}}
+<!-- 2. 오른쪽 메인 영역 -->
+<main class="main-content" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #f8f9fa;">
+
+<!-- 🔥 토글(Toggle) 기능이 적용된 Quick Guide & Tutorial -->
+<details style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; padding: 12px 15px; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" open>
+<summary style="color: #1e707a; font-weight: bold; font-size: 14px; cursor: pointer; outline: none;">💡 Quick Guiparde & Tutorial</summary>
+
+<div style="margin-top: 12px;">
+<p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
+검증할 프라이머와 프로브 서열을 좌측 폼에 입력한 후 검증(QC)을 실행하세요.<br>
+<span style="display: inline-block; margin-top: 4px; padding: 4px 8px; background: #fff; border: 1px solid #b8d4f1; border-radius: 4px; color: #0275d8; font-size: 12px;">
+<strong>Tip!</strong> 엑셀에서 서열 한 행(Fwd, Rev, Probe 순서)을 복사하여 좌측 <strong>'Quick Paste'</strong> 칸에 붙여넣으면 자동으로 분류됩니다.
+</span>
+</p>
+
+<hr style="border: none; border-top: 1px dashed #b8d4f1; margin: 12px 0;">
+
+<p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #1e707a;">🧪 Tutorial Data (예제 서열)</p>
+<p style="margin: 0 0 12px 0; font-size: 12px; color: #555; line-height: 1.4;">
+아래의 서열은 <strong>PIK3CA</strong> 유전자의 내부 엑손 영역입니다.<br>
+박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>RAW SEQUENCE (5’ -> 3’)</strong> 칸에 붙여넣고 실행해보세요.
+</p>
+
+<!-- 예제 데이터 2단 분할 -->
+<div style="display: flex; gap: 15px;">
+
+<!-- 예제 1: PICK3CA E545K -->
+<!-- 예제 1: 정상 타겟 -->
+<div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
+<div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">✅ 단일 타겟 (Specific)</div>
+<div style="font-size: 11px; color: #666; margin-bottom: 8px;">서열 중 [Target]에 결합하는 Probe 및 primer를 제작합니다.</div>
+<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
+GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA<br>
+</div>
+</div>
+
+
 
 </div>
-<script src="./manual_app.js"></script>
-<script src="./manual_style.css"></script>
+</details>
+
+<!-- 결과 패널 인클루드 -->
+{{< include partials/result_panel.html >}}
+
+</main>
+
+</div>
+
+<script src="[https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js)"></script>
+<script src="./app.js"></script>

@@ -30,6 +30,8 @@ pcr_params:
     max_probe_poly_g: 3
     max_probe_3_end_gc: 2
     avoid_5_prime_g: true
+    min_primer_probe_tm_diff: 5.0
+    max_primer_probe_tm_diff: 10.0
 
 qc_criteria:
   hairpin_min_dg: -5.0
@@ -43,3 +45,6 @@ qc_criteria:
   max_amp_size: 300
   primer:
     max_diff_tm: 3.0
+  probe:
+    min_primer_probe_tm_diff: 5.0
+    max_primer_probe_tm_diff: 10.0
