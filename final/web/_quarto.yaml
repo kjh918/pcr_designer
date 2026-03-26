@@ -6,7 +6,7 @@ website:
   navbar:
     background: "#0056b3" # 젠큐릭스 느낌의 블루 계열 (수정 가능)
     left:
-      - href: main.qmd
+      - href: index.qmd
         text: "Home"
       - href: qc/main.qmd
         text: "QC"

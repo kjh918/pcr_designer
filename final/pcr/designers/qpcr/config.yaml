@@ -9,15 +9,15 @@ pcr_params:
     min_length: 20
     opt_length: 25
     max_length: 30
-    min_tm: 45.0
-    opt_tm: 55.0
-    max_tm: 65.0
+    min_tm: 40.0
+    opt_tm: 50.0
+    max_tm: 60.0
     min_gc: 35.0
     opt_gc: 50.0
     max_gc: 65.0
 
   probe_kwargs:
-    n_candidates: 5
+    n_candidates: 10
     min_length: 20
     opt_length: 25
     max_length: 30
@@ -37,7 +37,7 @@ qc_criteria:
   min_identity: 90.0
   min_identity_threshold: 90.0
   min_hit_length: 13
-  blast_max_alignments: 5
+  blast_max_alignments: 50
   min_amp_size: 50
   max_amp_size: 300
   primer:

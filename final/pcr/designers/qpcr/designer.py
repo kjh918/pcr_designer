@@ -9,7 +9,6 @@ from pcr.components.region import GenomicRegion  # 🔥 Region 임포트 추가
 
 class QPCRPrimerDesigner(BasePrimerDesigner):
     ASSAY_TYPE = "qPCR"
-
     def __init__(self, input_data: BaseDesignInput):
         super().__init__(input_data)
         self.probe_gap = self.config.pcr_params.probe_kwargs.probe_gap
@@ -70,6 +69,7 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
     # [Override] 메인 파이프라인
     # ------------------------------------------------------------------
     def design(self) -> BaseDesignOutput:
+
         try:
             raw_probes = self._design_probes_only()
             if not raw_probes:
@@ -101,7 +101,6 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
                     final_amplicons.extend(amps)
                     processed += 1
 
-            print(self.qc_stats)
             if not final_amplicons:
                 return BaseDesignOutput(status="no_valid_pairs")
             return BaseDesignOutput(
@@ -139,8 +138,9 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
         
         current_seq_args = self.seq_args.copy()
         current_seq_args.update(probe_seq_args)
-
+        print(current_seq_args)
         res  = primer3.bindings.design_primers(current_seq_args, run_args)
+        print(res)
         num  = res.get("PRIMER_INTERNAL_NUM_RETURNED", 0)
         return [p for i in range(num) if (p := Probe.from_primer3(res, i))]
 
@@ -240,7 +240,6 @@ class QPCRPrimerDesigner(BasePrimerDesigner):
 
                 alt_seq = self.input.template_sequence
                 ref_seq = getattr(self.input, "reference_sequence", "") or ""
-                
                 # Alignment 다이어그램 생성
                 alignment_view = []
                 if ref_seq and alt_seq:

@@ -24,6 +24,7 @@ css: ./style.css
 <button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (JSON)</button>
 <button id="btn-export-html" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (HTML)</button>
 </div>
+</div>
 
 </aside>
 
@@ -36,10 +37,10 @@ css: ./style.css
 
 <div style="margin-top: 12px;">
 <p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
-검증할 프라이머와 프로브 서열을 좌측 폼에 입력한 후 검증(QC)을 실행하세요.<br>
-<span style="display: inline-block; margin-top: 4px; padding: 4px 8px; background: #fff; border: 1px solid #b8d4f1; border-radius: 4px; color: #0275d8; font-size: 12px;">
-<strong>Tip!</strong> 엑셀에서 서열 한 행(Fwd, Rev, Probe 순서)을 복사하여 좌측 <strong>'Quick Paste'</strong> 칸에 붙여넣으면 자동으로 분류됩니다.
-</span>
+프라이머와 프로브 서열을 제작하기위한 서열정보를 입력한 후 DESIGN START를 실행하세요.<br>
+입력받는 서열정보 중 프로브가 타겟하는 서열은 []로 표기해주세요.<br>
+[] 안에는 [Reference Genotype,ALT Genotype]을 넣어주세요 ex. A>C [A,C].<br>
+[] 안에 1개의 서열만 넣는경우 해당 위치의 서열을 타겟으로 프라이머, 프로브를 제작합니다.<br>
 </p>
 
 <hr style="border: none; border-top: 1px dashed #b8d4f1; margin: 12px 0;">
@@ -51,20 +52,15 @@ css: ./style.css
 </p>
 
 <!-- 예제 데이터 2단 분할 -->
-<div style="display: flex; gap: 15px;">
 
 <!-- 예제 1: PICK3CA E545K -->
 <!-- 예제 1: 정상 타겟 -->
 <div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
 <div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">✅ 단일 타겟 (Specific)</div>
 <div style="font-size: 11px; color: #666; margin-bottom: 8px;">서열 중 [Target]에 결합하는 Probe 및 primer를 제작합니다.</div>
-<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all;">
-GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA<br>
-</div>
-</div>
-
-
-
+<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all; word-break: break-all; overflow-wrap: anywhere;">
+GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G,A]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA
+</div></div> 
 </div>
 </details>
 
@@ -75,5 +71,5 @@ GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G]AGCAGGAGAAAGATTTT
 
 </div>
 
-<script src="[https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js)"></script>
+<!--<script src="[https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js)"></script>-->
 <script src="./app.js"></script>

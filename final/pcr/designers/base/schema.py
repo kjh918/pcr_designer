@@ -20,9 +20,13 @@ class QCEvalInput(BaseModel):
 
 
 # =================================================================
-# [Input Schema] 코어 엔진용 입력
+# [Input Schema] 코어 엔진용 입력 (Base)
 # =================================================================
 class BaseDesignInput(BaseModel):
+    """
+    모든 기법(qPCR, MS-PCR, AS-PCR 등)이 공통으로 사용하는 순수 뼈대입니다.
+    기법별 특수 파라미터는 여기 두지 않고, 상속받는 자식 클래스에 정의합니다.
+    """
     name: str
     template_sequence: str
     target_start: Optional[int] = None
@@ -32,6 +36,12 @@ class BaseDesignInput(BaseModel):
     template_genomic_end: Optional[int] = None 
     reference_name: str = "hg38"
     overrides: Dict[str, Any] = Field(default_factory=dict)
+
+    # Factory 실행에 필수적인 Config
+    config: Optional[Any] = Field(default=None, description="PCRFactory에서 주입되는 PipelineConfig 객체 (필수)")
+    
+    # Factory 공통 파싱 결과물 (대괄호 파싱)
+    target_indices: List[int] = Field(default_factory=list, description="대괄호 파싱으로 추출된 타겟(SNP/CpG) 인덱스 목록")
 
     @model_validator(mode='before')
     @classmethod
@@ -48,18 +58,16 @@ class BaseDesignInput(BaseModel):
                 data['target_start'] = start_idx
                 data['target_end'] = end_idx
             else:
-                if data.get('target_start') is None or data.get('target_end') is None:
-                    raise ValueError("서열에 대괄호('[', ']')로 타겟을 지정하거나 좌표를 명시해야 합니다.")
-                if data['target_start'] > data['target_end']:
-                    raise ValueError(f"target_start({data['target_start']})는 target_end({data['target_end']})보다 클 수 없습니다.")
+                if data.get('target_start') is not None and data.get('target_end') is not None:
+                    if data['target_start'] > data['target_end']:
+                        raise ValueError(f"target_start({data['target_start']})는 target_end({data['target_end']})보다 클 수 없습니다.")
         return data
 
 # =================================================================
 # [Output Schema sub-models]
-# 프론트엔드 응답을 위한 명확한 객체 분리 (Summary / Results)
 # =================================================================
 class DesignSummary(BaseModel):
-    status: Literal["success", "fail", "error"]
+    status: str  # 🔥 Literal 강제 검증을 해제하고 str로 유연하게 변경
     total_count: int = 0
     passed_count: int = 0
     failed_count: int = 0
@@ -71,7 +79,7 @@ class DesignSummary(BaseModel):
 # =================================================================
 class BaseDesignOutput(BaseModel):
     amplicons: List[Amplicon] = []
-    status: Literal["success", "fail", "error"] 
+    status: str  # 🔥 Literal 강제 검증 해제 ("no_probes_found" 등 자유로운 상태값 허용)
     log_messages: List[str] = []
     error_msg: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -108,21 +116,13 @@ class BaseDesignOutput(BaseModel):
         ).model_dump()
 
         if self.status != "success":
-            return {
-                "status": self.status,
-                "summary": summary,
-                "metadata": self.metadata,
-                "results": []
-            }
+            return {"status": self.status, "summary": summary, "metadata": self.metadata, "results": []}
 
         results_list = []
         for rank, amp in enumerate(self.amplicons, start=1):
             dynamic_qc_details = getattr(amp, "qc_metrics", {}).copy()
-            
-            # 🔥 BLAST 다이어트 코드 제거: 이제 BlastSpecificityChecker에서 알아서 최적화된 결과만 넘깁니다.
             blast_stats = getattr(amp, "blast_stats", {})
-            if blast_stats:
-                dynamic_qc_details["blast"] = blast_stats
+            if blast_stats: dynamic_qc_details["blast"] = blast_stats
 
             t_data = {}
             qc_status = getattr(amp, "qc_status", None)
@@ -139,6 +139,7 @@ class BaseDesignOutput(BaseModel):
             if getattr(amp, "is_qc_pass", None) is False:
                 final_is_pass = False
                 final_fail_reason = getattr(amp, "qc_log", final_fail_reason)
+
             def get_oligo_meta(obj):
                 if not obj: return {"tm": 0.0, "gc": 0.0, "cpg": 0, "hp": 0.0, "hd": 0.0}
                 return {
@@ -153,21 +154,12 @@ class BaseDesignOutput(BaseModel):
             result_item = {
                 "rank": rank,
                 "id": amp.id,
-                "qc_info": {
-                    "is_pass": final_is_pass,
-                    "fail_reason": final_fail_reason if not final_is_pass else "PASS"
-                },
+                "qc_info": {"is_pass": final_is_pass, "fail_reason": final_fail_reason},
                 "oligos": {
                     "forward": get_oligo_meta(amp.forward),
                     "reverse": get_oligo_meta(amp.reverse),
-                    "probe": get_oligo_meta(amp.probe) if amp.probe else {
-                        "sequence": "-", "tm": 0, "gc": 0, "cpg_count": 0, "hairpin_dg": 0, "homodimer_dg": 0
-                    },
-                    "heterodimer": {
-                        "fr_dg": round(t_data.get("hetero_fr_dg", 0.0), 2),
-                        "fp_dg": round(t_data.get("hetero_fp_dg", 0.0), 2),
-                        "rp_dg": round(t_data.get("hetero_rp_dg", 0.0), 2)
-                    }
+                    "probe": get_oligo_meta(amp.probe) if amp.probe else {"sequence": "-", "tm": 0, "gc": 0, "cpg_count": 0, "hairpin_dg": 0, "homodimer_dg": 0},
+                    "heterodimer": {"fr_dg": round(t_data.get("hetero_fr_dg", 0.0), 2), "fp_dg": round(t_data.get("hetero_fp_dg", 0.0), 2), "rp_dg": round(t_data.get("hetero_rp_dg", 0.0), 2)}
                 },
                 "amplicon_info": {
                     "size": amp.product_size,
@@ -180,9 +172,4 @@ class BaseDesignOutput(BaseModel):
             }
             results_list.append(result_item)
 
-        return {
-            "status": self.status,
-            "metadata": self.metadata,
-            "summary": summary,
-            "results": results_list
-        }
+        return {"status": self.status, "metadata": self.metadata, "summary": summary, "results": results_list}

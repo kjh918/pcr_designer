@@ -51,31 +51,55 @@ class BasePrimerDesigner(ABC):
     @staticmethod
     def parse_sequence_with_brackets(raw_seq: str):
         """
-        대괄호 표기법을 사용하여 순수 서열과 타겟 위치(1-based)를 반환합니다.
-        예: 'ATGC[CG]ATGC' (MS-PCR) -> 순수 서열, [5, 6] 반환
-        예: 'ATGC[A]TGC' (AS-PCR 변이) -> 순수 서열, [5] 반환
+        대괄호 표기법을 사용하여 템플릿 서열(ALT), 레퍼런스 서열(REF), 타겟 위치(1-based)를 반환합니다.
+        예: 'ATGC[CG]ATGC' (MS-PCR) -> template=ATGCCGATGC, ref=ATGCCGATGC, target=[5, 6]
+        예: 'ATGC[A,G]TGC' (AS-PCR 변이) -> template=ATGCGTGC (ALT), ref=ATGCATGC (REF), target=[5]
         """
-        seq = raw_seq.replace(" ", "").replace("\n", "").upper()
-        clean_seq = ""
+        seq = raw_seq.replace("\n", "").upper()
+        
+        template_seq = ""
+        reference_seq = ""
         target_indices = []
         
         in_target = False
-        clean_idx = 0
+        bracket_content = ""
+        current_idx = 0
         
         for char in seq:
             if char == '[':
                 in_target = True
+                bracket_content = ""
             elif char == ']':
                 in_target = False
+                
+                # 콤마(,) 또는 슬래시(/)를 기준으로 REF와 ALT 분리 (공백 제거)
+                if ',' in bracket_content or '/' in bracket_content:
+                    delimiter = ',' if ',' in bracket_content else '/'
+                    parts = [p.replace(" ", "") for p in bracket_content.split(delimiter)]
+                    ref_allele = parts[0]
+                    alt_allele = parts[1] if len(parts) > 1 else parts[0]
+                else:
+                    ref_allele = bracket_content.replace(" ", "")
+                    alt_allele = bracket_content.replace(" ", "")
+                
+                # 타겟 인덱스는 설계의 중심이 되는 template_seq(ALT) 기준으로 추가
+                for _ in range(len(alt_allele)):
+                    target_indices.append(current_idx + 1)
+                    current_idx += 1
+                
+                template_seq += alt_allele
+                reference_seq += ref_allele
             else:
-                # 🔥 'C' 검사 조건을 없애고, 괄호 안의 '모든' 염기 위치를 타겟으로 등록!
                 if in_target:
-                    target_indices.append(clean_idx + 1) 
+                    bracket_content += char
+                else:
+                    # 괄호 밖의 서열은 공백 제거 후 추가
+                    if char != " ":
+                        template_seq += char
+                        reference_seq += char
+                        current_idx += 1
                 
-                clean_seq += char
-                clean_idx += 1
-                
-        return clean_seq, target_indices
+        return template_seq, reference_seq, target_indices
     
     @abstractmethod
     def design(self) -> BaseDesignOutput:

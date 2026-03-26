@@ -1,9 +1,11 @@
 import os
 import traceback
 from datetime import datetime
+from typing import Dict, Any
+
 from fastapi import APIRouter, HTTPException
 
-# 🔥 최신 Pydantic 기반 API Request 스키마 임포트
+# 🔥 수정 1: 코어용 객체(QPCRDesignInput)가 아닌 API 통신용 객체(QPCRDesignInput)를 임포트합니다!
 from pcr.designers.qpcr.schema import QPCRDesignInput
 from scripts.design_qpcr import design_qpcr_pipeline 
 
@@ -13,44 +15,58 @@ router = APIRouter(
 )
 
 @router.post("/qpcr")
-async def design_qpcr_api(req: QPCRDesignInput):
+async def design_qpcr_api(req: QPCRDesignInput): # 🔥 수정 2: 타입 힌트 변경
     print(f"\n🚀 [API] qPCR Design Request: {req.design_name}")
     
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) 
     APP_DIR = os.path.dirname(CURRENT_DIR) 
     ROOT_DIR = os.path.dirname(APP_DIR) 
 
-    # 시스템 및 qPCR 전용 config 경로 지정
     SYSTEM_YAML_PATH = os.path.join(ROOT_DIR, "pcr", "config", "system.yaml")
-    BASE_QPCR_PATH = os.path.join(ROOT_DIR, "pcr", "designers", "qpcr", "config.yaml")
-
+    DESIGNER_YAML_PATH = os.path.join(ROOT_DIR, "pcr", "designers", "base", "config.yaml")
+    print(DESIGNER_YAML_PATH)
     try:
-        # 🔥 지저분한 매핑, Temp YAML 생성 로직을 모두 지우고 Schema 객체 하나만 던집니다.
+        # 🔥 수정 3: 수십 줄의 지저분한 수동 매핑 로직을 전부 지우고, 
+        # schema.py에 만들어둔 우아한 Adapter 메서드를 바로 호출하여 딕셔너리를 뽑아냅니다.
+        pcr_core_overrides = req.to_core_pcr_params()
+        qc_core_overrides = req.to_core_qc_overrides()
+
+        # 스크립트 실행
         raw_result = design_qpcr_pipeline(
-            req=req,
-            designer_yaml=BASE_QPCR_PATH,
+            design_name=req.design_name,
+            sequence=req.sequence,
+            genome=req.reference_genome,
+            top_k=req.top_k,
+            pcr_overrides=pcr_core_overrides,
+            qc_overrides=qc_core_overrides,
+            designer_yaml=DESIGNER_YAML_PATH,
             system_yaml=SYSTEM_YAML_PATH
         )
         
-        if raw_result.get("status") == "success":
-            # 라우터에서 공통 응답 규격의 메타데이터 보강
-            raw_result.setdefault("metadata", {})
-            raw_result["metadata"]["project_name"] = req.design_name
-            raw_result["metadata"]["reference_genome"] = req.reference_genome
-            raw_result["metadata"]["timestamp"] = datetime.now().isoformat(timespec="seconds")
+        # 최종 출력 포맷 (qc.py와 완벽히 동일한 평탄화 계층)
+        results_list = raw_result.get("results", [])
+        
+        final_output = {
+            "status": raw_result.get("status", "error"),
+            "metadata": {
+                "project_name": req.design_name,
+                "reference_genome": req.reference_genome,
+                "timestamp": datetime.now().isoformat(timespec="seconds")
+            },
+            "summary": raw_result.get("summary", {}),
+            "inputs": {
+                "pcr_params": pcr_core_overrides,
+                "qc_criteria": qc_core_overrides
+            },
+            "results": results_list
+        }
+        
+        if final_output["status"] == "success":
+            passed = final_output.get("summary", {}).get("passed_count", 0)
+            total = final_output.get("summary", {}).get("total_count", 0)
+            print(f"✅ qPCR Design Success. Passed {passed} / {total}")
             
-            # summary 블록에서 통계 추출 (프론트엔드 출력을 위함)
-            passed = raw_result.get("summary", {}).get("passed_count", 0)
-            total = raw_result.get("summary", {}).get("total_count", 0)
-            
-            if passed > 0:
-                print(f"✅ [Execution Success] qPCR Design Passed: {passed} / {total} candidates.")
-            else:
-                print(f"⚠️ [Execution Success] qPCR Design Completed, but ALL FAILED: {passed} / {total} candidates.")
-        else:
-            print(f"❌ [Execution Failed] qPCR Pipeline Error: {raw_result.get('reason')}")
-
-        return raw_result
+        return final_output
 
     except Exception as e:
         traceback.print_exc()

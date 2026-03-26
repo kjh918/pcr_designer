@@ -10,107 +10,94 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pcr.config.loader import load_pipeline_config
 from pcr.factory import PCRFactory
-from pcr.designers.base.designer import BasePrimerDesigner
-from pcr.designers.base.schema import BaseDesignOutput
-
-# 🔥 최신 API 스키마 임포트
-from pcr.designers.qpcr.schema import QPCRDesignInput
+from pcr.designers.qpcr.schema import QPCRDesignOutput
 
 def design_qpcr_pipeline(
-    req: QPCRDesignInput,
+    design_name: str,
+    sequence: str,
+    genome: str = "hg38",
+    top_k: int = 10,
+    pcr_overrides: Dict[str, Any] = None,
+    qc_overrides: Dict[str, Any] = None,
     designer_yaml: str = "pcr/designers/qpcr/config.yaml", 
     system_yaml: str = "pcr/config/system.yaml"
 ) -> Dict[str, Any]:
     """
-    최신 Pydantic 스키마(req)를 통째로 받아 코어 엔진을 구동하고,
-    규격화된 BaseDesignOutput을 통해 결과를 반환하는 파이프라인입니다.
+    라우터가 풀어준 파라미터(kwargs)를 그대로 받아,
+    PCRFactory 하나에 모든 과정(Design -> QC -> Ranking)을 위임(Delegation)합니다.
+    (대괄호 파싱 역시 Factory가 내부적으로 자동 처리합니다.)
     """
     assay_type = "qpcr"
 
-    # 🔥 타겟 자동 파싱: 프론트에서 대괄호([ ])로 감싸 보낸 서열을 자동으로 분해
-    clean_seq, target_indices = BasePrimerDesigner.parse_sequence_with_brackets(req.sequence)
-    
-    if not target_indices:
-        return {"status": "fail", "reason": "Target not found. Please wrap your target with brackets, e.g., ATGC[A/G]ATGC"}
+    # 1. Config 로드 및 오버라이드 
+    user_overrides = {}
+    if pcr_overrides:
+        user_overrides["pcr_params"] = pcr_overrides
+    if qc_overrides:
+        user_overrides["qc_criteria"] = qc_overrides
 
-    rel_start = min(target_indices) - 1
-    rel_end = max(target_indices)
-
-    # 1. 프론트엔드에서 넘어온 딕셔너리 파라미터를 오버라이드용으로 조립
-    user_overrides = {
-        "pcr_params": req.pcr_params,
-        "qc_criteria": req.qc_criteria
-    }
-
-    # config loader 실행
     config = load_pipeline_config(designer_yaml, system_yaml, assay_type, user_overrides=user_overrides)
+    
+    # 2. BLAST 방어 로직 (Genome이 None일 때 확실히 끄기)
+    if genome.lower() == "none" and hasattr(config, "system") and hasattr(config.system, "paths"):
+        config.system.paths.blast_db_path = None
 
-    # 2. [In-Memory Override] BLAST 시스템 경로 동적 할당
-    if hasattr(config, "system") and hasattr(config.system, "paths"):
-        if req.reference_genome.lower() == "none":
-            config.system.paths.blast_db_path = None
-        else:
-            old_db = getattr(config.system.paths, "blast_db_path", "")
-            db_dir = os.path.dirname(old_db) if old_db else f"db/{req.reference_genome}"
-            config.system.paths.blast_db_path = os.path.join(db_dir, req.reference_genome)
-
-    # 3. Factory 실행
+    # 3. 🔥 PCR Factory 구동 (디자인부터 검증, 랭킹, 서열 파싱까지 Factory가 100% 처리합니다)
     factory = PCRFactory(config)
-
-    output = factory.run(
-        assay_type=assay_type,
-        name=req.design_name,
-        target_start=rel_start,
-        target_end=rel_end,
-        reference_name=req.reference_genome,
-        template_sequence=clean_seq,
-        top_k=req.top_k,
-        run_qc=True,
-        # 매뉴얼 서열 입력이므로 genomic start와 strand를 기본값으로 고정하여 안정성 확보
-        template_genomic_start=0,
-        target_strand="+"
-    )
-
-    if output.status != "success":
+    
+    try:
+        output = factory.run(
+            assay_type=assay_type,
+            name=design_name,
+            reference_name=genome,
+            template_sequence=sequence,  # 🔥 괄호가 포함된 원본 서열을 그대로 던집니다!
+            top_k=top_k,
+            run_qc=True,
+            template_genomic_start=0,
+            target_strand="+"
+        )
+    except Exception as e:
+        # 괄호가 없거나 파싱 오류 시 팩토리가 뱉는 에러를 우아하게 잡아냅니다.
         return {
-            "status": "fail", 
-            "reason": getattr(output, "error_msg", "Design failed"),
-            "log_messages": getattr(output, "log_messages", "")
+            "status": "fail",
+            "reason": f"Factory Pipeline Error: {str(e)}",
+            "log_messages": str(e)
         }
 
-    # 4. 공통 스키마(BaseDesignOutput)를 활용한 압도적으로 깔끔한 결과 자동 포맷팅
-    # 기존 코드에 있던 수십 줄의 딕셔너리 매핑과 get_position_info()가 이 한 줄로 대체됩니다!
-    output_schema = BaseDesignOutput(
+    # 4. 에러 처리 및 반환
+    if output.status != "success":
+        fail_reason = getattr(output, "error_msg", "Failed to design primers/probes.")
+        logs = getattr(output, "log_messages", [])
+        return {
+            "status": "fail", 
+            "reason": fail_reason,
+            "log_messages": "; ".join(logs) if isinstance(logs, list) else str(logs)
+        }
+
+    # 5. 결과를 순수 코어 모델인 QPCRDesignOutput에 얹어서 프론트엔드로 변환
+    output_schema = QPCRDesignOutput(
         status="success",
-        amplicons=output.amplicons
+        amplicons=output.amplicons,
+        log_messages=output.log_messages
     )
     
-    result_dict = output_schema.to_frontend_dict()
-    
-    # 라우터에서 Export 메타데이터로 사용할 수 있도록 원본 파라미터 백업
-    result_dict["_applied_pcr_params"] = req.pcr_params
-    result_dict["_applied_qc_params"] = req.qc_criteria
-    
-    return result_dict
+    return output_schema.to_frontend_dict()
 
 
 if __name__ == "__main__":
-    # 단독 실행(CLI) 테스트용 안전 장치
+    # CLI 단독 실행용
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", type=str, default="CLI_qPCR_Project")
-    parser.add_argument("--seq", type=str, required=True, help="Sequence with brackets, e.g., ATGC[A]ATGC")
+    parser.add_argument("--seq", type=str, required=True, help="Sequence with brackets, e.g., ATGC[A/G]ATGC")
     parser.add_argument("--genome", type=str, default="none")
     args = parser.parse_args()
 
-    # CLI에서도 QPCRDesignApiInput 스키마를 목업하여 전달
-    mock_req = QPCRDesignApiInput(
-        design_name=args.name,
-        sequence=args.seq,
-        reference_genome=args.genome
-    )
-
     try:
-        res = design_qpcr_pipeline(mock_req)
+        res = design_qpcr_pipeline(
+            design_name=args.name,
+            sequence=args.seq,
+            genome=args.genome
+        )
         print(json.dumps(res, indent=2)) 
     except Exception as e:
         print(json.dumps({"status": "fail", "reason": str(e)}, indent=2))
