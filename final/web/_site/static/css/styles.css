@@ -149,7 +149,7 @@ hr.rule-light {
     font-family: 'Roboto Condensed', sans-serif; /* 라벨 전용 폰트 */
     font-size: 13px;
     color: #333;
-    margin-bottom: 3px;
+    margin-bottom: 1px;
 }
 
 .form-select {

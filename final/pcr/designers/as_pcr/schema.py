@@ -1,7 +1,8 @@
-from typing import Dict, Optional, List
-from pydantic import Field
-from pcr.designers.base.schema import BaseDesignInput, BaseDesignOutput
+from typing import Dict, Optional, List, Any
+from pydantic import BaseModel, Field, model_validator
+
 from pcr.components.amplicon import Amplicon
+from pcr.designers.base.schema import BaseDesignInput, BaseDesignOutput
 
 class ASPCRAmplicon(Amplicon):
     """
@@ -15,17 +16,57 @@ class ASPCRAmplicon(Amplicon):
 
 class ASPCRDesignInput(BaseDesignInput):
     """
-    AS-PCR 전용 입력 스키마.
-    BaseDesignInput을 상속받으며, 4가지 템플릿 딕셔너리와 앵커 방향이 추가됩니다.
+    AS-PCR 전용 입력 객체.
+    반복되는 파라미터와 변환 로직은 BaseDesignInput을 상속받아 자동으로 처리하고,
+    AS-PCR 특화 설정만 추가로 주입합니다.
     """
-    templates: Dict[str, str] = Field(
-        ..., 
-        description="WT, ALT, WT_MM, ALT_MM 서열을 포함하는 딕셔너리"
-    )
-    fixed_prime: str = Field(
-        default="forward", 
-        description="SNP 위치에 3' 말단을 고정할 프라이머 방향 ('forward' 또는 'reverse')"
-    )
+    design_name: str = "AS-PCR_Design"
+    sequence: str = "" 
+    reference_genome: str = "hg38"
+    top_k: int = 5
+    
+    template_genomic_start: int = 0
+    template_genomic_end: int = 0
+
+    # 🔥 AS-PCR 특화 설정 (자식 클래스의 고유 속성)
+    fixed_prime: str = "forward"
+    mismatch_pos: int = 3
+    mismatch_intensity: str = "strong"
+
+    @model_validator(mode='before')
+    @classmethod
+    def parse_brackets_and_validate(cls, data: Any) -> Any:
+        """
+        API에서 넘어온 데이터를 Base 파서가 이해할 수 있는 규격으로 이름만 맞춰줍니다.
+        (대괄호 파싱 등은 이후 Base의 부모 Validator가 이어서 처리하거나 무시합니다)
+        """
+        if isinstance(data, dict):
+            data['name'] = data.get('design_name', 'AS-PCR_Design')
+            data['reference_name'] = data.get('reference_genome', 'hg38')
+            
+            if 'sequence' in data:
+                data['template_sequence'] = data['sequence']
+                
+            data['target_start'] = data.get('target_start', 0)
+            data['target_end'] = data.get('target_end', 0)
+            
+        return data
+
+    def to_core_qc_overrides(self) -> Dict[str, Any]:
+        """
+        [Adapter] 
+        부모의 공통 QC 변환 로직을 그대로 호출한 뒤, AS-PCR 전용 블록만 덧붙입니다.
+        """
+        overrides = super().to_core_qc_overrides()
+        
+        # Base에서 만들어준 딕셔너리에 AS-PCR 고유 설정 결합
+        overrides["as_pcr"] = {
+            "fixed_prime": self.fixed_prime,
+            "mismatch_pos": self.mismatch_pos,
+            "mismatch_intensity": self.mismatch_intensity
+        }
+        
+        return overrides
 
 class ASPCRDesignOutput(BaseDesignOutput):
     """

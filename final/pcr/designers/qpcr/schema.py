@@ -122,7 +122,7 @@ class QPCRDesignInput(BaseDesignInput):
         # 예전 app.js(amplicon, primer, probe 분리) 형식도 안전하게 지원
         return {
             "primer_kwargs": {
-                "n_candidates": 3,
+                "n_candidates": 10,
                 "min_amplicon_length": self.amplicon.get("min_length", 60),
                 "max_amplicon_length": self.amplicon.get("max_length", 150),
                 "min_length": self.primer.get("min_length", 20),
@@ -136,7 +136,7 @@ class QPCRDesignInput(BaseDesignInput):
                 "max_gc": self.primer.get("max_gc", 65.0),
             },
             "probe_kwargs": {
-                "n_candidates": 5,
+                "n_candidates": 3,
                 "min_length": self.probe.get("min_length", 20),
                 "opt_length": self.probe.get("opt_length", 25),
                 "max_length": self.probe.get("max_length", 30),
@@ -172,7 +172,6 @@ class QPCRDesignInput(BaseDesignInput):
             "blast_max_alignments": blast.get("max_alignments", 50),
             "min_amp_size": amp.get("min_size", 50),
             "max_amp_size": amp.get("max_size", 300),
-            "use_ispcr_check": amp.get("use_ispcr", False),
             "primer": {"max_diff_tm": oligo.get("max_tm_diff", 3.0)}
         }
 

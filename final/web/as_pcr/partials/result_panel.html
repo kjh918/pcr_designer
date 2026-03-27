@@ -1,80 +1,88 @@
-<main class="main">
-<div class="panel" id="error-log-panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; margin-bottom: 20px;">
+<!-- 세로 정렬 및 반응형을 완벽하게 지원하는 전체 래퍼 -->
+<div style="display: flex; flex-direction: column; width: 100%; gap: 20px; padding-bottom: 40px; min-width: 0; box-sizing: border-box;">
+
+<!-- 1. 파이프라인 로그 패널 -->
+<div class="panel" id="error-log-panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; padding: 15px; border-radius: 4px; border-top: 1px solid #eccbc0; border-right: 1px solid #eccbc0; border-bottom: 1px solid #eccbc0; flex-shrink: 0;">
 <div class="panel-title" style="color: #d9534f; font-size: 14px; font-weight: bold;">⚠️ PIPELINE STATUS & LOGS</div>
-<hr class="rule-light" style="border-top-color: #f5c6c6;">
-<pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto;">
-</pre>
-</div>
-<div class="panel">
-<div class="panel-title">DESIGN SUMMARY (AS-PCR)</div>
-<hr class="rule-light">
-
-<div class="grid-3">
-<div>
-<div class="small-label">CHROMOSOME</div>
-<div style="font-weight:900;" id="summary-chrom">-</div>
-</div>
-<div>
-<div class="small-label">TARGET POSITION</div>
-<div style="font-weight:900;" id="summary-pos">-</div>
-</div>
-<div>
-<div class="small-label">DESIGN DATE</div>
-<div style="font-weight:900;" id="summary-date">-</div>
-</div>
-</div>
-<div class="grid-3" style="margin-top: 15px;">
-<div>
-<div class="small-label">REFERENCE GENOME</div>
-<div style="font-weight:900;" id="summary-reference">-</div>
-</div>
-<div>
-<div class="small-label">MUTATION (REF > ALT)</div>
-<div style="font-weight:900; color: #d9534f;" id="summary-mutation">-</div>
-</div>
-<div>
-<div class="small-label">STATUS</div>
-<div style="font-weight:900;" id="summary-status">WAITING</div>
-</div>
-</div>
+<hr class="rule-light" style="border-top-color: #f5c6c6; margin: 10px 0;">
+<pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto; width: 100%; box-sizing: border-box;"></pre>
 </div>
 
-<div class="panel" id="stats-panel" style="display: none; margin-top: 20px; background-color: #f8f9fa;">
-<div class="panel-title" style="font-size: 13px; color: #555;">📊 DESIGN PIPELINE STATISTICS</div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="table-stats">
-<tbody id="stats-tbody">
-</tbody>
+<!-- 2. 디자인 요약 패널 (AS-PCR 전용) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 14px; font-weight: bold; color: #1e707a; margin-bottom: 15px;">📊 DESIGN SUMMARY (AS-PCR)</div>
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">CHROMOSOME</div>
+<div style="font-weight: 900; font-size: 14px; color: #333;" id="summary-chrom">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">TARGET POSITION</div>
+<div style="font-weight: 900; font-size: 14px; color: #333;" id="summary-pos">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">DESIGN DATE</div>
+<div style="font-weight: 900; font-size: 13px; color: #555;" id="summary-date">-</div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">REFERENCE GENOME</div>
+<div style="font-weight: 900; font-size: 14px; color: #333;" id="summary-reference">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">MUTATION (REF > ALT)</div>
+<div style="font-weight: 900; font-size: 14px; color: #d9534f;" id="summary-mutation">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">STATUS</div>
+<div style="font-weight: 900; font-size: 13px; background: #e9ecef; padding: 4px 10px; border-radius: 12px; color: #333; display: inline-block;" id="summary-status">WAITING</div>
+</div>
+</div>
+</div>
+
+<!-- 3. 파이프라인 통계 패널 -->
+<div class="panel" id="stats-panel" style="display: none; background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #555; margin-bottom: 10px;">📈 DESIGN PIPELINE STATISTICS</div>
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+<div class="table-container" style="overflow-x: auto;">
+<table class="table-stats" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+<tbody id="stats-tbody"></tbody>
 </table>
 </div>
 </div>
 
-<div class="panel">
-<div class="panel-title">SEQUENCE ALIGNMENT (Mismatch Visualization)</div>
-<hr class="rule-light">
-<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 13px; background: #2b2b2b; color: #f8f8f2; padding: 15px; border-radius: 5px; line-height: 1.5;"></pre>
+<!-- 4. 시퀀스 정렬 뷰어 (Mismatch Visualization) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
+🔍 SEQUENCE ALIGNMENT (Mismatch Visualization)
+</div>
+<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 12px; background: #2b2b2b; color: #a9b7c6; padding: 15px; margin: 0; line-height: 1.5; min-height: 120px; width: 100%; box-sizing: border-box;">Enter sequence and run AS-PCR Design to view alignment...</pre>
 </div>
 
-<div class="panel">
-<div class="panel-title">AS-PCR CANDIDATE SETS</div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="table" id="result-table">
-<thead>
+<!-- 5. 메인 결과 테이블 (AS-PCR 7열 구조) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
+🧬 AS-PCR CANDIDATE SETS
+</div>
+<div class="table-container" style="max-height: 60vh; overflow-y: auto; overflow-x: auto; width: 100%;">
+<table class="table" id="result-table" style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px;">
+<thead style="position: sticky; top: 0; z-index: 10; background: #e9ecef; color: #495057;">
 <tr>
-<th style="width: 5%;">Rank</th>
-<th style="width: 10%;">Set ID</th>
-<th style="width: 10%;">Allele</th>
-<th style="width: 25%;">Forward Primer (5'→3')</th>
-<th style="width: 25%;">Reverse Primer (5'→3')</th>
-<th style="width: 12%;">Tm (F/R) °C</th>
-<th style="width: 13%;">GC (F/R) %</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 5%;">Rank</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 10%;">Set ID</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 10%;">Allele</th>
+<th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; width: 25%;">Forward Primer (5'→3')</th>
+<th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; width: 25%;">Reverse Primer (5'→3')</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 12%;">Tm (F/R) °C</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 13%;">GC (F/R) %</th>
 </tr>
 </thead>
 <tbody id="candidate-tbody">
 <tr>
-<td colspan="7" style="text-align:center; padding:40px; color:#999;">
+<td colspan="7" style="text-align:center; padding:40px; color:#999; font-size: 13px;">
 No candidates. Enter parameters and click 'Design Start'.
 </td>
 </tr>
@@ -83,12 +91,14 @@ No candidates. Enter parameters and click 'Design Start'.
 </div>
 </div>
 
-<div class="panel" id="metadata-panel" style="display: none; margin-top: 25px;">
-<div class="panel-title">DESIGN PARAMETERS & QC SUMMARY</div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="meta-full-table" id="metadata-table">
+<!-- 6. 메타데이터 / QC 파라미터 정보 -->
+<div class="panel" id="metadata-panel" style="display: none; background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #555; margin-bottom: 10px;">⚙️ DESIGN PARAMETERS & QC SUMMARY</div>
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+<div class="table-container" style="overflow-x: auto;">
+<table class="meta-full-table" id="metadata-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
 </table>
 </div>
 </div>
-</main>
+
+</div>

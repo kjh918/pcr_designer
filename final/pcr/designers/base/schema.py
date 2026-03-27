@@ -67,7 +67,7 @@ class BaseDesignInput(BaseModel):
 # [Output Schema sub-models]
 # =================================================================
 class DesignSummary(BaseModel):
-    status: str  # 🔥 Literal 강제 검증을 해제하고 str로 유연하게 변경
+    status: str
     total_count: int = 0
     passed_count: int = 0
     failed_count: int = 0
@@ -79,7 +79,7 @@ class DesignSummary(BaseModel):
 # =================================================================
 class BaseDesignOutput(BaseModel):
     amplicons: List[Amplicon] = []
-    status: str  # 🔥 Literal 강제 검증 해제 ("no_probes_found" 등 자유로운 상태값 허용)
+    status: str 
     log_messages: List[str] = []
     error_msg: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -151,6 +151,23 @@ class BaseDesignOutput(BaseModel):
                     "homodimer_dg": round(getattr(obj, "homodimer_dg", 0.0), 2)
                 }
 
+            aln_text = "\n".join(getattr(amp, "alignment_visual", []))
+            
+            # 🔥 [특이성 병합] BLAST 오프타겟 내역을 Alignment View 하단에 보기 좋게 병합합니다.
+            # _OffTarget_ 이나 _Noise_ 로 클론된 자식 행이 아닌 "메인(Target) 프라이머 행"일 때만 병합합니다.
+            if blast_stats and "_OffTarget_" not in amp.id and "_Noise_" not in amp.id:
+                ot_sigs = blast_stats.get("off_target_signals", [])
+                noise_sigs = blast_stats.get("amplification_only", [])
+                
+                if ot_sigs or noise_sigs:
+                    extra = ["\n", "=" * 65, "⚠️ NON-SPECIFIC BINDINGS (OFF-TARGET / NOISE)", "=" * 65]
+                    for ot in ot_sigs:
+                        extra.extend(["\n[Off-Target : Probe Binds Here]", ot.get("unified_text_block", "")])
+                    for noise in noise_sigs:
+                        extra.extend(["\n[Noise : Amplification Only]", noise.get("unified_text_block", "")])
+                    
+                    aln_text += "\n".join(extra)
+
             result_item = {
                 "rank": rank,
                 "id": amp.id,
@@ -166,7 +183,7 @@ class BaseDesignOutput(BaseModel):
                     "tm": round(getattr(amp, "tm", 0.0), 2),
                     "gc": round(getattr(amp, "gc_percent", 0.0), 2),
                     "genomic_pos": getattr(amp, "genomic_pos", "Unknown"),
-                    "alignment_text_block": "\n".join(getattr(amp, "alignment_visual", []))
+                    "alignment_text_block": aln_text
                 },
                 "qc_details": dynamic_qc_details
             }

@@ -9,51 +9,36 @@
 </select>
 </div>-->
 
-<label class="small-label" style="margin-top:10px;">REFERENCE GENOME</label>
-<select class="input-tight" id="input-ref-genome">
-<option value="hg38">hg38</option>
-<option value="hg19">hg19</option>
+<label class="small-label">RAW SEQUENCE (5' -> 3')</label>
+<textarea id="manual-sequence" class="input-tight" style="width:100%; height:120px; font-family:monospace; text-transform:uppercase;" placeholder="ATGC 서열을 입력하세요..."></textarea>
+<hr class="rule">
+<div class="section-title">Advanced Parameters</div>
+<hr class="rule-light">
+
+<div style="margin-bottom:2px;">
+<label class="small-label">REFERENCE GENOME (FOR BLAST QC)</label>
+<select id="input-ref-genome" class="input-tight" style="width:100%;">
+<option value="hg38">Human (hg38) - Run BLAST</option>
+<option value="none" selected>None - Skip BLAST (Fast)</option>
 </select>
-
-<label class="small-label" style="margin-top:10px;">CHROMOSOME</label>
-<input class="input-tight" id="input-chrom" placeholder="e.g. chr17">
-
-<div class="grid-2" style="margin-top:10px;">
-<div>
-<label class="small-label">START</label>
-<input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723640">
+<small style="color: #666; font-size: 0.8em;">* 'None' 선택 시 비특이 결합 체크를 생략합니다.</small>
 </div>
-<div>
-<label class="small-label">END</label>
-<input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723640">
-</div>
-</div>
-
-<div class="grid-2" style="margin-top:10px;">
-<div>
-<label class="small-label">REF</label>
-<input type="text" class="input-tight" id="input-ref-base" placeholder="e.g. G">
-</div>
-<div>
-<label class="small-label">ALT</label>
-<input type="text" class="input-tight" id="input-alt-base" placeholder="e.g. A">
-</div>
-</div>
-
-<label class="small-label" style="margin-top:10px;">STRAND</label>
+<label class="small-label" style="margin-top:2px;">Target Primer</label>
 <select class="input-tight" id="input-strand">
-<option value="+">Plus (+)</option>
-<option value="-">Minus (-)</option>
+<option value="+">Forward</option>
+<option value="-">Reverse</option>
 </select>
+<div class="warn" style="margin-top:5px;">
+※ Target 변이가 말단에 위치할 primer를 선정해주세요.
+</div>
 
-<label class="small-label" style="margin-top:10px;">MISMATCH</label>
+<label class="small-label" style="margin-top:2px;">MISMATCH</label>
 <select class="input-tight" id="input-mismatch">
 <option value="None">None</option>
 <option value=3>Third bp (3' end)</option>
 <option value=2>Second bp (3' end)</option>
 </select>
-
-<div class="warn" style="margin-top:8px;">
+<div class="warn" style="margin-top:5px;">
 ※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)
 </div>
 

@@ -140,27 +140,18 @@ Target Information
 <option value="hg19">hg19 (GRCh37)</option>
 </select>
 </div>-->
-<p><label class="small-label" style="margin-top:10px;">REFERENCE GENOME</label> <select class="input-tight" id="input-ref-genome"> <option value="hg38">hg38</option> <option value="hg19">hg19</option> </select></p>
-<p><label class="small-label" style="margin-top:10px;">CHROMOSOME</label> <input class="input-tight" id="input-chrom" placeholder="e.g. chr17"></p>
-<div class="grid-2" style="margin-top:10px;">
-<div>
-<p><label class="small-label">START</label> <input type="number" class="input-tight" id="input-start" placeholder="e.g. 39723640"></p>
+<label class="small-label">RAW SEQUENCE (5’ -&gt; 3’)</label>
+<textarea id="manual-sequence" class="input-tight" style="width:100%; height:120px; font-family:monospace; text-transform:uppercase;" placeholder="ATGC 서열을 입력하세요..."></textarea>
+<hr class="rule">
+<div class="section-title">
+Advanced Parameters
 </div>
-<div>
-<p><label class="small-label">END</label> <input type="number" class="input-tight" id="input-end" placeholder="e.g. 39723640"></p>
+<hr class="rule-light">
+<div style="margin-bottom:2px;">
+<p><label class="small-label">REFERENCE GENOME (FOR BLAST QC)</label> <select id="input-ref-genome" class="input-tight" style="width:100%;"> <option value="hg38">Human (hg38) - Run BLAST</option> <option value="none" selected="">None - Skip BLAST (Fast)</option> </select> <small style="color: #666; font-size: 0.8em;">* ‘None’ 선택 시 비특이 결합 체크를 생략합니다.</small></p>
 </div>
-</div>
-<div class="grid-2" style="margin-top:10px;">
-<div>
-<p><label class="small-label">REF</label> <input type="text" class="input-tight" id="input-ref-base" placeholder="e.g. G"></p>
-</div>
-<div>
-<p><label class="small-label">ALT</label> <input type="text" class="input-tight" id="input-alt-base" placeholder="e.g. A"></p>
-</div>
-</div>
-<p><label class="small-label" style="margin-top:10px;">STRAND</label> <select class="input-tight" id="input-strand"> <option value="+">Plus (+)</option> <option value="-">Minus (-)</option> </select></p>
-<p><label class="small-label" style="margin-top:10px;">MISMATCH</label> <select class="input-tight" id="input-mismatch"> <option value="None">None</option> <option value="3">Third bp (3’ end)</option> <option value="2">Second bp (3’ end)</option> </select></p>
-<div class="warn" style="margin-top:8px;">
+<label class="small-label" style="margin-top:2px;">Target Primer</label> <select class="input-tight" id="input-strand"> <option value="+">Forward</option> <option value="-">Reverse</option> </select> <label class="small-label" style="margin-top:2px;">MISMATCH</label> <select class="input-tight" id="input-mismatch"> <option value="None">None</option> <option value="3">Third bp (3’ end)</option> <option value="2">Second bp (3’ end)</option> </select>
+<div class="warn" style="margin-top:5px;">
 <p>※ Target-Finder에서 넘겨받은 좌표를 입력하세요. (1-based 기준)</p>
 </div>
 <hr class="rule">
@@ -254,127 +245,162 @@ Export (HTML)
 </button>
 </div>
 </div></aside>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<main class="main"><header id="title-block-header" class="quarto-title-block"></header>
-<div id="error-log-panel" class="panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; margin-bottom: 20px;">
+<!-- 2. 오른쪽 메인 영역 -->
+<main class="main-content" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #f8f9fa;"><header id="title-block-header" class="quarto-title-block"></header>
+<!-- 🔥 토글(Toggle) 기능이 적용된 Quick Guide & Tutorial -->
+<details style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; padding: 12px 15px; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" open="">
+<summary style="color: #1e707a; font-weight: bold; font-size: 14px; cursor: pointer; outline: none;">
+💡 Quick Guiparde &amp; Tutorial
+</summary>
+<div style="margin-top: 12px;">
+<p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
+Allele specific 프라이머을 제작하기위한 서열정보를 입력한 후 DESIGN START를 실행하세요.<br> 입력받는 서열정보 중 프로브가 타겟하는 서열은 []로 표기해주세요.<br> [] 안에는 [Reference Genotype,ALT Genotype]을 넣어주세요 ex. A&gt;C [A,C].<br> [] 안에 넣어진 서열들을 참고하여 Reference 프라이머와 Alt 프라이머를 제작합니다.<br>
+</p>
+<hr style="border: none; border-top: 1px dashed #b8d4f1; margin: 12px 0;">
+<p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #1e707a;">
+🧪 Tutorial Data (예제 서열)
+</p>
+<p style="margin: 0 0 12px 0; font-size: 12px; color: #555; line-height: 1.4;">
+아래의 서열은 <strong>PIK3CA</strong> 유전자의 내부 엑손 영역입니다.<br> 박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>RAW SEQUENCE (5’ -&gt; 3’)</strong> 칸에 붙여넣고 실행해보세요.
+</p>
+<div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
+<div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">
+✅ 타겟 (Specific)
+</div>
+<div style="font-size: 11px; color: #666; margin-bottom: 8px;">
+서열 중 [Target]이 3’말단이 되는 primer set를 제작합니다.
+</div>
+<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all; word-break: break-all; overflow-wrap: anywhere;">
+<p>GAAAATGACAAAGAACAGCTCA[A,C]AGCAATTTCTACACGAGATCCTCTCTCTGAAATCACTGAGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA</p>
+</div>
+</div>
+</div>
+</details>
+<!-- 결과 패널 인클루드 -->
+<!-- 세로 정렬 및 반응형을 완벽하게 지원하는 전체 래퍼 -->
+<div style="display: flex; flex-direction: column; width: 100%; gap: 20px; padding-bottom: 40px; min-width: 0; box-sizing: border-box;">
+<!-- 1. 파이프라인 로그 패널 -->
+<div id="error-log-panel" class="panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; padding: 15px; border-radius: 4px; border-top: 1px solid #eccbc0; border-right: 1px solid #eccbc0; border-bottom: 1px solid #eccbc0; flex-shrink: 0;">
 <div class="panel-title" style="color: #d9534f; font-size: 14px; font-weight: bold;">
 ⚠️ PIPELINE STATUS &amp; LOGS
 </div>
-<hr class="rule-light" style="border-top-color: #f5c6c6;">
-<pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto;"></pre>
+<hr class="rule-light" style="border-top-color: #f5c6c6; margin: 10px 0;">
+<pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto; width: 100%; box-sizing: border-box;"></pre>
 </div>
-<div class="panel">
-<div class="panel-title">
-DESIGN SUMMARY (AS-PCR)
+<!-- 2. 디자인 요약 패널 (AS-PCR 전용) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 14px; font-weight: bold; color: #1e707a; margin-bottom: 15px;">
+📊 DESIGN SUMMARY (AS-PCR)
 </div>
-<hr class="rule-light">
-<div class="grid-3">
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
 <div>
-<div class="small-label">
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">
 CHROMOSOME
 </div>
-<div id="summary-chrom" style="font-weight:900;">
+<div id="summary-chrom" style="font-weight: 900; font-size: 14px; color: #333;">
 -
 </div>
 </div>
 <div>
-<div class="small-label">
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">
 TARGET POSITION
 </div>
-<div id="summary-pos" style="font-weight:900;">
+<div id="summary-pos" style="font-weight: 900; font-size: 14px; color: #333;">
 -
 </div>
 </div>
 <div>
-<div class="small-label">
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">
 DESIGN DATE
 </div>
-<div id="summary-date" style="font-weight:900;">
+<div id="summary-date" style="font-weight: 900; font-size: 13px; color: #555;">
 -
 </div>
 </div>
 </div>
-<div class="grid-3" style="margin-top: 15px;">
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
 <div>
-<div class="small-label">
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">
 REFERENCE GENOME
 </div>
-<div id="summary-reference" style="font-weight:900;">
+<div id="summary-reference" style="font-weight: 900; font-size: 14px; color: #333;">
 -
 </div>
 </div>
 <div>
-<div class="small-label">
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">
 MUTATION (REF &gt; ALT)
 </div>
-<div id="summary-mutation" style="font-weight:900; color: #d9534f;">
+<div id="summary-mutation" style="font-weight: 900; font-size: 14px; color: #d9534f;">
 -
 </div>
 </div>
 <div>
-<div class="small-label">
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">
 STATUS
 </div>
-<div id="summary-status" style="font-weight:900;">
+<div id="summary-status" style="font-weight: 900; font-size: 13px; background: #e9ecef; padding: 4px 10px; border-radius: 12px; color: #333; display: inline-block;">
 WAITING
 </div>
 </div>
 </div>
 </div>
-<div id="stats-panel" class="panel" style="display: none; margin-top: 20px; background-color: #f8f9fa;">
-<div class="panel-title" style="font-size: 13px; color: #555;">
-📊 DESIGN PIPELINE STATISTICS
+<!-- 3. 파이프라인 통계 패널 -->
+<div id="stats-panel" class="panel" style="display: none; background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #555; margin-bottom: 10px;">
+📈 DESIGN PIPELINE STATISTICS
 </div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="table-stats">
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+<div class="table-container" style="overflow-x: auto;">
+<table class="table-stats" style="width: 100%; border-collapse: collapse; font-size: 12px;">
 <tbody id="stats-tbody">
 </tbody>
 </table>
 </div>
 </div>
-<div class="panel">
-<div class="panel-title">
-SEQUENCE ALIGNMENT (Mismatch Visualization)
+<!-- 4. 시퀀스 정렬 뷰어 (Mismatch Visualization) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
+<p>🔍 SEQUENCE ALIGNMENT (Mismatch Visualization)</p>
 </div>
-<hr class="rule-light">
-<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 13px; background: #2b2b2b; color: #f8f8f2; padding: 15px; border-radius: 5px; line-height: 1.5;"></pre>
+<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 12px; background: #2b2b2b; color: #a9b7c6; padding: 15px; margin: 0; line-height: 1.5; min-height: 120px; width: 100%; box-sizing: border-box;">Enter sequence and run AS-PCR Design to view alignment...</pre>
 </div>
-<div class="panel">
-<div class="panel-title">
-AS-PCR CANDIDATE SETS
+<!-- 5. 메인 결과 테이블 (AS-PCR 7열 구조) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
+<p>🧬 AS-PCR CANDIDATE SETS</p>
 </div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="table" id="result-table">
-<thead>
+<div class="table-container" style="max-height: 60vh; overflow-y: auto; overflow-x: auto; width: 100%;">
+<table class="table" id="result-table" style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px;">
+<thead style="position: sticky; top: 0; z-index: 10; background: #e9ecef; color: #495057;">
 <tr>
-<th style="width: 5%;">
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 5%;">
 Rank
 </th>
-<th style="width: 10%;">
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 10%;">
 Set ID
 </th>
-<th style="width: 10%;">
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 10%;">
 Allele
 </th>
-<th style="width: 25%;">
+<th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; width: 25%;">
 Forward Primer (5’→3’)
 </th>
-<th style="width: 25%;">
+<th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; width: 25%;">
 Reverse Primer (5’→3’)
 </th>
-<th style="width: 12%;">
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 12%;">
 Tm (F/R) °C
 </th>
-<th style="width: 13%;">
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 13%;">
 GC (F/R) %
 </th>
 </tr>
 </thead>
 <tbody id="candidate-tbody">
 <tr>
-<td colspan="7" style="text-align:center; padding:40px; color:#999;">
+<td colspan="7" style="text-align:center; padding:40px; color:#999; font-size: 13px;">
 No candidates. Enter parameters and click ‘Design Start’.
 </td>
 </tr>
@@ -382,20 +408,20 @@ No candidates. Enter parameters and click ‘Design Start’.
 </table>
 </div>
 </div>
-<div id="metadata-panel" class="panel" style="display: none; margin-top: 25px;">
-<div class="panel-title">
-DESIGN PARAMETERS &amp; QC SUMMARY
+<!-- 6. 메타데이터 / QC 파라미터 정보 -->
+<div id="metadata-panel" class="panel" style="display: none; background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #555; margin-bottom: 10px;">
+⚙️ DESIGN PARAMETERS &amp; QC SUMMARY
 </div>
-<hr class="rule-light">
-<div class="table-container">
-<table class="meta-full-table" id="metadata-table">
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+<div class="table-container" style="overflow-x: auto;">
+<table class="meta-full-table" id="metadata-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
 </table>
+</div>
 </div>
 </div>
 </main>
 </div>
-<script src="app.js"></script>
-<script src="style.css"></script>
 
 
 </div>
