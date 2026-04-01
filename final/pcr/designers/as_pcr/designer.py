@@ -1,12 +1,12 @@
 import primer3
 from typing import Dict, Any, List, Tuple
+import copy
 
-from ..base.designer import BasePrimerDesigner
-from ..base.schema import BaseDesignInput, BaseDesignOutput
+from pcr.designers.base.designer import BasePrimerDesigner
+from pcr.designers.base.schema import BaseDesignInput, BaseDesignOutput
 from pcr.components.primer import Primer
 from pcr.components.amplicon import Amplicon
 from pcr.components.region import GenomicRegion
-import copy
 
 class ASPCRPrimerDesigner(BasePrimerDesigner):
     ASSAY_TYPE = "ASPCR"
@@ -14,10 +14,26 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
     def __init__(self, input_data: BaseDesignInput):
         super().__init__(input_data)
         self.templates = getattr(input_data, "templates", {})
-        self.fixed_prime = getattr(input_data, "fixed_prime", "forward")
+        
+        # 🔥 HTML UI의 "+", "-" 값을 "forward", "reverse"로 자동 변환
+        raw_fixed_prime = str(getattr(input_data, "fixed_prime", "forward")).strip().lower()
+        if raw_fixed_prime == "+":
+            self.fixed_prime = "forward"
+        elif raw_fixed_prime == "-":
+            self.fixed_prime = "reverse"
+        else:
+            self.fixed_prime = raw_fixed_prime
+
         self.target_index = input_data.target_start # SNP 위치 (0-based 기준점)
-        # 🔥 입력받은 mismatch_pos 저장 (기본값 3, 없거나 0이면 None)
-        self.mismatch_pos = getattr(input_data, "mismatch_pos", 3)
+        
+        # 🔥 HTML UI의 "None" 문자열을 안전하게 파싱 (None으로 처리)
+        raw_mm_pos = getattr(input_data, "mismatch_pos", 3)
+        if str(raw_mm_pos).strip().lower() == "none" or not raw_mm_pos:
+            self.mismatch_pos = None
+        else:
+            self.mismatch_pos = int(raw_mm_pos)
+            
+        self.mismatch_intensity = getattr(input_data, "mismatch_intensity", "strong")
 
     # =========================================================================
     # Helpers (Coordinate-safe, Template-slice based)
@@ -51,8 +67,8 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
         seg = template[start : end + 1].upper()
         return seg if strand == "forward" else self._rc(seg)
     
-    @staticmethod
     def _build_alignment_visual(
+        self,
         templates: Dict[str, str], 
         left_span: Tuple[int, int], 
         right_span: Tuple[int, int], 
@@ -79,14 +95,14 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
         alt_mm_amp = alt_mm_full[l_start:r_end + 1] if alt_mm_full else ""
 
         lines.append(f"REF_SEQ            : {wt_amp}")
-        lines.append(f"REF_SEQ(MISMATCH)  : {wt_mm_amp}")
+        lines.append(f"REF_SEQ(MISMATCH)  : {wt_mm_amp} (Pos: -{self.mismatch_pos}, Int: {self.mismatch_intensity})")
         lines.append(f"AMPLICON           : {alt_amp} (Target ALT)")
         lines.append(f"AMPLICON(MISMATCH) : {alt_mm_amp} (Target ALT)")
-        lines.append("-" * (21 + len(wt_amp))) # 시각적 구분선 추가
+        lines.append("-" * (21 + len(wt_amp))) 
         
         # 2. 프라이머 파싱 헬퍼 함수
         def get_fwd(tpl): return tpl[l_start:l_end + 1] if tpl else ""
-        def get_rev(tpl): return ASPCRPrimerDesigner._rc(tpl[r_start:r_end + 1]) if tpl else ""
+        def get_rev(tpl): return self._rc(tpl[r_start:r_end + 1]) if tpl else ""
 
         fwd_wt, fwd_alt = get_fwd(wt_full), get_fwd(alt_full)
         fwd_wt_mm, fwd_alt_mm = get_fwd(wt_mm_full), get_fwd(alt_mm_full)
@@ -102,13 +118,13 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
             lines.append(f"FORWARD(WT_MM)     : {fwd_wt_mm}")
             lines.append(f"FORWARD(ALT)       : {fwd_alt}")
             lines.append(f"FORWARD(ALT_MM)    : {fwd_alt_mm}")
-            lines.append(f"REVERSE(COMMON)    : {pad_rev}{rev_wt} (RC)")
+            lines.append(f"REVERSE(COMMON)    : {pad_rev}{self._rc(rev_wt)}")
         else:
             lines.append(f"FORWARD(COMMON)    : {fwd_wt}")
-            lines.append(f"REVERSE(WT)        : {pad_rev}{rev_wt} (RC)")
-            lines.append(f"REVERSE(WT_MM)     : {pad_rev}{rev_wt_mm} (RC)")
-            lines.append(f"REVERSE(ALT)       : {pad_rev}{rev_alt} (RC)")
-            lines.append(f"REVERSE(ALT_MM)    : {pad_rev}{rev_alt_mm} (RC)")
+            lines.append(f"REVERSE(WT)        : {pad_rev}{self._rc(rev_wt)}")
+            lines.append(f"REVERSE(WT_MM)     : {pad_rev}{self._rc(rev_wt_mm)}")
+            lines.append(f"REVERSE(ALT)       : {pad_rev}{self._rc(rev_alt)}")
+            lines.append(f"REVERSE(ALT_MM)    : {pad_rev}{self._rc(rev_alt_mm)}")
         
         return lines
 
@@ -128,11 +144,11 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
             self.seq_args.pop("SEQUENCE_FORCE_LEFT_START", None)
 
         primer_kw = self.config.pcr_params.primer_kwargs
-        n_primers = getattr(primer_kw, "n_primers", 5)
+        n_primers = getattr(primer_kw, "n_candidates", 5)
         self.global_args.update({
             "PRIMER_PICK_LEFT_PRIMER": 1, "PRIMER_PICK_RIGHT_PRIMER": 1,"PRIMER_PICK_INTERNAL_PRIMER": 0,
             "PRIMER_NUM_RETURN": int(n_primers),
-            "PRIMER_PRODUCT_SIZE_RANGE": [[primer_kw.min_amplicon_length, primer_kw.max_amplicon_length]],
+            "PRIMER_PRODUCT_SIZE_RANGE": [[getattr(primer_kw, 'min_amplicon_length', 60), getattr(primer_kw, 'max_amplicon_length', 150)]],
             "PRIMER_EXPLAIN_FLAG": 1,
         })
 
@@ -154,6 +170,7 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
         chrom = self.input.reference_name
         offset = getattr(self.input, "template_genomic_start", 0)
         ref_tpl = getattr(self.input, "reference_sequence", "")
+        opt_tm = float(self.global_args.get("PRIMER_OPT_TM", 58.0))
 
         for i in range(num):
             left_pos = res.get(f"PRIMER_LEFT_{i}")
@@ -163,6 +180,7 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
             # 1. Span 계산 로직 적용
             left_span = self._left_pos_to_span(left_pos)
             right_span = self._right_pos_to_span(right_pos)
+            
             # 2. 앵커 무결성 재확인
             if not self._validate_anchor(self.fixed_prime, left_span, right_span, self.target_index):
                 continue
@@ -173,20 +191,26 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
                 if wt_tpl[left_span[0]:right_span[1]+1] != ref_tpl[left_span[0]:right_span[1]+1]:
                     continue
             set_id = f"Set_{i}"
+            base_pair_penalty = float(res.get(f'PRIMER_PAIR_{i}_PENALTY', 0.0))
 
             # 4. 템플릿별 컴포넌트 파생
             for ttype in ["wt", "alt", "wt_mm", "alt_mm"]:
-                tpl_seq = self.templates[ttype]
+                tpl_seq = self.templates.get(ttype)
+                if not tpl_seq: continue
                 
-                # 서열 파싱
-                # 1. 서열 파싱
+                # 서열 파싱 (Mismatch가 포함된 서열이 잘려 나옵니다)
                 fwd_seq = self._parse_primer(tpl_seq, left_span[0], left_span[1], "forward")
                 rev_seq = self._parse_primer(tpl_seq, right_span[0], right_span[1], "reverse")
 
-                # 2. 진짜 통계치를 뽑기 위해 Primer3 입력값 세팅
+                # 🔥 Mismatch 여부에 따른 열역학(Tm, GC, Dimer) 동적 재계산
                 fwd = Primer.make_primer(sequence=fwd_seq, role="forward", start_index=left_span[0], end_index=left_span[1] + 1)
                 rev = Primer.make_primer(sequence=rev_seq, role="reverse", start_index=right_span[0], end_index=right_span[1] + 1)
-                current_pair_penalty = fwd.penalty + rev.penalty
+                
+                # 재계산된 Tm을 바탕으로 새로운 페널티 부여 (Mismatch가 발생하면 페널티가 증가하여 결과표에 반영됨)
+                fwd.penalty = abs(fwd.tm - opt_tm)
+                rev.penalty = abs(rev.tm - opt_tm)
+                current_pair_penalty = fwd.penalty + rev.penalty + base_pair_penalty
+                
                 # ==========================================================
                 # 공통 메타데이터 주입
                 # ==========================================================
@@ -209,6 +233,7 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
                 
                 rev.is_allele_specific = not is_fwd_as
                 rev.terminal_base = rev_seq[-1] if not is_fwd_as else None
+                # 역방향 프라이머(rev_seq)도 5'->3' 기준이므로 음수 인덱스로 3' 말단을 정확히 타겟팅합니다.
                 rev.mismatch_base = rev_seq[mm_offset] if (not is_fwd_as and mm_offset is not None) else None
             
                 fwd.region = GenomicRegion(chrom=chrom, start=offset + left_span[0] + 1, end=offset + left_span[1] + 1, strand="+")
@@ -230,6 +255,5 @@ class ASPCRPrimerDesigner(BasePrimerDesigner):
                 
                 amp.is_qc_pass = True 
                 flat_amplicons.append(amp)
-                
 
         return BaseDesignOutput(status="success", amplicons=flat_amplicons, metadata={"assay": self.ASSAY_TYPE})

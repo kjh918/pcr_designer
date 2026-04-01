@@ -1,0 +1,134 @@
+---
+title: "qPCR Manual"
+page-layout: full
+format:
+  html:
+    toc: true
+    toc-depth: 3
+---
+
+# qPCR Manual
+
+## 1. Overview
+
+qPCR(quantitative PCR)은 PCR 증폭 과정을 실시간으로 모니터링하여 target nucleic acid의 양을 정량적으로 분석하는 방법입니다.  
+형광 신호를 이용하여 cycle별 증폭 정도를 추적하며, Ct 또는 Cq 값을 통해 상대적 또는 절대적 정량이 가능합니다.
+
+---
+
+## 2. Principle
+
+qPCR은 다음 요소를 기반으로 동작합니다.
+
+- Forward primer
+- Reverse primer
+- Template DNA or cDNA
+- DNA polymerase
+- Fluorescent chemistry
+
+대표적인 검출 방식은 다음과 같습니다.
+
+### SYBR Green 방식
+이중가닥 DNA에 결합하는 형광 dye를 사용합니다.
+
+**장점**
+- 구조가 단순함
+- 비용이 비교적 낮음
+
+**주의점**
+- 비특이 산물도 함께 검출될 수 있음
+- melt curve 확인이 중요함
+
+### Probe-based 방식
+특정 타겟 서열에 결합하는 probe를 사용합니다.
+
+**장점**
+- 특이성이 높음
+- multiplex 적용에 유리함
+
+**주의점**
+- probe 설계가 추가로 필요함
+- 비용이 증가할 수 있음
+
+---
+
+## 3. Assay Structure
+
+### Primer Pair
+- Forward primer
+- Reverse primer
+
+### Probe (optional)
+- target 내부에 위치
+- 일반적으로 primer 사이에 위치
+- reporter / quencher 구조를 가짐
+
+---
+
+## 4. Design Rules
+
+### Primer Length
+- 일반적으로 18–25 nt 권장
+
+### GC Content
+- 일반적으로 40–60% 권장
+
+### Tm
+- primer 간 Tm 차이는 크지 않게 유지
+- 보통 58–62°C 범위에서 설계
+
+### Amplicon Length
+- qPCR은 일반적으로 짧은 amplicon이 유리
+- 보통 70–200 bp 권장
+
+### Specificity
+- 반복서열 회피
+- non-target 결합 최소화
+- primer-dimer / hairpin 형성 최소화
+
+---
+
+## 5. Input Guidance
+
+입력 서열은 보통 다음 조건을 만족하는 것이 좋습니다.
+
+- 5' → 3' 방향 기준
+- target 부위를 충분히 포함
+- 너무 짧은 flank는 피함
+- 공백, 숫자, header 제거 권장
+
+---
+
+## 6. Result Interpretation
+
+qPCR 결과는 일반적으로 다음 정보를 포함합니다.
+
+- primer sequence
+- Tm
+- GC%
+- amplicon size
+- probe sequence (if applicable)
+
+실험 결과에서는 Ct/Cq 값이 중요합니다.
+
+### Ct / Cq
+형광 신호가 threshold를 넘는 cycle number입니다.
+
+- Ct가 낮을수록 initial template 양이 많을 가능성이 큼
+- Ct가 높을수록 target abundance가 낮을 가능성이 있음
+
+---
+
+## 7. Notes
+
+- 설계 결과가 in-silico 기준으로 적합해도 wet validation은 반드시 필요합니다.
+- high GC region, repeat-rich region, pseudogene 영역은 추가 검토가 필요합니다.
+- probe-based assay에서는 probe 위치와 SNP 유무도 함께 확인해야 합니다.
+
+---
+
+## 8. Related
+- [PCR Assay Manual Home](index.qmd)
+- [Troubleshooting](troubleshooting.qmd)
+- [AS-PCR Manual](aspcr.qmd)
+- [MS-PCR Manual](mspcr.qmd)

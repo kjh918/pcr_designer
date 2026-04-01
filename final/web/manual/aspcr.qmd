@@ -1,0 +1,71 @@
+---
+title: "AS-PCR Manual"
+page-layout: full
+format:
+  html:
+    toc: true
+    toc-depth: 3
+---
+
+# AS-PCR Manual
+
+## 1. Overview
+
+AS-PCR(Allele-Specific PCR)은 특정 allele에 선택적으로 결합하는 primer를 이용하여  
+reference allele과 alternate allele을 구분하는 PCR 방법입니다.
+
+주로 다음과 같은 목적에 사용됩니다.
+
+- point mutation 검출
+- hotspot mutation 분석
+- genotype discrimination
+- variant-specific amplification
+
+---
+
+## 2. Principle
+
+AS-PCR의 핵심은 **primer의 3' 말단 특이성**입니다.
+
+DNA polymerase는 primer의 3' 말단이 template와 정확히 결합할 때 효율적으로 연장됩니다.  
+따라서 변이 위치를 primer의 3' 말단에 배치하면, 특정 allele에 대해서만 선택적으로 증폭되도록 설계할 수 있습니다.
+
+### 핵심 개념
+- Reference primer: reference allele에 맞게 설계
+- Alt primer: alternate allele에 맞게 설계
+- Common primer: 반대편 strand에 공통으로 결합
+
+---
+
+## 3. Assay Structure
+
+AS-PCR은 일반적으로 다음과 같은 구조를 가집니다.
+
+### Reference-specific primer
+reference 염기를 3' 말단에 가지는 primer
+
+### Alt-specific primer
+alternate 염기를 3' 말단에 가지는 primer
+
+### Common primer
+반대편 strand에 결합하는 공통 primer
+
+---
+
+## 4. Why 3' End Matters
+
+3' 말단 mismatch는 polymerase extension 효율에 큰 영향을 줍니다.
+
+- 3' 말단이 정확히 일치하면 증폭 가능
+- 3' 말단이 불일치하면 증폭 효율 저하 또는 증폭 실패
+
+필요 시 특이성을 더 높이기 위해 3' 인근에 의도적인 mismatch를 추가할 수도 있습니다.
+
+---
+
+## 5. Input Format
+
+AS-PCR 디자인 도구에서는 변이 위치를 다음 형식으로 표시하는 것이 좋습니다.
+
+```text
+[Reference,Alt]

@@ -1,0 +1,45 @@
+---
+title: "PCR Assay Manual"
+page-layout: full
+format:
+  html:
+    toc: true
+    toc-depth: 2
+---
+
+# PCR Assay Manual
+
+이 문서는 primer/probe design tool 사용자를 위한 **manual hub**입니다.  
+아래 문서에서 각 assay의 개념, 입력 형식, 설계 원리, 결과 해석 방법을 확인할 수 있습니다.
+
+## Available Manuals
+
+### [qPCR Manual](qpcr.qmd)
+정량 PCR(qPCR)의 기본 원리, primer/probe 구조, Ct/Cq 개념, 설계 시 고려사항을 설명합니다.
+
+### [AS-PCR Manual](aspcr.qmd)
+Allele-Specific PCR의 원리, 3' 말단 특이성, reference/alt primer 설계 개념, 입력 형식을 설명합니다.
+
+### [MS-PCR Manual](mspcr.qmd)
+Methylation-Specific PCR의 원리, bisulfite conversion 개념, methylated/unmethylated primer 설계 방법을 설명합니다.
+
+### [Troubleshooting](troubleshooting.qmd)
+primer 후보가 나오지 않거나, 특이성이 낮거나, 입력 형식 오류가 있는 경우 확인할 수 있는 가이드입니다.
+
+---
+
+## How to Use
+
+1. assay type을 선택합니다.
+2. 해당 manual에서 입력 형식과 설계 원리를 확인합니다.
+3. design app에서 sequence를 입력하고 분석을 수행합니다.
+4. 결과가 예상과 다를 경우 troubleshooting 문서를 참고합니다.
+
+---
+
+## Quick Navigation
+
+- [qPCR](qpcr.qmd)
+- [AS-PCR](aspcr.qmd)
+- [MS-PCR](mspcr.qmd)
+- [Troubleshooting](troubleshooting.qmd)

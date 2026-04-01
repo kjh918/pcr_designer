@@ -5,7 +5,6 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, HTTPException
 
-# 🔥 수정 1: 코어용 객체(QPCRDesignInput)가 아닌 API 통신용 객체(QPCRDesignInput)를 임포트합니다!
 from pcr.designers.qpcr.schema import QPCRDesignInput
 from scripts.design_qpcr import design_qpcr_pipeline 
 

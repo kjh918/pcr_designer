@@ -1,371 +1,400 @@
 /**
- * app.js (refactor)
+ * app.js (AS-PCR Accordion UI & Unified Params Version)
  * - LocalStorage 자동 저장/복구
- * - FastAPI 통신
- * - 결과/메타 렌더링
- * - Export: JSON / HTML (PDF는 별도 구현 가능)
+ * - FastAPI 통신 (단일 서열 'sequence' 파라미터 기반)
+ * - AS-PCR Set 구조(WT, ALT, WT_MM, ALT_MM) 완벽 병합(Accordion) 렌더링
  */
 
-/* -----------------------------
-   0) App State / Constants
------------------------------- */
-
 const state = {
-  lastResults: null,   // 서버 응답 전체
-  lastPayload: null,   // 마지막 실행 payload
+    lastResults: null,
+    lastPayload: null,
 };
 
-const STORAGE_PREFIX = "aspcr";
+const STORAGE_PREFIX = "aspcr_";
 
+// 🔥 공통 params.html에 있는 실제 ID(mspcr-*)들을 완벽하게 매핑합니다.
 const TRACKED_INPUTS = [
-  // Basic
-  "input-ref-genome", "input-chrom", "input-start", "input-end",
-  "input-ref-base", "input-alt-base", "input-strand",
-
-  // Amplicon
-  "min_amplicon_length", "max_amplicon_length",
-
-  // Primer
-  "primer_min_length", "primer_opt_length", "primer_max_length",
-  "primer_min_tm", "primer_opt_tm", "primer_max_tm",
-  "primer_min_gc", "primer_opt_gc", "primer_max_gc",
-
-  // QC
-  "qc_hairpin_min_dg", "qc_homodimer_min_dg", "qc_heterodimer_min_dg",
-  "qc_min_identity", "qc_min_hit_length", "qc_blast_max_alignments",
-  "qc_use_ispcr_check", "qc_primer_max_diff_tm",
+    "mspcr-design-name", "aspcr-design-name", "input-design-name", 
+    "mspcr-raw-sequence", "aspcr-raw-sequence", "manual-sequence", 
+    "input-ref-genome",
+    "aspcr_fixed_prime", "aspcr_mismatch_pos", "aspcr_mismatch_intensity",
+    "min_amplicon_length", "max_amplicon_length",
+    "primer_min_length", "primer_opt_length", "primer_max_length",
+    "primer_min_tm", "primer_opt_tm", "primer_max_tm",
+    "primer_min_gc", "primer_opt_gc", "primer_max_gc",
+    "qc_hairpin_min_dg", "qc_homodimer_min_dg", "qc_heterodimer_min_dg",
+    "qc_min_identity", "qc_min_hit_length", "qc_blast_max_alignments",
+    "qc_min_amp_size", "qc_max_amp_size", "qc_use_ispcr_check", 
+    "qc_primer_max_diff_tm"
 ];
 
-// API endpoint (필요하면 환경에 맞게 바꾸기)
 const API_URL = "http://192.168.0.35:9000/api/design/aspcr";
 
-/* -----------------------------
-   1) Utils (DOM / format / read)
------------------------------- */
-
 const $ = (sel) => document.querySelector(sel);
-
-function byId(id) {
-  return document.getElementById(id);
-}
+const byId = (id) => document.getElementById(id);
 
 function formatNum1(val) {
-  if (val === "-" || val === undefined || val === null || Number.isNaN(val)) return "-";
-  const n = typeof val === "number" ? val : parseFloat(val);
-  return Number.isFinite(n) ? n.toFixed(1) : "-";
+    if (val === "-" || val === undefined || val === null || Number.isNaN(val)) return "-";
+    const n = typeof val === "number" ? val : parseFloat(val);
+    return Number.isFinite(n) ? n.toFixed(1) : "-";
 }
 
 function getVal(id, type = "string", def = null) {
-  const el = byId(id);
-  if (!el) return def;
-
-  // checkbox는 checked 기준
-  if (el.type === "checkbox") {
-    const checked = el.checked;
-    if (type === "bool") return !!checked;
-    return checked;
-  }
-
-  const raw = (el.value ?? "").toString();
-
-  if (type === "int") {
-    const v = parseInt(raw, 10);
-    return Number.isFinite(v) ? v : def;
-  }
-  if (type === "float") {
-    const v = parseFloat(raw);
-    return Number.isFinite(v) ? v : def;
-  }
-  if (type === "bool") {
-    // select/hidden 등에서 "true"/"false"로 저장되는 경우
-    return raw === "true";
-  }
-
-  return raw;
+    const el = byId(id);
+    if (!el) return def;
+    if (el.type === "checkbox") return type === "bool" ? !!el.checked : el.checked;
+    const raw = (el.value ?? "").toString();
+    if (type === "int") {
+        const v = parseInt(raw, 10);
+        return Number.isFinite(v) ? v : def;
+    }
+    if (type === "float") {
+        const v = parseFloat(raw);
+        return Number.isFinite(v) ? v : def;
+    }
+    if (type === "bool") return raw === "true";
+    return raw;
 }
 
 function setText(id, text) {
-  const el = byId(id);
-  if (el) el.innerText = text;
+    const el = byId(id);
+    if (el) el.innerText = text;
 }
 
 function setStatus(text, color) {
-  const el = byId("summary-status");
-  if (!el) return;
-  el.innerText = text;
-  if (color) el.style.color = color;
+    const el = byId("summary-status");
+    if (!el) return;
+    el.innerText = text;
+    if (color) {
+        if (text === "SUCCESS" || text === "COMPLETED") {
+            el.style.backgroundColor = "#d1e7dd";
+            el.style.color = "#0f5132";
+        } else if (text.includes("FAIL") || text.includes("ERROR")) {
+            el.style.backgroundColor = "#f8d7da";
+            el.style.color = "#842029";
+        } else {
+            el.style.backgroundColor = "#e9ecef";
+            el.style.color = "#333";
+        }
+    }
 }
 
-/* -----------------------------
-   2) LocalStorage Save/Restore
------------------------------- */
-
 function saveInputsToStorage() {
-  TRACKED_INPUTS.forEach((id) => {
-    const el = byId(id);
-    if (!el) return;
-
-    const val = (el.type === "checkbox") ? el.checked : el.value;
-    localStorage.setItem(STORAGE_PREFIX + id, String(val));
-  });
-  console.log("💾 Input values saved.");
+    TRACKED_INPUTS.forEach((id) => {
+        const el = byId(id);
+        if (!el) return;
+        const val = (el.type === "checkbox") ? el.checked : el.value;
+        localStorage.setItem(STORAGE_PREFIX + id, String(val));
+    });
 }
 
 function restoreInputsFromStorage() {
-  TRACKED_INPUTS.forEach((id) => {
-    const saved = localStorage.getItem(STORAGE_PREFIX + id);
-    const el = byId(id);
-    if (!el || saved === null) return;
-
-    if (el.type === "checkbox") {
-      el.checked = (saved === "true");
-    } else {
-      el.value = saved;
-    }
-  });
-  console.log("📂 Input values restored.");
+    TRACKED_INPUTS.forEach((id) => {
+        const saved = localStorage.getItem(STORAGE_PREFIX + id);
+        const el = byId(id);
+        if (!el || saved === null) return;
+        if (el.type === "checkbox") el.checked = (saved === "true");
+        else el.value = saved;
+    });
 }
 
-/* -----------------------------
-   3) Payload Builder + Validation
------------------------------- */
+function extractMutation(seq) {
+    const match = seq.match(/\[(.*?)\]/);
+    if (match) {
+        const alleles = match[1].replace(/\s/g, '').replace('/', ',');
+        const parts = alleles.split(',');
+        if (parts.length >= 2) return `${parts[0]} > ${parts[1]}`;
+        return alleles;
+    }
+    return "-";
+}
 
 function buildPayload() {
-  return {
-    // Basic
-    reference: getVal("input-ref-genome", "string", "hg38"),
-    chrom: getVal("input-chrom", "string", "").trim(),
-    start: getVal("input-start", "int"),
-    end: getVal("input-end", "int"),
-    ref: getVal("input-ref-base", "string", "G").toUpperCase(),
-    alt: getVal("input-alt-base", "string", "A").toUpperCase(),
-    strand: getVal("input-strand", "string", "+"),
-    top_k: 5,
+    // 🔥 공용 params.html의 실제 ID(mspcr-raw-sequence)를 최우선으로 찾습니다.
+    const rawSeq = (byId("mspcr-raw-sequence")?.value || byId("aspcr-raw-sequence")?.value || byId("manual-sequence")?.value || "").replace(/\s/g, "").toUpperCase();
+    const designName = getVal("mspcr-design-name", "string", getVal("aspcr-design-name", "string", getVal("input-design-name", "string", "ASPCR_Design")));
 
-    // Amplicon
-    min_amplicon_length: getVal("min_amplicon_length", "int", 60),
-    max_amplicon_length: getVal("max_amplicon_length", "int", 150),
-
-    // Primer
-    primer_min_length: getVal("primer_min_length", "int", 20),
-    primer_opt_length: getVal("primer_opt_length", "int", 25),
-    primer_max_length: getVal("primer_max_length", "int", 30),
-
-    primer_min_tm: getVal("primer_min_tm", "float", 55.0),
-    primer_opt_tm: getVal("primer_opt_tm", "float", 60.0),
-    primer_max_tm: getVal("primer_max_tm", "float", 65.0),
-
-    primer_min_gc: getVal("primer_min_gc", "float", 35.0),
-    primer_opt_gc: getVal("primer_opt_gc", "float", 50.0),
-    primer_max_gc: getVal("primer_max_gc", "float", 65.0),
-
-    // QC
-    qc_hairpin_min_dg: getVal("qc_hairpin_min_dg", "float", -6.0),
-    qc_homodimer_min_dg: getVal("qc_homodimer_min_dg", "float", -6.0),
-    qc_heterodimer_min_dg: getVal("qc_heterodimer_min_dg", "float", -6.0),
-    qc_min_identity: getVal("qc_min_identity", "float", 90.0),
-    qc_min_hit_length: getVal("qc_min_hit_length", "int", 13),
-    qc_blast_max_alignments: getVal("qc_blast_max_alignments", "int", 50),
-    qc_use_ispcr_check: getVal("qc_use_ispcr_check", "bool", false),
-    qc_primer_max_diff_tm: getVal("qc_primer_max_diff_tm", "float", 3.0),
-
-  };
+    return {
+        design_name: designName,
+        sequence: rawSeq,  
+        reference_genome: getVal("input-ref-genome", "string", "hg38"),
+        top_k: 5,
+        
+        fixed_prime: getVal("aspcr_fixed_prime", "string", "forward"),
+        mismatch_pos: getVal("aspcr_mismatch_pos", "int", 3),
+        mismatch_intensity: getVal("aspcr_mismatch_intensity", "string", "strong"),
+        
+        amplicon: {
+            min_length: getVal("min_amplicon_length", "int", 60),
+            max_length: getVal("max_amplicon_length", "int", 150)
+        },
+        
+        primer: {
+            min_length: getVal("primer_min_length", "int", 15),
+            opt_length: getVal("primer_opt_length", "int", 22),
+            max_length: getVal("primer_max_length", "int", 30),
+            min_tm: getVal("primer_min_tm", "float", 52.0),
+            opt_tm: getVal("primer_opt_tm", "float", 58.0),
+            max_tm: getVal("primer_max_tm", "float", 65.0),
+            min_gc: getVal("primer_min_gc", "float", 35.0),
+            opt_gc: getVal("primer_opt_gc", "float", 50.0),
+            max_gc: getVal("primer_max_gc", "float", 65.0)
+        },
+        
+        qc_criteria: {
+            thermodynamics: {
+                hairpin_min_dg: getVal("qc_hairpin_min_dg", "float", -5.0),
+                homodimer_min_dg: getVal("qc_homodimer_min_dg", "float", -6.0),
+                heterodimer_min_dg: getVal("qc_heterodimer_min_dg", "float", -6.0)
+            },
+            blast: {
+                min_identity: getVal("qc_min_identity", "float", 90.0),
+                min_hit_length: getVal("qc_min_hit_length", "int", 13),
+                max_alignments: getVal("qc_blast_max_alignments", "int", 50)
+            },
+            amplicon: {
+                min_size: getVal("qc_min_amp_size", "int", 50),
+                max_size: getVal("qc_max_amp_size", "int", 300),
+                use_ispcr: getVal("qc_use_ispcr_check", "bool", false)
+            },
+            oligo: {
+                max_tm_diff: getVal("qc_primer_max_diff_tm", "float", 5.0)
+            }
+        }
+    };
 }
 
+// 🔥 VCF 좌표 검증을 제거하고, 대괄호 포함 여부만 검증합니다.
 function validatePayload(p) {
-  if (!p.chrom || !Number.isFinite(p.start)) {
-    return "Please fill in Chromosome and Position.";
-  }
-  return null;
-}
-
-/* -----------------------------
-   4) Render: Results / Metadata / Summary
------------------------------- */
-
-function renderResults(results) {
-  const tbody = byId("candidate-tbody");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  const listData = results?.single_total_amplicons || [];
-  if (!listData.length) {
-    tbody.innerHTML =
-      '<tr><td colspan="13" style="text-align:center; padding:40px;">No candidates found.</td></tr>';
-    return;
-  }
-
-  listData.forEach((item, idx) => {
-    const tr = document.createElement("tr");
-    tr.style.cursor = "pointer";
-    tr.id = `rank-row-${idx}`;
-
-    tr.innerHTML = `
-      <td class="text-center">${item.rank ?? (idx + 1)}</td>
-      <td class="mono-cell">${item.forward_primer || "-"}</td>
-      <td class="mono-cell">${item.reverse_primer || "-"}</td>
-      <td class="mono-cell">${item.probe || "-"}</td>
-      <td class="text-center">${formatNum1(item.tm_f)}</td>
-      <td class="text-center">${formatNum1(item.tm_r)}</td>
-      <td class="text-center">${formatNum1(item.tm_p)}</td>
-      <td class="text-center">${formatNum1(item.gc_f)}%</td>
-      <td class="text-center">${formatNum1(item.gc_r)}%</td>
-      <td class="text-center">${formatNum1(item.gc_p)}%</td>
-      <td class="text-center">${item.amplicon_size ?? 0}</td>
-      <td class="text-nowrap">${item.genomic_pos || "-"}</td>
-    `;
-
-    tr.addEventListener("click", () => {
-      document.querySelectorAll("#candidate-tbody tr").forEach((r) => r.classList.remove("selected-row"));
-      tr.classList.add("selected-row");
-      const alnView = byId("alignment-view");
-      if (alnView) alnView.innerText = item.alignment_text_block || "No alignment data.";
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  // 첫 행 자동 선택
-  byId("rank-row-0")?.click();
-}
-
-function renderMetadata(results, payload) {
-  const panel = byId("metadata-panel");
-  const container = byId("metadata-table");
-  if (!panel || !container || !results || !payload) return;
-
-  panel.style.display = "block";
-
-  const total = results.single_result?.total_count || 0;
-  const filtered = results.single_total_amplicons?.length || 0;
-  const rejected = total - filtered;
-
-  container.innerHTML = `
-    <div class="meta-report-grid">
-      <div class="meta-card">
-        <div class="card-header">📍 TARGET & AMPLICON</div>
-        <div class="card-item"><span>Reference</span> <b>${payload.reference}</b></div>
-        <div class="card-item"><span>Mutation</span> <b class="text-danger">${payload.ref} > ${payload.alt}</b></div>
-        <div class="card-item"><span>Amp Size</span> <b>${payload.min_amplicon_length}-${payload.max_amplicon_length} bp</b></div>
-        <div class="card-item"><span>Filtered</span> <b>${filtered}</b> / <b>${total}</b> <span style="opacity:.7">(rejected ${rejected})</span></div>
-        <div class="help-text">
-          * <b>Mutation:</b> Probe 서열 내부에 타겟 변이 부위를 포함하는 디자인인지 확인합니다.<br>
-          * <b>Amp Size:</b> AS-PCR 서열(80-200bp)이 이상적입니다.
-        </div>
-      </div>
-      <div class="meta-card">
-        <div class="card-header">🛡️ BLAST & SPECIFICITY</div>
-        <div class="card-item"><span>Min Identity</span> <b>${payload.qc_min_identity}%</b></div>
-        <div class="card-item"><span>Min Hit BP</span> <b>${payload.qc_min_hit_length} bp</b></div>
-        <div class="card-item"><span>Max Align</span> <b>${payload.qc_blast_max_alignments} Hits</b></div>
-        <div class="help-text">
-          * <b>Min Identity:</b> 유전체 내 다른 부위와의 상동성 허용치입니다. 높을수록 엄격합니다.<br>
-          * <b>Min Hit BP:</b> 연속적으로 일치한 염기서열 수.<br>
-          * <b>Max Align:</b> Blast 결과 중 상위 수의 위치만 비특이적 결합 유무 확인.
-        </div>
-      </div>
-    </div>
-  `;
+    if (!p.sequence || p.sequence.length < 30) {
+        return "Please enter a valid DNA sequence (at least 30bp).";
+    }
+    if (!p.sequence.includes("[") || !p.sequence.includes("]")) {
+        return "서열에 대괄호('[', ']')를 사용하여 변이 타겟을 명시해야 합니다. (e.g. ATGC[A,G]ATGC)";
+    }
+    return null;
 }
 
 function renderSummary(payload, results) {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const summary = results?.summary || {};
+    const now = new Date();
+    const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  setText("summary-chrom", payload.chrom);
-  setText("summary-pos", `${payload.start} - ${payload.end}`);
-  setText("summary-date", dateStr);
-  setText("summary-reference", payload.reference);
-  setText("summary-mutation", `${payload.ref} > ${payload.alt}`);
+    setText("summary-chrom", "Auto");
+    setText("summary-pos", "Auto");
+    setText("summary-date", dateStr);
+    setText("summary-reference", payload.reference_genome || "hg38");
+    setText("summary-mutation", extractMutation(payload.sequence));
 
-  if (results?.status === "success") setStatus("COMPLETED", "green");
-  else if (results?.status) setStatus("FAILED", "red");
-  else setStatus("READY", "#2b384c");
+    if (results?.status === "success") {
+        const passedCount = summary.passed_count || 0;
+        const totalCount = summary.total_count || 0;
+        const allFailed = passedCount === 0 && totalCount > 0;
+        setStatus(allFailed ? `FAIL (${passedCount} PASS)` : "SUCCESS", "color");
+    } else if (results?.status) {
+        setStatus("ERROR", "color");
+    } else {
+        setStatus("READY", "#2b384c");
+    }
+}
+
+// 🔥 [아코디언 토글 전역 함수]
+window.toggleSet = function(setId) {
+    const rows = document.querySelectorAll('.' + setId);
+    const icon = document.getElementById('icon-' + setId);
+    let isHidden = true;
+    
+    rows.forEach(row => {
+        if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+            isHidden = false;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    if (icon) {
+        icon.textContent = isHidden ? '+' : '-';
+    }
+};
+
+// 🔥 [아코디언 렌더러] 17열 구조에 맞춰 메인(Set) 행 클릭 시 서브(Allele) 행들이 토글됩니다.
+function renderResults(results) {
+    const tbody = document.getElementById("candidate-tbody");
+    const alignmentView = document.getElementById("alignment-view");
+    
+    if (!tbody) return;
+
+    const ampliconsData = results?.results || [];
+    
+    if (!ampliconsData || ampliconsData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="17" style="text-align:center; padding:60px; color:#999; font-size: 13px;">No candidates found or all failed.</td></tr>`;
+        return;
+    }
+
+    let html = "";
+    let alignmentTexts = [];
+
+    ampliconsData.forEach((set, setIndex) => {
+        const rank = set.rank || (setIndex + 1);
+        const setId = set.set_id || `Set_${rank}`;
+        const setPass = set.set_qc_pass;
+        
+        const sampleAllele = Object.values(set.alleles || {})[0];
+        if (sampleAllele && sampleAllele.amplicon_info?.alignment_text_block) {
+            alignmentTexts.push(`[${setId} ALIGNMENT]\n${sampleAllele.amplicon_info.alignment_text_block}`);
+        }
+
+        const qcBadge = setPass ? `<span style="color:#198754; font-weight:bold; font-size:12px;">PASS</span>` : `<span style="color:#d9534f; font-weight:bold; font-size:12px;">FAIL</span>`;
+        const setRowId = `set-row-${rank}`;
+        
+        // 1. 요약 메인 행 (Set 정보) - 클릭 시 toggleSet 호출
+        html += `
+            <tr style="background-color: #fdfdfe; cursor: pointer; border-top: 2px solid #adb5bd;" onclick="toggleSet('${setRowId}')">
+                <td style="text-align: center; border-bottom: 1px solid #dee2e6;">
+                    <span id="icon-${setRowId}" style="font-size: 16px; font-weight: bold; color: #6c757d; border: 1px solid #ccc; padding: 0 5px; border-radius: 3px;">+</span>
+                </td>
+                <td style="font-weight: bold; border-bottom: 1px solid #dee2e6; color: #495057;">Rank ${rank}</td>
+                <td style="text-align: center; font-weight: bold; border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; color: #333;">${setId}<br>${qcBadge}</td>
+                <td colspan="14" style="border-bottom: 1px solid #dee2e6; color: #6c757d; font-size: 12px; vertical-align: middle;">
+                    👉 <em>Click here to expand and view details for <strong>WT, ALT, WT_MM, ALT_MM</strong> alleles.</em>
+                </td>
+            </tr>
+        `;
+
+        // 2. 상세 서브 행 (각 Allele의 Fwd, Rev, HD, QC 정보)
+        const alleleKeys = ["wt", "alt", "wt_mm", "alt_mm"];
+        alleleKeys.forEach((key, index) => {
+            const alleleData = set.alleles[key];
+            if (!alleleData) return;
+
+            const fwd = alleleData.oligos?.forward || { sequence: "-", tm: 0, gc: 0 };
+            const rev = alleleData.oligos?.reverse || { sequence: "-", tm: 0, gc: 0 };
+            const hetero = alleleData.oligos?.heterodimer || { fr_dg: 0, fp_dg: 0, rp_dg: 0 };
+            
+            const isIndivPass = alleleData.qc_info?.is_pass;
+            const qcText = isIndivPass ? "PASS" : (alleleData.qc_info?.fail_reason || "FAIL");
+            const qcColor = isIndivPass ? "#198754" : "#d9534f";
+            
+            let labelColor = key.includes("mm") ? "#d9534f" : "#0275d8"; 
+            let rowBottomBorder = (index === 3) ? `border-bottom: 2px solid #adb5bd;` : `border-bottom: 1px solid #e9ecef;`;
+
+            html += `
+            <tr class="allele-detail-row ${setRowId}" style="display: none; background-color: #ffffff;">
+                <td style="${rowBottomBorder}"></td>
+                <td style="font-weight: bold; color: ${labelColor}; ${rowBottomBorder}">${key.toUpperCase()}</td>
+                <td style="${rowBottomBorder} border-right: 2px solid #adb5bd;"></td>
+                
+                <!-- Fwd (5 cols) -->
+                <td class="mono-cell" style="${rowBottomBorder}">${fwd.sequence}</td>
+                <td class="text-center" style="${rowBottomBorder}">${formatNum1(fwd.tm)}</td>
+                <td class="text-center" style="${rowBottomBorder}">${formatNum1(fwd.gc)}</td>
+                <td class="text-center" style="${rowBottomBorder} color: #d9534f;">${formatNum1(fwd.hairpin_dg)}</td>
+                <td class="text-center" style="${rowBottomBorder} color: #d9534f; border-right: 2px solid #adb5bd;">${formatNum1(fwd.homodimer_dg)}</td>
+
+                <!-- Rev (5 cols) -->
+                <td class="mono-cell" style="${rowBottomBorder}">${rev.sequence}</td>
+                <td class="text-center" style="${rowBottomBorder}">${formatNum1(rev.tm)}</td>
+                <td class="text-center" style="${rowBottomBorder}">${formatNum1(rev.gc)}</td>
+                <td class="text-center" style="${rowBottomBorder} color: #d9534f;">${formatNum1(rev.hairpin_dg)}</td>
+                <td class="text-center" style="${rowBottomBorder} color: #d9534f; border-right: 2px solid #adb5bd;">${formatNum1(rev.homodimer_dg)}</td>
+
+                <!-- Hetero (1 col) -->
+                <td class="text-center" style="${rowBottomBorder} color: #d9534f; border-right: 2px solid #adb5bd;">${formatNum1(hetero.fr_dg)}</td>
+
+                <!-- Amp/QC (3 cols) -->
+                <td class="text-center" style="${rowBottomBorder}">${formatNum1(alleleData.metrics?.pair_penalty)}</td>
+                <td class="text-center text-nowrap" style="${rowBottomBorder}">${alleleData.amplicon_info?.genomic_pos || "-"}</td>
+                <td style="${rowBottomBorder} color: ${qcColor}; font-size: 10px; max-width: 200px; word-wrap: break-word;">${qcText}</td>
+            </tr>
+            `;
+        });
+    });
+
+    tbody.innerHTML = html;
+
+    if (alignmentView) {
+        if (alignmentTexts.length > 0) {
+            alignmentView.textContent = alignmentTexts.join("\n\n" + "=".repeat(100) + "\n\n");
+        } else {
+            alignmentView.textContent = "No alignment data available.";
+        }
+    }
 }
 
 /* -----------------------------
    5) Export: JSON / HTML
 ------------------------------ */
 
-function exportJSON() {
-  if (!state.lastResults) {
-    alert("내보낼 데이터가 없습니다. 먼저 분석을 실행하세요.");
-    return;
-  }
+function exportJSON(e) {
+    if (e) e.preventDefault();
+    if (!state.lastResults) {
+        alert("내보낼 데이터가 없습니다. 먼저 분석을 실행하세요.");
+        return;
+    }
 
-  const projectOutput = {
-    project_info: {
-      name: `AS-PCR_Project_${state.lastResults.export_meta?.region?.name || "Design"}`,
-      date: new Date().toISOString(),
-      app_version: "1.0.0",
-    },
-    input_parameters: state.lastPayload || {},
-    design_results: state.lastResults,
-  };
+    const projectOutput = state.lastResults;
+    const projectName = projectOutput.metadata?.project_name || "ASPCR_Project";
 
-  const jsonString = JSON.stringify(projectOutput, null, 4);
-  const blob = new Blob([jsonString], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+    const jsonString = JSON.stringify(projectOutput, null, 4);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `AS-PCR_RawData_${Date.now()}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${projectName}_Report.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
-function exportHTML() {
-  // main export 영역: .main-panel 우선, 없으면 .main
-  const target = $(".main-panel") || $(".main");
-  if (!target) {
-    alert("리포트 영역(.main-panel/.main)을 찾을 수 없습니다.");
-    return;
-  }
+function exportHTML(e) {
+    if (e) e.preventDefault();
+    if (!state.lastResults) {
+        alert("내보낼 데이터가 없습니다.");
+        return;
+    }
+    const target = document.querySelector(".main-content");
+    if (!target) return;
 
-  // 외부 도메인 CSSRules 접근은 실패할 수 있음(try/catch)
-  const styles = Array.from(document.styleSheets)
-    .map((ss) => {
-      try {
-        return Array.from(ss.cssRules).map((r) => r.cssText).join("\n");
-      } catch {
-        return "";
-      }
-    })
-    .join("\n");
+    let styles = "";
+    try {
+        styles = Array.from(document.styleSheets)
+            .map((ss) => {
+                try { return Array.from(ss.cssRules).map((r) => r.cssText).join("\n"); } 
+                catch { return ""; }
+            }).join("\n");
+    } catch(err) {}
 
-  const reportArea = target.innerHTML;
-
-  const htmlContent = `<!DOCTYPE html>
+    const projectName = state.lastPayload?.design_name || "ASPCR_Project";
+    const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>AS-PCR Design Report - ${new Date().toLocaleString()}</title>
+  <title>AS-PCR Design Report - ${projectName}</title>
   <style>
     body { font-family: 'Nunito', sans-serif; padding: 20px; background: #f5f5f5; }
     ${styles}
-    .no-print, .export-buttons { display: none !important; }
-    .report-wrap { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .table-container { overflow-x: auto !important; }
+    .no-print, details { display: none !important; }
+    .panel { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
   </style>
 </head>
 <body>
-  <div class="report-wrap">
-    ${reportArea}
+  <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h2>🔍 AS-PCR Design Report</h2>
+    ${target.innerHTML}
   </div>
 </body>
 </html>`;
 
-  const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `AS-PCR_Report_${Date.now()}.html`;
-  link.click();
-  URL.revokeObjectURL(url);
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${projectName}_Report.html`;
+    link.click();
+    URL.revokeObjectURL(url);
 }
 
 /* -----------------------------
@@ -373,147 +402,111 @@ function exportHTML() {
 ------------------------------ */
 
 async function runDesign() {
-  const runBtn = byId("btn-run-aspcr");
-  if (!runBtn) return;
+    const runBtn = byId("btn-run-aspcr");
+    if (!runBtn) return;
 
-  // 저장 + payload
-  saveInputsToStorage();
-  const payload = buildPayload();
-  const err = validatePayload(payload);
-  if (err) {
-    alert(err);
-    return;
-  }
-
-  // UI: loading
-  const originalText = runBtn.innerText;
-  runBtn.innerText = "⏳ RUNNING...";
-  runBtn.disabled = true;
-  setStatus("RUNNING", "#2b384c");
-
-  try {
-    console.log("📤 Sending payload:", payload);
-
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || "Server Error");
-    }
-
-    const results = await res.json();
-    console.log("📥 Received results:", results);
-
-    // state 저장
-    state.lastPayload = payload;
-    state.lastResults = results;
-
-    // 렌더
-    renderResults(results);
-    renderMetadata(results, payload);
-    renderSummary(payload, results);
-
-  } catch (e) {
-    console.error("Fetch Error:", e);
-    alert("Design failed: " + e.message);
-    setStatus("ERROR", "red");
-  } finally {
-    runBtn.innerText = originalText;
-    runBtn.disabled = false;
-  }
-}
-
-/* -----------------------------
-   7) Wire up Events (single entry)
------------------------------- */
-
-document.addEventListener("DOMContentLoaded", () => {
-  // restore inputs
-  restoreInputsFromStorage();
-
-  // run
-  byId("btn-run-aspcr")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    runDesign();
-  });
-
-  // exports
-  byId("btn-export-json")?.addEventListener("click", exportJSON);
-  byId("btn-export-html")?.addEventListener("click", exportHTML);
-
-  console.log("✅ AS-PCR app ready.");
-});
-
-// 서버 응답 데이터(response.single_filtered_amplicons)를 렌더링하는 로직
-function renderAspcrTable(ampliconsData) {
-    const tbody = document.getElementById("candidate-tbody");
-    const alignmentView = document.getElementById("alignment-view");
-    
-    if (!ampliconsData || ampliconsData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:40px; color:#999;">No candidates found or all failed QC.</td></tr>`;
+    saveInputsToStorage();
+    const payload = buildPayload();
+    const err = validatePayload(payload);
+    if (err) {
+        alert(err);
         return;
     }
 
-    let html = "";
-    let alignmentTexts = [];
+    const originalText = runBtn.innerText;
+    runBtn.innerText = "⏳ RUNNING...";
+    runBtn.disabled = true;
+    setStatus("RUNNING", "#2b384c");
 
-    // 각 Set를 순회합니다.
-    ampliconsData.forEach((set) => {
-        // 얼라인먼트 텍스트 수집 (Set별로 구분)
-        if (set.alignment_text_block) {
-            alignmentTexts.push(`[${set.set_id} ALIGNMENT]\n${set.alignment_text_block}`);
+    const errPanel = byId("error-log-panel");
+    if (errPanel) errPanel.style.display = "none";
+
+    try {
+        console.log("📤 Sending AS-PCR Payload:", payload);
+        const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            let errMsg = errData.detail || "Server Error";
+            if (Array.isArray(errMsg)) {
+                errMsg = errMsg.map(e => `[${e.loc?.join('.')}] : ${e.msg}`).join('\n');
+            } else if (typeof errMsg === 'object') {
+                errMsg = JSON.stringify(errMsg, null, 2);
+            }
+            throw new Error(errMsg);
         }
 
-        // 4가지 Allele 순서 고정
-        const alleleKeys = ["wt", "alt", "wt_mm", "alt_mm"];
-        
-        alleleKeys.forEach((key, index) => {
-            const alleleData = set.alleles[key];
-            if (!alleleData) return; // 데이터가 없으면 패스
+        const results = await res.json();
+        console.log("📥 Received Results:", results);
 
-            const fwd = alleleData.oligos.forward;
-            const rev = alleleData.oligos.reverse;
-            
-            html += `<tr>`;
-            
-            // 🔥 [핵심] 첫 번째 행(wt)일 때만 Set 공통 정보(Rank, ID, QC)를 rowspan=4로 병합해서 출력!
-            if (index === 0) {
-                const qcBadge = set.set_qc_pass 
-                    ? `<span style="color:#5cb85c; font-weight:bold;">PASS</span>` 
-                    : `<span style="color:#d9534f; font-weight:bold;">FAIL</span>`;
-                    
-                html += `<td rowspan="4" style="vertical-align: middle; text-align: center; border-bottom: 2px solid #ddd;">${set.rank}</td>`;
-                html += `<td rowspan="4" style="vertical-align: middle; text-align: center; font-weight: bold; border-bottom: 2px solid #ddd;">${set.set_id}</td>`;
-                html += `<td rowspan="4" style="vertical-align: middle; text-align: center; border-bottom: 2px solid #ddd;">${qcBadge}</td>`;
+        state.lastPayload = payload;
+        state.lastResults = results;
+
+        if (results.status !== "success" || results.error || results.reason) {
+            const errContent = byId("error-log-content");
+            if (errPanel && errContent) {
+                errPanel.style.display = "block";
+                let logs = results.log_messages || results.error || results.reason || "Unknown error occurred.";
+                errContent.innerText = Array.isArray(logs) ? logs.join('\n') : logs;
             }
+        }
 
-            // 개별 Allele 디자인 속성
-            let labelColor = key.includes("mm") ? "#d9534f" : "#0275d8"; // Mismatch는 빨간색, 기본은 파란색
-            let rowBottomBorder = (index === 3) ? `border-bottom: 2px solid #ddd;` : `border-bottom: 1px solid #eee;`;
+        renderResults(results);
+        renderSummary(payload, results);
 
-            html += `<td style="font-weight: bold; color: ${labelColor}; ${rowBottomBorder}">${key.toUpperCase()}</td>`;
-            html += `<td style="font-family: monospace; font-size: 13px; ${rowBottomBorder}">${fwd.sequence}</td>`;
-            html += `<td style="font-family: monospace; font-size: 13px; ${rowBottomBorder}">${rev.sequence}</td>`;
-            html += `<td style="${rowBottomBorder}">${fwd.tm.toFixed(1)} / ${rev.tm.toFixed(1)}</td>`;
-            html += `<td style="${rowBottomBorder}">${fwd.gc.toFixed(1)} / ${rev.gc.toFixed(1)}</td>`;
-            html += `<td style="font-weight: 500; ${rowBottomBorder}">${alleleData.pair_penalty.toFixed(2)}</td>`;
-            html += `<td style="font-size: 11px; color: #555; ${rowBottomBorder}">${alleleData.amplicon_info.genomic_pos}</td>`;
-            
-            html += `</tr>`;
-        });
-    });
+        // 첫 번째 행은 자동으로 펼쳐줍니다
+        setTimeout(() => window.toggleSet("set-row-1"), 100);
 
-    // 테이블 삽입
-    tbody.innerHTML = html;
-
-    // 얼라인먼트 프리뷰 삽입 (전체 Set 텍스트를 모아서 뿌려줌)
-    if (alignmentTexts.length > 0) {
-        alignmentView.textContent = alignmentTexts.join("\n\n----------------------------------------------------------------------------------------------------------\n\n");
-    } else {
-        alignmentView.textContent = "No alignment data available.";
+    } catch (e) {
+        console.error("Fetch Error:", e);
+        alert("Design failed:\n" + e.message);
+        setStatus("ERROR", "red");
+        const errContent = byId("error-log-content");
+        if (errPanel && errContent) {
+            errPanel.style.display = "block";
+            errContent.innerText = e.message;
+        }
+    } finally {
+        runBtn.innerText = originalText;
+        runBtn.disabled = false;
     }
 }
+
+/* -----------------------------
+   7) Wire up Events
+------------------------------ */
+
+document.addEventListener("DOMContentLoaded", () => {
+    restoreInputsFromStorage();
+
+    byId("btn-run-aspcr")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        runDesign();
+    });
+
+    byId("btn-export-json")?.addEventListener("click", exportJSON);
+    byId("btn-export-html")?.addEventListener("click", exportHTML);
+
+    byId("btn-load-tutorial")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        const designNameInput = byId("mspcr-design-name") || byId("aspcr-design-name");
+        if (designNameInput) designNameInput.value = "EGFR_L858R_Tutorial";
+        
+        const seqInput = byId("mspcr-raw-sequence") || byId("aspcr-raw-sequence");
+        if (seqInput) seqInput.value = "GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G,A]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA";
+        
+        if (byId("input-ref-genome")) byId("input-ref-genome").value = "none";
+        
+        const btn = e.target;
+        btn.innerText = "✅ Loaded!";
+        btn.style.backgroundColor = "#28a745";
+        setTimeout(() => {
+            btn.innerText = "🧪 Tutorial";
+            btn.style.backgroundColor = "#17a2b8";
+        }, 2000);
+    });
+});

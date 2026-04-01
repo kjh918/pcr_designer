@@ -6,7 +6,8 @@ resources:
 ---
 
 ```{=html}
-<div class="app-shell">
+<!-- 🔥 Quarto의 강제 테이블 파싱 및 Warning을 차단하는 마법의 속성 추가 -->
+<div class="app-shell" data-quarto-disable-processing="true">
 
 <aside class="sidebar">
 <div class="sidebar-content">
@@ -26,7 +27,7 @@ resources:
 <button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (JSON)</button>
 <button id="btn-export-html" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (HTML)</button>
 </div>
-
+</div> 
 </aside>
 
 <!-- 2. 오른쪽 메인 영역 -->
@@ -67,3 +68,4 @@ GAAAATGACAAAGAACAGCTCA[A,C]AGCAATTTCTACACGAGATCCTCTCTCTGAAATCACTGAGCAGGAGAAAGATT
 </main>
 
 </div>
+<script src="./app.js"></script>

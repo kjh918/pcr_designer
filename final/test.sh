@@ -31,8 +31,17 @@
 #PYTHONPATH=. python3.11 scripts/design_mspcr.py \
 #    --step 2 --seq "GGTGCTTGGATCTGGCGCTTTTGGCACAGTCTACGAAGGT[CG]AGGGCCAGGTCCTGGGGTGGGCGGCCCCAGAGGATGGGGGCGGTGCCTGGAGGGGTGTGGTCGGCAGTTCTGATGGGAGGGGCAAGAGCTGGAGGCAGTGTTTGG" -k 5 --name "MGMT_Promoter"
 
-PYTHONPATH=. python3.11 scripts/design_qc.py \
-    --name test \
-    --fwd GAAAATGACAAAGAACAGCTC \
-    --rev TAGCACTTACCTGTA \
+#PYTHONPATH=. python3.11 scripts/design_qc.py \
+#    --name test \
+#    --fwd GAAAATGACAAAGAACAGCTC \
+#    --rev TAGCACTTACCTGTA \
     #--probe CTGAAATCACTAAGCAGGAGA
+
+PYTHONPATH=. python3.11 scripts/design_aspcr.py \
+    --name "EGFR_L858R_ASPCR_Test" \
+    --seq "GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G,A]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA" \
+    --genome hg38 \
+    --top_k 5 \
+    --fixed_prime forward \
+    --mismatch_pos 3 \
+    --intensity strong
