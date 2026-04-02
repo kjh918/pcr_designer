@@ -38,7 +38,7 @@ class ASPCRDesignInput(BaseDesignInput):
         """🔥 프론트엔드 파라미터를 코어 엔진용 파라미터로 완벽 맵핑"""
         return {
             "primer_kwargs": {
-            "n_candidates": 10,
+                "n_candidates": 5,
                 "min_amplicon_length": self.amplicon.get("min_length", 60),
                 "max_amplicon_length": self.amplicon.get("max_length", 150),
                 "min_length": self.primer.get("min_length", 15),
