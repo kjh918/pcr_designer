@@ -170,7 +170,7 @@ class PCRFactory:
 
         # 6. QC 실행
         if run_qc:
-            qc_executor = QCClass(self.config)
+            qc_executor = QCClass(self.config, reference_name=reference_name)
             qc_passed_amplicons = qc_executor.execute(output.amplicons)
             
             qc_stats = getattr(qc_executor, "qc_stats", {})

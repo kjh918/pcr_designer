@@ -38,10 +38,10 @@ def design_qpcr_pipeline(
 
     config = load_pipeline_config(designer_yaml, system_yaml, assay_type, user_overrides=user_overrides)
     
-    # 2. BLAST 방어 로직 (Genome이 None일 때 확실히 끄기)
     if genome.lower() == "none" and hasattr(config, "system") and hasattr(config.system, "paths"):
         config.system.paths.blast_db_path = None
-
+    
+    reference_name = genome.lower()
     # 3. 🔥 PCR Factory 구동 (디자인부터 검증, 랭킹, 서열 파싱까지 Factory가 100% 처리합니다)
     factory = PCRFactory(config)
     

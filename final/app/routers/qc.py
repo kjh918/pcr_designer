@@ -55,7 +55,6 @@ async def design_qc_api(req: QCEvalInput):
                 "avoid_5_prime_g": req_qc.get("probe", {}).get("avoid_5_prime_g", True)
             }
         }
-
         # 스크립트 실행 (Base Schema 형태 반환)
         raw_result = evaluate_qc_pipeline(
             project_name=req.project_name,
@@ -68,6 +67,7 @@ async def design_qc_api(req: QCEvalInput):
             base_yaml=DESIGNER_YAML_PATH,
             system_yaml=SYSTEM_YAML_PATH
         )
+        print(raw_result)
         
         # 🔥 [JSON 다이어트] BLAST 객체 내부에 중복된 무거운 텍스트/서열 블록 제거
         results_list = raw_result.get("results", [])
