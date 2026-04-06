@@ -1,237 +1,72 @@
-# app/routers/design_qpcr.py
-from __future__ import annotations
-
-from typing import Any, Dict, List
+import os
 import traceback
 from datetime import datetime
+from typing import Dict, Any
 
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, HTTPException
 
-from app.routers.design_common import (
-	CommonDesignForm,
-	build_common_kwargs,
-	parse_regions_from_form,
-	init_context,
+from pcr.designers.qpcr.schema import QPCRDesignInput
+from scripts.design_qpcr import design_qpcr_pipeline 
+
+router = APIRouter(
+    prefix="/api/design",
+    tags=["qpcr"]
 )
 
-from pcr.seq.fetch import GenomicRegion
-from pcr.pipelines.qpcr import run_qpcr
+@router.post("/qpcr")
+async def design_qpcr_api(req: QPCRDesignInput): # 🔥 수정 2: 타입 힌트 변경
+    print(f"\n🚀 [API] qPCR Design Request: {req.design_name}")
+    
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) 
+    APP_DIR = os.path.dirname(CURRENT_DIR) 
+    ROOT_DIR = os.path.dirname(APP_DIR) 
 
-from pcr.config.runtime import (
-	get_fasta_handle,
-	build_pcr_params_from_web,
-	build_qc_params_from_web,
-	resolve_pcr_params,
-	merge_dict,
-)
+    SYSTEM_YAML_PATH = os.path.join(ROOT_DIR, "pcr", "config", "system.yaml")
+    DESIGNER_YAML_PATH = os.path.join(ROOT_DIR, "pcr", "designers", "base", "config.yaml")
+    print(DESIGNER_YAML_PATH)
+    try:
+        # 🔥 수정 3: 수십 줄의 지저분한 수동 매핑 로직을 전부 지우고, 
+        # schema.py에 만들어둔 우아한 Adapter 메서드를 바로 호출하여 딕셔너리를 뽑아냅니다.
+        pcr_core_overrides = req.to_core_pcr_params()
+        qc_core_overrides = req.to_core_qc_overrides()
 
-router = APIRouter(prefix="/design", tags=["design"])
-templates = Jinja2Templates(directory="app/templates")
+        # 스크립트 실행
+        raw_result = design_qpcr_pipeline(
+            design_name=req.design_name,
+            sequence=req.sequence,
+            genome=req.reference_genome,
+            top_k=req.top_k,
+            pcr_overrides=pcr_core_overrides,
+            qc_overrides=qc_core_overrides,
+            designer_yaml=DESIGNER_YAML_PATH,
+            system_yaml=SYSTEM_YAML_PATH
+        )
+        
+        # 최종 출력 포맷 (qc.py와 완벽히 동일한 평탄화 계층)
+        results_list = raw_result.get("results", [])
+        print(raw_result.get("summary", {}))
 
+        final_output = {
+            "status": raw_result.get("status", "error"),
+            "metadata": {
+                "project_name": req.design_name,
+                "reference_genome": req.reference_genome,
+                "timestamp": datetime.now().isoformat(timespec="seconds")
+            },
+            "summary": raw_result.get("summary", {}),
+            "inputs": {
+                "pcr_params": pcr_core_overrides,
+                "qc_criteria": qc_core_overrides
+            },
+            "results": results_list
+        }
+        
+        if final_output["status"] == "success":
+            passed = final_output.get("summary", {}).get("passed_count", 0)
+            total = final_output.get("summary", {}).get("total_count", 0)
+            print(f"✅ qPCR Design Success. Passed {passed} / {total}")
+        return final_output
 
-@router.post("/qpcr", response_class=HTMLResponse)
-async def design_qpcr_from_form(
-	request: Request,
-	f: CommonDesignForm = Depends(CommonDesignForm.as_form),
-
-	# qpcr 전용
-	probe: str = Form("no"),  # yes/no
-
-	n_probes: int | None = Form(None),
-	min_primer_probe_tm_diff: float | None = Form(None),
-	max_primer_probe_tm_diff: float | None = Form(None),
-
-	probe_opt_length: int | None = Form(None),
-	probe_min_length: int | None = Form(None),
-	probe_max_length: int | None = Form(None),
-
-	probe_opt_tm: float | None = Form(None),
-	probe_min_tm: float | None = Form(None),
-	probe_max_tm: float | None = Form(None),
-
-	probe_opt_gc: float | None = Form(None),
-	probe_min_gc: float | None = Form(None),
-	probe_max_gc: float | None = Form(None),
-):
-	context = init_context(request, f, assay="qpcr")
-
-	try:
-		# FASTA handle (pysam cached)
-		fasta = get_fasta_handle(f.reference)
-
-		# region(s) 파싱
-		regions = await parse_regions_from_form(f)
-
-		# 공통 kwargs (라우터 수준)
-		common_kwargs = build_common_kwargs(f)
-
-		# probe on/off 반영
-		effective_n_probes = (n_probes if n_probes is not None else None)
-		if probe != "yes":
-			effective_n_probes = 0
-
-		# -----------------------------
-		# ✅ 1) 웹 입력 기반 request-scope PCR/QC config 생성
-		# -----------------------------
-		pcr_overrides: Dict[str, Any] = {
-			"primer_kwargs": {
-				# 공통 폼 값 (있으면 덮어씀)
-				"min_amplicon_length": common_kwargs.get("min_amplicon_length"),
-				"max_amplicon_length": common_kwargs.get("max_amplicon_length"),
-				"n_primers": common_kwargs.get("n_primers"),
-				# primer3 args는 (추후 폼 연결되면 여기에 추가)
-				# "primer3_global_args": {...}
-			},
-			"probe_kwargs": {
-				"n_probes": effective_n_probes,
-				"primer3_global_args": {
-					# probe 관련 입력을 primer3 internal probe 키로 매핑
-					# (프로젝트에서 쓰는 키 네이밍이 다르면 여기만 조정)
-					"PRIMER_INTERNAL_OPT_SIZE": probe_opt_length,
-					"PRIMER_INTERNAL_MIN_SIZE": probe_min_length,
-					"PRIMER_INTERNAL_MAX_SIZE": probe_max_length,
-					"PRIMER_INTERNAL_OPT_TM": probe_opt_tm,
-					"PRIMER_INTERNAL_MIN_TM": probe_min_tm,
-					"PRIMER_INTERNAL_MAX_TM": probe_max_tm,
-					"PRIMER_INTERNAL_MIN_GC": probe_min_gc,
-					"PRIMER_INTERNAL_MAX_GC": probe_max_gc,
-				},
-			},
-			"bisulfite": {"run": False},
-		}
-
-		pcr_cfg = build_pcr_params_from_web(pcr_overrides)
-
-		qc_overrides: Dict[str, Any] = {
-			# diff tm
-			"PROBE_MIN_DIFF_TM": min_primer_probe_tm_diff,
-			"PROBE_MAX_DIFF_TM": max_primer_probe_tm_diff,
-
-			# amplicon QC filter도 동일 범위로 동기화(혼선 방지)
-			"MIN_AMP_BP": common_kwargs.get("min_amplicon_length"),
-			"MAX_AMP_BP": common_kwargs.get("max_amplicon_length"),
-		}
-
-		qc_cfg = build_qc_params_from_web(qc_overrides)
-
-		# -----------------------------
-		# ✅ 2) resolve는 merged pcr_cfg 기준으로!
-		# -----------------------------
-		resolved = resolve_pcr_params(
-			pcr_cfg=pcr_cfg,
-			min_amplicon_length=common_kwargs.get("min_amplicon_length"),
-			max_amplicon_length=common_kwargs.get("max_amplicon_length"),
-			n_probes=effective_n_probes,
-			n_primers=common_kwargs.get("n_primers"),
-			bisulfite=False,
-		)
-
-		# primer3 args는 config 기본 + override merge
-		primer3_global_args = merge_dict(
-			base=pcr_cfg.primer_kwargs.primer3_global_args,
-			override=None,
-		)
-		probe_primer3_global_args = merge_dict(
-			base=pcr_cfg.probe_kwargs.primer3_global_args,
-			override=None,
-		)
-
-		# 결과 조립
-		if f.mode == "single":
-			region = regions[0]
-			r = regions[0]
-			gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end, name=region.name)
-
-			result = run_qpcr(
-				region=gr,
-				fasta=fasta,
-				pcr_cfg=pcr_cfg,   # ✅ merged
-				qc_params=qc_cfg,	 # ✅ merged
-				min_amplicon_length=resolved.min_amplicon_length,
-				max_amplicon_length=resolved.max_amplicon_length,
-				n_probes=resolved.n_probes,
-				n_primers=resolved.n_primers,
-				primer3_global_args=primer3_global_args,
-				probe_primer3_global_args=probe_primer3_global_args,
-			)
-
-			total_df = result.total_df
-			filtered_df = result.filtered_df
-			print(total_df.columns)
-			#x
-			context["single_result"] = {
-				"region": r,
-				"total_count": len(total_df),
-				"filtered_count": len(filtered_df),
-			}
-			context["single_total_amplicons"] = total_df.to_dict(orient="records")
-			context["single_filtered_amplicons"] = filtered_df.to_dict(orient="records")
-			context["export_meta"] = {
-				# ---- 기본 정보 ----
-				"assay": "qpcr",
-				"timestamp": datetime.now().isoformat(timespec="seconds"),
-
-				# ---- 입력 정보 ----
-				"reference": f.reference,
-				"region": {
-					"chrom": r.chrom,
-					"start": r.start,
-					"end": r.end,
-					"name": r.name,
-				},
-				# ---- 결과 요약 ----
-				"total_count": len(total_df),
-				"filtered_count": len(filtered_df),
-
-				# ---- resolved PCR params (재현성 핵심) ----
-				"pcr_params": {
-					"min_amplicon_length": resolved.min_amplicon_length,
-					"max_amplicon_length": resolved.max_amplicon_length,
-					"n_primers": resolved.n_primers,
-				}
-			}
-
-		else:
-			multi_results: List[Dict[str, Any]] = []
-			for region in regions:
-				gr = GenomicRegion(chrom=region.chrom, start=region.start, end=region.end, name=region.name)
-				
-				result = run_qpcr(
-					region=gr,
-					fasta=fasta,
-					pcr_cfg=pcr_cfg,  # ✅ merged
-					qc_params=qc_cfg,	# ✅ merged
-					min_amplicon_length=resolved.min_amplicon_length,
-					max_amplicon_length=resolved.max_amplicon_length,
-					n_probes=resolved.n_probes,
-					n_primers=resolved.n_primers,
-					primer3_global_args=primer3_global_args,
-					probe_primer3_global_args=probe_primer3_global_args,
-				)
-
-				total_df = result.total_df
-				filtered_df = result.filtered_df
-
-				multi_results.append(
-					dict(
-						region=region,
-						total_count=len(total_df),
-						filtered_count=len(filtered_df),
-						total_amplicons=total_df.to_dict(orient="records"),
-						filtered_amplicons=filtered_df.to_dict(orient="records"),
-					)
-				)
-
-			context["multi_results"] = multi_results
-
-	except Exception as e:
-		traceback.print_exc()
-		context["error"] = str(e)
-
-	response = templates.TemplateResponse("design.html", context)
-	response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-	response.headers["Pragma"] = "no-cache"
-	response.headers["Expires"] = "0"
-	return response
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

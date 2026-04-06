@@ -1,162 +1,210 @@
 from __future__ import annotations
-
-from typing import Any, Dict, Optional, Literal
-
-from pcr.components.primer import Primer
-from pcr.utils import get_start_end_index
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 import primer3
-from Bio.SeqUtils import gc_fraction
-#from pcr.seq.fetch import 
 
+# 내부 모듈 임포트
+from .region import GenomicRegion, SequenceChange
+from .primer import Primer, Probe
 
-class Amplicon:
-	def __init__(
-		self,
-		template_sequence: str,
-		target_start_index: int,
-		target_end_index: int,
-		reference_template_sequence: Optional[str] = None,
-		chrom: Optional[str] = None,
-		start: Optional[int] = None,
-		end: Optional[int] = None,
-		forward_primer: Optional[Primer] = None,
-		reverse_primer: Optional[Primer] = None,
-		probe: Optional[Primer] = None,
-		assay: str = "generic",
-		allele: Allele = "ref",
-	) -> None:
-		self.template_sequence = template_sequence
-		self.reference_template_sequence = reference_template_sequence # or template_sequence
+class Amplicon(BaseModel):
+    """
+    PCR Amplicon 객체 (Pydantic Model)
+    - Forward/Reverse Primer로 정의되는 증폭 산물
+    - 변이(Variation) 분석 및 물리적 성질(Tm, Size) 자동 계산
+    """
+    # -------------------------------------------------------------------------
+    # 1. 필수 입력 필드
+    # -------------------------------------------------------------------------
+    id: str = Field(..., description="Amplicon ID")
+    forward: Primer
+    reverse: Primer
+    set_id: Optional[str] = None
+    probe: Optional[Probe] = None
+        
+    template_sequence: str = Field(..., description="전체 템플릿 서열 (Context 포함)")
+    target_start_index: int = Field(-1, description="타겟 영역 시작 (0-based)")
+    target_end_index: int = Field(-1, description="타겟 영역 끝 (0-based)")
+        
+    reference_sequence: str = Field("", description="변이 분석을 위한 Reference 서열")
+    reference_id: str = Field("", description="Chromosome or Gene ID")
+        
+    # -------------------------------------------------------------------------
+    # 2. 결과 및 상태 필드 (QC 결과 저장 필드 추가)
+    # -------------------------------------------------------------------------
+    pair_penalty: float = 0.0
+    total_penalty: float = 0.0
+    allele_type: Optional[str] = None
+    is_qc_pass: bool = False
+    qc_log: str = ""
+    off_target_count: int = 0
+        
+    # ✅ [ADDED/FIXED] QC 결과를 담기 위한 핵심 필드들
+    # ThermoChecker가 dG 값 등을 저장하는 곳
+    thermo_stats: Dict[str, Any] = Field(default_factory=dict)
+    # BlastSpecificityChecker가 In-silico PCR 결과를 저장하는 곳
+    blast_stats: Dict[str, Any] = Field(default_factory=dict)
+    
+    # 하위 호환성을 위한 범용 QC 상세 데이터
+    qc_details: Dict[str, Any] = Field(default_factory=dict)
+        
+    # QCExecutor가 AmpliconQCStatus 객체를 저장하는 곳
+    qc_status: Optional[Any] = None 
+        
+    # 내부 계산 필드
+    sequence: str = ""        # 실제 증폭된 Amplicon 서열
+    ref_sequence_clip: str = "" # Amplicon 위치에 해당하는 Reference 서열
+    product_size: int = 0
+    tm: float = 0.0
+    gc: float = 0.0
+    cpg_count: int = 0
+    region: Optional[GenomicRegion] = None
+    genomic_pos: str = ""       # Amplicon 게놈 좌표 (chr:start-end)
+    alignment_visual: List[str] = Field(default_factory=list, description="웹 UI 렌더링용 Alignment 다이어그램")    
+    # 변이 분석 결과
+    all_changes: List[SequenceChange] = Field(default_factory=list)
+    target_change_count: int = 0
+    mismatch_count: int = 0
 
-		self.target_start_index = target_start_index
-		self.target_end_index = target_end_index
+    # Pydantic 설정: 임의의 타입 허용
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-		self.chrom = chrom
-		self.start = start
-		self.end = end
+    # -------------------------------------------------------------------------
+    # 3. 초기화 로직
+    # -------------------------------------------------------------------------
+    @model_validator(mode='after')
+    def compute_properties(self) -> 'Amplicon':
+        """객체 생성 직후 물리적 성질 및 변이 분석 수행"""
+        self._calculate_properties()
+        self.reanalyze_variations()
+        return self
 
-		self.forward_primer = forward_primer
-		self.reverse_primer = reverse_primer
-		self.probe = probe
+    def _calculate_properties(self):
+        """기본 물성(Tm, Size) 및 좌표 계산"""
+        if self.forward.start_index is not None and self.reverse.end_index is not None:
+            # 1. 길이 계산
+            self.product_size = self.reverse.end_index - self.forward.start_index
+            
+            # 2. 서열 추출
+            if self.template_sequence:
+                self.sequence = self.template_sequence[self.forward.start_index : self.reverse.end_index]
+                try:
+                    self.tm = primer3.calc_tm(self.sequence, mv_conc=50, dv_conc=1.5, dntp_conc=0.6, dna_conc=50)
+                    g_count = self.sequence.upper().count('G')
+                    c_count = self.sequence.upper().count('C')
+                    cpg_count = self.sequence.upper().count('CG')
+                    self.gc = round(((g_count + c_count) / len(self.sequence)) * 100, 2)
+                    self.cpg_count = cpg_count
 
-		self.assay = assay
-		self.allele = allele
+                except Exception:
+                    self.tm = 0.0
+                    self.gc = 0.0
 
-		if self.forward_primer is not None:
-			if self.forward_primer.binding_start_index is not None and self.forward_primer.binding_end_index is not None:
-				self.forward_start_index, self.forward_end_index = self.forward_primer.binding_start_index, self.forward_primer.binding_end_index
-			else:
-				self.forward_start_index, self.forward_end_index = get_start_end_index(
-					self.forward_primer.template_sequence, self.forward_primer.sequence
-				)
-		if self.reverse_primer is not None:
-			if self.reverse_primer.binding_start_index is not None and self.reverse_primer.binding_end_index is not None:
-				self.reverse_start_index, self.reverse_end_index = self.reverse_primer.binding_start_index, self.reverse_primer.binding_end_index
-			else:
-				self.reverse_start_index, self.reverse_end_index = get_start_end_index(
-					self.reverse_primer.template_sequence, self.reverse_primer.sequence
-				)
-		if self.probe is not None:		
-			if self.probe.binding_start_index is not None and self.probe.binding_end_index is not None:
-				self.probe_start_index, self.probe_end_index = self.probe.binding_start_index, self.probe.binding_end_index
-			else:
-				self.probe_start_index, self.probe_end_index = get_start_end_index(
-					self.probe.template_sequence, self.probe.sequence
-				)
-			
-		# Amplicon sequence (template 기준)
-		self.amplicon_sequence: Optional[str] = self._calc_amplicon_sequence()
+            # 3. Reference 서열 추출
+            if self.reference_sequence and len(self.reference_sequence) >= len(self.template_sequence):
+                self.ref_sequence_clip = self.reference_sequence[self.forward.start_index : self.reverse.end_index]
 
-		# Amplicon metrics (template 기준)
-		self.amplicon_gc: Optional[float] = None
-		self.amplicon_tm: Optional[float] = None
+        # 4. Genomic Region 매핑
+        if self.forward.region and self.reverse.region:
+            f_reg = self.forward.region
+            r_reg = self.reverse.region
+            coords = [f_reg.start, f_reg.end, r_reg.start, r_reg.end]
+            self.region = GenomicRegion(
+                chrom=f_reg.chrom, 
+                start=min(coords), 
+                end=max(coords), 
+                strand=f_reg.strand
+            )
 
-		# Reference 기준 (template/reference가 다를 때만 의미있음)
-		self.reference_amplicon_sequence: Optional[str] = None
-		self.reference_amplicon_gc: Optional[float] = None
-		self.reference_amplicon_tm: Optional[float] = None
+    def _is_cpg_context(self, index: int, ref_base: str) -> bool:
+        """CpG Site 판별"""
+        if not self.ref_sequence_clip: return False
+        seq_len = len(self.ref_sequence_clip)
+        
+        if ref_base == 'C':
+            if index + 1 < seq_len:
+                return self.ref_sequence_clip[index + 1].upper() == 'G'
+        elif ref_base == 'G':
+            if index > 0:
+                return self.ref_sequence_clip[index - 1].upper() == 'C'
+        return False
 
-		self._calc_amplicon_metrics()
+    def reanalyze_variations(self):
+        """변이(Mismatch) 재분석 로직"""
+        self.all_changes = []
+        self.target_change_count = 0
+        self.mismatch_count = 0
 
-	# -------------------------
-	# helpers
-	# -------------------------
-	@staticmethod
-	def _calc_tm_primer3(seq: str) -> float:
-		s = (seq or "").upper()
-		if not s:
-			raise ValueError("Empty sequence for calcTm")
-		return float(primer3.calc_tm(s))
+        if not self.sequence or not self.ref_sequence_clip:
+            return
+        
+        if len(self.sequence) != len(self.ref_sequence_clip):
+            return
 
-	@staticmethod
-	def _calc_gc_primer3(seq: str) -> float:
-		s = (seq or "").upper()
-		return gc_fraction(s, ambiguous="ignore") * 100.0
-	# -------------------------
-	# core
-	# -------------------------
-	def _calc_amplicon_sequence(self) -> Optional[str]:
-		if self.forward_primer is None or self.reverse_primer is None:
-			return None	
-		return self.template_sequence[self.forward_start_index : self.reverse_end_index + 1]
+        fwd_len = len(self.forward.sequence) if self.forward.sequence else 0
+        rev_len = len(self.reverse.sequence) if self.reverse.sequence else 0
+        total_len = len(self.sequence)
 
-	def _calc_reference_amplicon_sequence(self) -> Optional[str]:
-		if self.forward_primer is None or self.reverse_primer is None:
-			return None
-		ref = self.reference_template_sequence
-		if not ref:
-			return None
+        # 타겟 상대 좌표 계산
+        amp_start_abs = self.forward.start_index
+        rel_t_start = -1
+        rel_t_end = -1
 
-		# template에서 계산된 primer 좌표를 reference에도 그대로 적용
-		if self.reverse_end_index >= len(ref) or self.forward_start_index < 0:
-			# indel 등으로 길이가 달라져 인덱스가 깨진 경우 방어
-			return None
-		return ref[self.forward_start_index : self.reverse_end_index + 1]
+        if self.target_start_index != -1 and amp_start_abs is not None:
+            rel_t_start = self.target_start_index - amp_start_abs
+            rel_t_end = self.target_end_index - amp_start_abs
 
-	def _calc_amplicon_metrics(self) -> None:
-		# template 기준
-		if self.amplicon_sequence:
-			self.amplicon_gc = self._calc_gc_primer3(self.amplicon_sequence)
-			self.amplicon_tm = self._calc_tm_primer3(self.amplicon_sequence)
+        for i, (alt, ref) in enumerate(zip(self.sequence, self.ref_sequence_clip)):
+            if alt.upper() != ref.upper():
+                ref_u, alt_u = ref.upper(), alt.upper()
+                
+                on_target = False
+                if rel_t_start != -1:
+                    if rel_t_start <= i < rel_t_end:
+                        on_target = True
 
-		# reference 고려 (reference != template 인 경우)
-		if self.reference_template_sequence != self.template_sequence:
-			self.reference_amplicon_sequence = self._calc_reference_amplicon_sequence()
-			if self.reference_amplicon_sequence:
-				self.reference_amplicon_gc = self._calc_gc_primer3(self.reference_amplicon_sequence)
-				self.reference_amplicon_tm = self._calc_tm_primer3(self.reference_amplicon_sequence)
+                r_type = "internal"
+                if i < fwd_len:
+                    r_type = "forward_primer"
+                elif i >= (total_len - rev_len):
+                    r_type = "reverse_primer"
 
-	def to_dict(self) -> Dict[str, Any]:
-		d: Dict[str, Any] = {
-			"reference_template_sequence": self.reference_template_sequence,
-			"template_sequence": self.template_sequence,
-			"target_start_index": self.target_start_index,
-			"target_end_index": self.target_end_index,
-			"assay": self.assay,
-			"allele": self.allele,
-		}
+                is_conv = False
+                if (ref_u == 'C' and alt_u == 'T') or (ref_u == 'G' and alt_u == 'A'):
+                    if self._is_cpg_context(i, ref_u):
+                        is_conv = True
 
-		if self.amplicon_sequence is not None:
-			d["amplicon_sequence"] = self.amplicon_sequence
-			d["amplicon_length"] = len(self.amplicon_sequence)
-		else:
-			d["amplicon_sequence"] = None
-			d["amplicon_length"] = None
+                change = SequenceChange(
+                    position=i,
+                    ref_base=ref_u,
+                    alt_base=alt_u,
+                    region_type=r_type,
+                    on_target=on_target,
+                    is_bisulfite_conversion=is_conv
+                )
+                self.all_changes.append(change)
 
-		# ✅ Amplicon metrics (template)
-		d["amplicon_gc"] = self.amplicon_gc
-		d["amplicon_tm"] = self.amplicon_tm
+                if on_target:
+                    self.target_change_count += 1
+                else:
+                    self.mismatch_count += 1
 
-		# ✅ Reference-aware metrics
-		# (reference가 같으면 None으로 두거나, 같을 때도 채우고 싶으면 조건을 빼면 됨)
-		d["reference_amplicon_sequence"] = self.reference_amplicon_sequence
-		d["reference_amplicon_gc"] = self.reference_amplicon_gc
-		d["reference_amplicon_tm"] = self.reference_amplicon_tm
+    # -------------------------------------------------------------------------
+    # API Methods
+    # -------------------------------------------------------------------------
+    def set_target_region(self, start: int, end: int):
+        self.target_start_index = start
+        self.target_end_index = end
+        self.reanalyze_variations()
 
-		if self.forward_primer is not None:
-			d.update(self.forward_primer.to_dict())
-		if self.reverse_primer is not None:
-			d.update(self.reverse_primer.to_dict())
-		if self.probe is not None:
-			d.update(self.probe.to_dict())
-		return d
+    def manually_approve_change(self, position: int):
+        for change in self.all_changes:
+            if change.position == position:
+                if not change.on_target:
+                    change.on_target = True
+                    self.mismatch_count = max(0, self.mismatch_count - 1)
+                    self.target_change_count += 1
+                return
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return self.model_dump()

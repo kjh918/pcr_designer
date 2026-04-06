@@ -1,0 +1,74 @@
+---
+page-layout: custom
+css: ./style.css     
+---
+
+```{=html}
+<div class="app-shell">
+
+<aside class="sidebar">
+<div class="sidebar-content">
+<h4 style="margin:0;"><b>Manual qPCR DESIGN</b></h4>
+<small>NGS-TEAM PRIMER SUITE</small>
+<hr class="rule">
+
+{{< include partials/params.html >}}
+
+<hr class="rule">
+
+<div class="section-title">RUN</div>
+<hr class="rule-light">
+<button class="btn-run" id="btn-run-qpcr">DESIGN START</button>
+
+<div style="margin-top:10px; display:flex; gap:10px;">
+<button id="btn-export-json" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (JSON)</button>
+<button id="btn-export-html" class="btn-ghost" style="flex:1; padding:8px; border:1px solid #ccc; background:white; border-radius:4px; cursor:pointer;">Export (HTML)</button>
+</div>
+</div>
+
+</aside>
+
+<!-- 2. 오른쪽 메인 영역 -->
+<main class="main-content" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #f8f9fa;">
+
+<!-- 🔥 토글(Toggle) 기능이 적용된 Quick Guide & Tutorial -->
+<details style="background-color: #e8f4f8; border-left: 4px solid #39a2ae; padding: 12px 15px; border-radius: 4px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" open>
+<summary style="color: #1e707a; font-weight: bold; font-size: 14px; cursor: pointer; outline: none;">💡 Quick Guiparde & Tutorial</summary>
+
+<div style="margin-top: 12px;">
+<p style="margin: 0 0 12px 0; font-size: 13px; color: #333; line-height: 1.5;">
+프라이머와 프로브 서열을 제작하기위한 서열정보를 입력한 후 DESIGN START를 실행하세요.<br>
+입력받는 서열정보 중 프로브가 타겟하는 서열은 [ ] 사이에 표기해주세요.<br>
+[ ] 안에는 [Reference Genotype,ALT Genotype]으로만 넣어주세요 ex. A>C [A,C].<br>
+</p>
+
+<hr style="border: none; border-top: 1px dashed #b8d4f1; margin: 12px 0;">
+
+<p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #1e707a;">🧪 Tutorial Data (예제 서열)</p>
+<p style="margin: 0 0 12px 0; font-size: 12px; color: #555; line-height: 1.4;">
+아래의 서열은 <strong>PIK3CA</strong> 유전자의 내부 엑손 영역입니다.<br>
+박스 내부를 드래그하여 복사한 뒤, 좌측 <strong>RAW SEQUENCE (5’ -> 3’)</strong> 칸에 붙여넣고 실행해보세요.
+</p>
+
+<!-- 예제 데이터 2단 분할 -->
+
+<!-- 예제 1: PICK3CA E545K -->
+<!-- 예제 1: 정상 타겟 -->
+<div style="flex: 1; border: 1px solid #cddde6; border-radius: 4px; padding: 12px; background: #fff;">
+<div style="font-weight: bold; color: #198754; font-size: 13px; margin-bottom: 5px;">✅ 단일 타겟 (Specific)</div>
+<div style="font-size: 11px; color: #666; margin-bottom: 8px;">서열 중 [Target]에 결합하는 Probe 및 primer를 제작합니다.</div>
+<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', monospace; font-size: 12px; color: #333; line-height: 1.6; user-select: all; word-break: break-all; overflow-wrap: anywhere;">
+GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G,A]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA
+</div></div> 
+</div>
+</details>
+
+<!-- 결과 패널 인클루드 -->
+{{< include partials/result_panel.html >}}
+
+</main>
+
+</div>
+
+<!--<script src="[https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js](https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js)"></script>-->
+<script src="./app.js"></script>

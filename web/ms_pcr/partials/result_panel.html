@@ -1,0 +1,115 @@
+<!-- 세로 정렬 및 반응형을 완벽하게 지원하는 전체 래퍼 -->
+<div style="display: flex; flex-direction: column; width: 100%; gap: 20px; padding-bottom: 40px; min-width: 0; box-sizing: border-box;">
+
+<!-- 1. 파이프라인 로그 패널 -->
+<div class="panel" id="error-log-panel" style="display: none; border-left: 5px solid #d9534f; background-color: #fdf7f7; padding: 15px; border-radius: 4px; border-top: 1px solid #eccbc0; border-right: 1px solid #eccbc0; border-bottom: 1px solid #eccbc0; flex-shrink: 0;">
+<div class="panel-title" style="color: #d9534f; font-size: 14px; font-weight: bold;">⚠️ PIPELINE STATUS & LOGS</div>
+<hr class="rule-light" style="border-top-color: #f5c6c6; margin: 10px 0;">
+<pre id="error-log-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #333; white-space: pre-wrap; margin: 0; padding: 15px; background: #fff; border: 1px solid #eccbc0; border-radius: 4px; max-height: 200px; overflow-y: auto; width: 100%; box-sizing: border-box;"></pre>
+</div>
+
+<!-- 2. 디자인 요약 패널 (AS-PCR 전용) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px;">
+<div class="panel-title" style="font-size: 14px; font-weight: bold; color: #1e707a;">📊 AS-PCR DESIGN SUMMARY</div>
+<div style="text-align: right;">
+<span style="font-size: 11px; color: #888; margin-right: 10px;">STATUS</span>
+<span id="summary-status" style="font-size: 12px; font-weight: 900; background: #e9ecef; padding: 4px 10px; border-radius: 12px; color: #333;">READY</span>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">DEISGN NAME</div>
+<div style="font-weight: 900; font-size: 14px; color: #333;" id="summary-project">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">DESIGN DATE</div>
+<div style="font-weight: bold; font-size: 13px; color: #555;" id="summary-date">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">REFERENCE GENOME</div>
+<div style="font-weight: bold; font-size: 13px; color: #555;" id="summary-reference">-</div>
+</div>
+<div>
+<div class="small-label" style="font-size: 10px; color: #6c757d; margin-bottom: 4px; font-weight: bold;">MUTATION (REF > ALT)</div>
+<div style="font-weight: 900; font-size: 14px; color: #d9534f;" id="summary-mutation">-</div>
+</div>
+</div>
+</div>
+
+<!-- 3. 파이프라인 통계 패널 -->
+<div class="panel" id="stats-panel" style="display: none; background: white; border-radius: 6px; border: 1px solid #e0e0e0; padding: 20px; flex-shrink: 0;">
+<div class="panel-title" style="font-size: 13px; font-weight: bold; color: #555; margin-bottom: 10px;">📈 DESIGN PIPELINE STATISTICS</div>
+<hr class="rule-light" style="margin-top: 0; margin-bottom: 15px;">
+<div class="table-container" style="overflow-x: auto;">
+<table class="table-stats" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+<tbody id="stats-tbody"></tbody>
+</table>
+</div>
+</div>
+
+<!-- 4. 시퀀스 정렬 뷰어 (Mismatch Visualization) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
+🔍 SEQUENCE ALIGNMENT (Mismatch Visualization)
+</div>
+<pre id="alignment-view" class="alignment-pre" style="font-family: monospace; white-space: pre; overflow-x: auto; font-size: 12px; background: #2b2b2b; color: #a9b7c6; padding: 15px; margin: 0; line-height: 1.5; min-height: 120px; width: 100%; box-sizing: border-box;">Enter sequence and run AS-PCR Design to view alignment...</pre>
+</div>
+
+<!-- 5. 🔥 메인 결과 테이블 (확장형 아코디언 17열 구조) -->
+<div class="panel" style="background: white; border-radius: 6px; border: 1px solid #e0e0e0; overflow: hidden; flex-shrink: 0; min-width: 0; box-sizing: border-box;">
+<div class="panel-title" style="padding: 12px 15px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; font-size: 13px; font-weight: bold; color: #333;">
+🧬 AS-PCR CANDIDATE SETS
+</div>
+<div class="table-container" style="max-height: 60vh; overflow-y: auto; overflow-x: auto; width: 100%;">
+<table class="table" id="result-table" style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; min-width: 1600px;">
+<thead style="position: sticky; top: 0; z-index: 10;">
+<!-- 1층 헤더: 대분류 -->
+<tr style="background: #f1f3f5; color: #495057;">
+<th colspan="3" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd;">Set Information</th>
+<th colspan="5" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #e7f5ff;">Forward Primer Details</th>
+<th colspan="5" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #fff5f5;">Reverse Primer Details</th>
+<th colspan="1" style="border-bottom: 1px solid #dee2e6; border-right: 2px solid #adb5bd; background: #fff9db;">Heterodimer</th>
+<th colspan="3" style="border-bottom: 1px solid #dee2e6;">Amplicon & QC</th>
+</tr>
+<!-- 2층 헤더: 소분류 -->
+<tr style="background: #e9ecef; color: #495057;">
+<th style="padding: 8px; text-align: center; width: 30px; border-bottom: 2px solid #dee2e6;"></th> <!-- Expand Icon -->
+<th style="padding: 8px; text-align: left; width: 80px; border-bottom: 2px solid #dee2e6;">Rank/Allele</th>
+<th style="padding: 8px; text-align: center; width: 100px; border-bottom: 2px solid #dee2e6; border-right: 2px solid #adb5bd;">Set ID / Status</th>
+
+<!-- Fwd -->
+<th style="padding: 8px; text-align: left; width: 180px; border-bottom: 2px solid #dee2e6;">Sequence (5'-3')</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">Tm</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">GC%</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">HP</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">HD</th>
+
+<!-- Rev -->
+<th style="padding: 8px; text-align: left; width: 180px; border-bottom: 2px solid #dee2e6;">Sequence (5'-3')</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">Tm</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6;">GC%</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f;">HP</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">HD</th>
+
+<!-- Hetero -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; color: #d9534f; border-right: 2px solid #adb5bd;">F-R (dG)</th>
+
+<!-- Amp/QC -->
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 60px;">Penalty</th>
+<th style="padding: 8px; text-align: center; border-bottom: 2px solid #dee2e6; width: 120px;">Position</th>
+<th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6;">QC Result & Reason</th>
+</tr>
+</thead>
+<tbody id="candidate-tbody">
+<tr><td colspan="17" style="text-align:center; padding:60px; color:#888; font-size: 13px;">Waiting for AS-PCR design execution...</td></tr>
+</tbody>
+</table>
+<div style="padding: 10px 15px; background: #f8f9fa; border-top: 1px solid #dee2e6;">
+<span style="font-size: 11px; font-weight: normal; color: #666;">* HP : Hairpin (dG) &nbsp;&nbsp;|&nbsp;&nbsp; * HD : Homodimer / Heterodimer (dG)</span>
+</div>
+</div>
+</div>
+
+</div>

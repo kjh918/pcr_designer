@@ -1,7 +1,0 @@
-# pcr/designers/__init__.py
-
-from .base import BasePrimerDesigner
-# ✅ 아래 줄을 추가해야 외부에서 Import 가능
-from .qpcr import QPCRPrimerDesigner 
-
-__all__ = ["BasePrimerDesigner", "QPCRPrimerDesigner"]

@@ -1,0 +1,118 @@
+<div style="margin-bottom:15px;">
+<label class="small-label">DESIGN NAME (PROJECT ID)</label>
+<input type="text" class="input-tight" id="input-design-name" placeholder="e.g. MGMT_Promoter">
+</div>
+
+<label class="small-label">RAW SEQUENCE (5' -> 3')</label>
+<textarea id="mspcr-raw-sequence" class="input-tight" style="width:100%; height:120px; font-family:monospace; text-transform:uppercase;" placeholder="서열및 메틸화 CpG Site를 입력하세요.\n e.g ATCGCGGGACGAGCGAGACAGAGGGAC[CG]CAAAACATTTAAGAGAGCACACA"></textarea>
+
+
+<label class="small-label">MIN CpG Count</label>
+<select class="input-tight" id="input-mismatch" style="width:100%; margin-bottom: 4px;">
+<option value="0">0</option>
+<option value="1" selected>1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+</select>
+
+
+<label class="small-label">CpG WINDOW SIZE 3' PRIME</label>
+<select class="input-tight" id="input-mismatch" style="width:100%; margin-bottom: 4px;">
+<option value="3" selected>3rd bp (Recommended)</option>
+<option value="2">2nd bp</option>
+<option value="4">4th bp</option>
+</select>
+
+<details class="custom-accordion">
+<summary>PRIMER OPTIONS</summary>
+<div class="accordion-content">
+
+<label class="small-label">AMPLICON SIZE (MIN / MAX)</label>
+<div class="grid-2" style="margin-bottom:12px;">
+<input type="number" class="input-tight" id="min_amplicon_length" value="80">
+<input type="number" class="input-tight" id="max_amplicon_length" value="200">
+</div>
+
+<label class="small-label">LENGTH (MIN / OPT / MAX)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<input type="number" class="input-tight" id="primer_min_length" value="15">
+<input type="number" class="input-tight" id="primer_opt_length" value="18">
+<input type="number" class="input-tight" id="primer_max_length" value="25">
+</div>
+
+<label class="small-label">TM (MIN / OPT / MAX)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<input type="number" class="input-tight" id="primer_min_tm" value="50" step="0.1">
+<input type="number" class="input-tight" id="primer_opt_tm" value="55" step="0.1">
+<input type="number" class="input-tight" id="primer_max_tm" value="60" step="0.1">
+</div>
+
+<label class="small-label">GC% (MIN / OPT / MAX)</label>
+<div class="grid-3">
+<input type="number" class="input-tight" id="primer_min_gc" value="45">
+<input type="number" class="input-tight" id="primer_opt_gc" value="50">
+<input type="number" class="input-tight" id="primer_max_gc" value="65">
+</div>
+
+</div>
+</details>
+
+
+<details class="custom-accordion">
+<summary>QC & SPECIFICITY OPTIONS</summary>
+<div class="accordion-content">
+
+<label class="small-label">THERMODYNAMICS (Min dG)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<div>
+<span style="font-size:0.8em; color:#666;">Hairpin</span>
+<input type="number" class="input-tight" id="qc_hairpin_min_dg" value="-5.0" step="0.1">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Homodimer</span>
+<input type="number" class="input-tight" id="qc_homodimer_min_dg" value="-6.0" step="0.1">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Heterodimer</span>
+<input type="number" class="input-tight" id="qc_heterodimer_min_dg" value="-6.0" step="0.1">
+</div>
+</div>
+
+<label class="small-label">SPECIFICITY (BLAST)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<div>
+<span style="font-size:0.8em; color:#666;">Min Identity (%)</span>
+<input type="number" class="input-tight" id="qc_min_identity" value="90.0" step="0.1">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Min Hit Length</span>
+<input type="number" class="input-tight" id="qc_min_hit_length" value="13">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Max Alignments</span>
+<input type="number" class="input-tight" id="qc_blast_max_alignments" value="50">
+</div>
+</div>
+
+<label class="small-label">AMPLICON QC (Size / Check)</label>
+<div class="grid-3" style="margin-bottom:12px;">
+<div>
+<span style="font-size:0.8em; color:#666;">Min Size</span>
+<input type="number" class="input-tight" id="qc_min_amp_size" value="50">
+</div>
+<div>
+<span style="font-size:0.8em; color:#666;">Max Size</span>
+<input type="number" class="input-tight" id="qc_max_amp_size" value="300">
+</div>
+</div>
+
+<label class="small-label">OLIGO CONSTRAINTS (QC Only)</label>
+<div class="grid-2" style="margin-bottom:12px;">
+<div>
+<span style="font-size:0.8em; color:#666;">Primer Max Tm Diff</span>
+<input type="number" class="input-tight" id="qc_primer_max_diff_tm" value="3.0" step="0.1">
+</div>
+</div>
+
+</div>
+</details>

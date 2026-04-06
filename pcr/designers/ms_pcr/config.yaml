@@ -1,0 +1,92 @@
+# ─────────────────────────────────────────────────────────
+# base_pcr.yaml
+# 공통 기본값 + assay별 overwrite 섹션
+# ─────────────────────────────────────────────────────────
+
+pcr_params:
+  primer_kwargs:
+    n_candidates: 100
+    min_amplicon_length: 80
+    max_amplicon_length: 200
+    opt_length: 18
+    min_length: 15
+    max_length: 25
+    opt_tm: 55.0
+    min_tm: 50.0
+    max_tm: 60.0
+    opt_gc: 45.0
+    min_gc: 25.0
+    max_gc: 85.0
+
+  probe_kwargs:
+    n_candidates: 100
+    opt_length: 25
+    min_length: 20
+    max_length: 30
+    opt_gc: 50.0
+    min_gc: 40.0
+    max_gc: 60.0
+    min_primer_probe_tm_diff: 5.0
+    max_primer_probe_tm_diff: 10.0
+    max_probe_poly_g: 3
+    max_probe_3_end_gc: 2
+    avoid_5_prime_g: true
+
+qc_criteria:
+  hairpin_min_dg: -5.0
+  homodimer_min_dg: -6.0
+  heterodimer_min_dg: -6.0
+  min_identity: 80.0
+  min_hit_length: 10
+  blast_max_alignments: 20
+  min_amp_size: 50
+  max_amp_size: 300
+  min_query_coverage: 0.8
+  min_identity_threshold: 80.0
+  end_match_tolerance: 1
+  primer:
+    max_diff_tm: 3.0
+    min_diff_tm: 0.0
+  probe:
+    min_primer_probe_tm_diff: 5.0
+    max_primer_probe_tm_diff: 10.0
+    max_probe_poly_g: 3
+    max_probe_3_end_gc: 2
+    avoid_5_prime_g: true
+
+# ─────────────────────────────────────────────────────────
+# assay별 overwrite (loader가 assay_type 보고 적용)
+# ─────────────────────────────────────────────────────────
+assay_overrides:
+  qpcr:
+    pcr_params:
+      primer_kwargs:
+        min_amplicon_length: 60
+        max_amplicon_length: 150
+      probe_kwargs:
+        opt_tm: 67.0
+        min_tm: 65.0
+        max_tm: 70.0
+        avoid_5_prime_g: true
+        max_probe_poly_g: 3
+
+  aspcr:
+    pcr_params:
+      primer_kwargs:
+        min_amplicon_length: 50
+        max_amplicon_length: 200
+      probe_kwargs: null   # AS-PCR은 probe 없음
+
+  mspcr:
+    pcr_params:
+      primer_kwargs:
+        opt_length: 25
+        min_length: 20
+        max_length: 30
+        min_gc: 10.0
+        opt_gc: 25.0
+        max_gc: 60.0
+        opt_tm: 55.0
+        min_tm: 50.0
+        max_tm: 60.0
+      probe_kwargs: null   # MS-PCR은 probe 없음

@@ -1,0 +1,170 @@
+[
+  {
+    "objectID": "qpcr/main.html",
+    "href": "qpcr/main.html",
+    "title": "",
+    "section": "",
+    "text": "💡 Quick Guiparde & Tutorial\n\n\n\n프라이머와 프로브 서열을 제작하기위한 서열정보를 입력한 후 DESIGN START를 실행하세요. 입력받는 서열정보 중 프로브가 타겟하는 서열은 [ ] 사이에 표기해주세요. [ ] 안에는 [Reference Genotype,ALT Genotype]으로만 넣어주세요 ex. A&gt;C [A,C].\n\n\n\n🧪 Tutorial Data (예제 서열)\n\n\n아래의 서열은 PIK3CA 유전자의 내부 엑손 영역입니다. 박스 내부를 드래그하여 복사한 뒤, 좌측 RAW SEQUENCE (5’ -&gt; 3’) 칸에 붙여넣고 실행해보세요.\n\n\n\n\n\n\n✅ 단일 타겟 (Specific)\n\n\n서열 중 [Target]에 결합하는 Probe 및 primer를 제작합니다.\n\n\nGAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G,A]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA\n\n\n\n\n\n\n\n\n\n\n⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\n\n\n📊 qPCR DESIGN SUMMARY\n\n\nSTATUS READY\n\n\n\n\n\nPROJECT NAME\n\n\n-\n\n\n\n\nDATE\n\n\n-\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nPASS / TOTAL\n\n\n\n/ -\n\n\n\n\n\n\n\n\n📍 Design Target & Params\n\n\n\n\nAmplicon Size\n\n\n-\n\n\n\n\nPrimer Tm\n\n\n-\n\n\n\n\nProbe Tm\n\n\n-\n\n\n\n\nPrimer GC%\n\n\n-\n\n\n\n\n\n\n\n⚙️ Applied QC Parameters\n\n\n\n\n\nThermodynamics\n\n\nHairpin: -\n\n\nHomodimer: -\n\n\nHeterodimer: -\n\n\nMax ΔTm: -\n\n\n\n\n\nSpecificity & Size\n\n\nMin Identity: -\n\n\nMin Hit Len: -\n\n\nMax Align: -\n\n\nAmp Size QC: -\n\n\n\n\n\nProbe QC\n\n\n5’ G: -\n\n\nPoly-G: -\n\n\nTm Diff: -\n\n\n\n\n\n\n\n\n\n🔍 SEQUENCE ALIGNMENT & BINDING REPORT\n\nEnter sequence and run qPCR Design to view alignment...\n\n\n\n\n🧬 DESIGNED PRIMERS & QC RESULTS\n\n\n\n\n\n\n\nBasic Information\n\n\nForward Primer Details\n\n\nReverse Primer Details\n\n\nProbe Details (TaqMan)\n\n\nHeterodimer (dG)\n\n\nAmplicon & QC\n\n\n\n\n\n#\n\n\nForward (5’-3’)\n\n\nReverse (5’-3’)\n\n\nProbe (5’-3’)\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nF-R\n\n\nF-P\n\n\nR-P\n\n\n\nSize\n\n\nAmp Tm\n\n\nPosition\n\n\nQC Result & Reason\n\n\n\n\n\n\n\nWaiting for qPCR design execution…\n\n\n\n\n\n* HP : Hairpin (dG)   |   * HD : Homodimer / Heterodimer (dG)"
+  },
+  {
+    "objectID": "ms_pcr/main.html",
+    "href": "ms_pcr/main.html",
+    "title": "",
+    "section": "",
+    "text": "💡 Quick Guiparde & Tutorial\n\n\n\nMethylation specific primer를 제작하기 위한 서열정보를 입력한 후 DESIGN START를 실행하세요. 입력받는 서열정보 중 프로브가 타겟하는 CpG 위치는[ ] 안에 표기해주세요. Target 하는 CpG sites의 서열을 [ ] 안에 넣어주세요 ex. [CG]. [CG]를 기준으로 Methyl, Unmethyl specific primer를 제작합니다.\n\n\n\n🧪 Tutorial Data (예제 서열)\n\n\n아래의 서열은 MGMT Promoter 영역입니다. 박스 내부를 드래그하여 복사한 뒤, 좌측 RAW SEQUENCE (5’ -&gt; 3’) 칸에 붙여넣고 실행해보세요.\n\n\n\n✅ Methyl Specific\n\n\n서열 중 [CG]에 primer를 제작합니다.\n\n\nCGCAGACTGCCTCAGGCCCGGCGCCGCCGCACAGGGCATGCGCCGACCCGGTCGGGCGGGAACACCCCGCCCCTCCCGGGCTCCGCCCCAGCTCCGCCCCCGCGCGCCCCGGCCCCGCCCCCGCGCGCTCTCTTGCTTTTCTCAGGTCCTCGGCTCCGCCC[CG]CTCTAGACCCCGCCCCACGCCGCCATCCCCGTGCCCCTCGGCCCCGCCCCCGCGCCCCGGATATGCTGGGACAGCCCGCGCCCCTAGAACGCTTTGCGTCCCGACGCCCGCAGGTCCTCGCGGTGCGCACCGTTTGCGACTTGGTGAGTGTCTGGGTCGCCTCGCTCCCGGAAGAGTGCGGAGCTC\n\n\n\n\n\n\n\n\n\n\n⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\n\n\n📊 AS-PCR DESIGN SUMMARY\n\n\nSTATUS READY\n\n\n\n\n\nDEISGN NAME\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\n\n\n\n📈 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\n\n🔍 SEQUENCE ALIGNMENT (Mismatch Visualization)\n\nEnter sequence and run AS-PCR Design to view alignment...\n\n\n\n\n🧬 AS-PCR CANDIDATE SETS\n\n\n\n\n\n\n\nSet Information\n\n\nForward Primer Details\n\n\nReverse Primer Details\n\n\nHeterodimer\n\n\nAmplicon & QC\n\n\n\n\n\n\n\n\nRank/Allele\n\n\nSet ID / Status\n\n\n\nSequence (5’-3’)\n\n\nTm\n\n\nGC%\n\n\nHP\n\n\nHD\n\n\n\nSequence (5’-3’)\n\n\nTm\n\n\nGC%\n\n\nHP\n\n\nHD\n\n\n\nF-R (dG)\n\n\n\nPenalty\n\n\nPosition\n\n\nQC Result & Reason\n\n\n\n\n\n\nWaiting for AS-PCR design execution…\n\n\n\n\n\n* HP : Hairpin (dG)   |   * HD : Homodimer / Heterodimer (dG)"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "PrimerDesign Suite",
+    "section": "",
+    "text": "Welcome\n분석 목적에 맞는 디자인 모듈을 선택해 주세요.\n\n\n\n\n🔍\nQC\nQuality check pre-designed Primers\n\n\n🧬\nqPCR\nTaqMan Probe & Primer Design\n\n\n🎯\nAS-PCR\nAllele-Specific Primer Design\n\n\n\n🧬Me\n\nMS-PCR\nMethylation-Specific Primer Design"
+  },
+  {
+    "objectID": "as_pcr/main.html",
+    "href": "as_pcr/main.html",
+    "title": "",
+    "section": "",
+    "text": "💡 Quick Guiparde & Tutorial\n\n\n\nAllele specific 프라이머을 제작하기위한 서열정보를 입력한 후 DESIGN START를 실행하세요. 입력받는 서열정보 중 타겟하는 서열은 [ ] 안에 표기해주세요. [ ] 안에는 [Reference Genotype,ALT Genotype]을 넣어주세요 ex. A&gt;C [A,C]. [ ] 안에 넣어진 서열들을 참고하여 Reference 프라이머와 Alt 프라이머를 제작합니다.\n\n\n\n🧪 Tutorial Data (예제 서열)\n\n\n아래의 서열은 PIK3CA 유전자의 내부 엑손 영역입니다. 박스 내부를 드래그하여 복사한 뒤, 좌측 RAW SEQUENCE (5’ -&gt; 3’) 칸에 붙여넣고 실행해보세요.\n\n\n\n✅ 타겟 (Specific)\n\n\n서열 중 [Target]이 3’말단이 되는 primer set를 제작합니다.\n\n\nGAAAATGACAAAGAACAGCTCA[A,C]AGCAATTTCTACACGAGATCCTCTCTCTGAAATCACTGAGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA\n\n\n\n\n\n\n\n\n\n\n⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\n\n\n📊 AS-PCR DESIGN SUMMARY\n\n\nSTATUS READY\n\n\n\n\n\nDEISGN NAME\n\n\n-\n\n\n\n\nDESIGN DATE\n\n\n-\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nMUTATION (REF &gt; ALT)\n\n\n-\n\n\n\n\n\n\n\n📈 DESIGN PIPELINE STATISTICS\n\n\n\n\n\n\n\n\n\n\n\n\n🔍 SEQUENCE ALIGNMENT (Mismatch Visualization)\n\nEnter sequence and run AS-PCR Design to view alignment...\n\n\n\n\n🧬 AS-PCR CANDIDATE SETS\n\n\n\n\n\n\n\nSet Information\n\n\nForward Primer Details\n\n\nReverse Primer Details\n\n\nHeterodimer\n\n\nAmplicon & QC\n\n\n\n\n\n\n\n\nRank/Allele\n\n\nSet ID / Status\n\n\n\nSequence (5’-3’)\n\n\nTm\n\n\nGC%\n\n\nHP\n\n\nHD\n\n\n\nSequence (5’-3’)\n\n\nTm\n\n\nGC%\n\n\nHP\n\n\nHD\n\n\n\nF-R (dG)\n\n\n\nPenalty\n\n\nPosition\n\n\nQC Result & Reason\n\n\n\n\n\n\nWaiting for AS-PCR design execution…\n\n\n\n\n\n* HP : Hairpin (dG)   |   * HD : Homodimer / Heterodimer (dG)"
+  },
+  {
+    "objectID": "manual/aspcr.html",
+    "href": "manual/aspcr.html",
+    "title": "AS-PCR Manual",
+    "section": "",
+    "text": "AS-PCR(Allele-Specific PCR)은 특정 allele에 선택적으로 결합하는 primer를 이용하여\nreference allele과 alternate allele을 구분하는 PCR 방법입니다.\n주로 다음과 같은 목적에 사용됩니다.\n\npoint mutation 검출\nhotspot mutation 분석\ngenotype discrimination\nvariant-specific amplification\n\n\n\n\n\nAS-PCR의 핵심은 primer의 3’ 말단 특이성입니다.\nDNA polymerase는 primer의 3’ 말단이 template와 정확히 결합할 때 효율적으로 연장됩니다.\n따라서 변이 위치를 primer의 3’ 말단에 배치하면, 특정 allele에 대해서만 선택적으로 증폭되도록 설계할 수 있습니다.\n\n\n\nReference primer: reference allele에 맞게 설계\nAlt primer: alternate allele에 맞게 설계\nCommon primer: 반대편 strand에 공통으로 결합\n\n\n\n\n\n\nAS-PCR은 일반적으로 다음과 같은 구조를 가집니다.\n\n\nreference 염기를 3’ 말단에 가지는 primer\n\n\n\nalternate 염기를 3’ 말단에 가지는 primer\n\n\n\n반대편 strand에 결합하는 공통 primer\n\n\n\n\n\n3’ 말단 mismatch는 polymerase extension 효율에 큰 영향을 줍니다.\n\n3’ 말단이 정확히 일치하면 증폭 가능\n3’ 말단이 불일치하면 증폭 효율 저하 또는 증폭 실패\n\n필요 시 특이성을 더 높이기 위해 3’ 인근에 의도적인 mismatch를 추가할 수도 있습니다.\n\n\n\n\nAS-PCR 디자인 도구에서는 변이 위치를 다음 형식으로 표시하는 것이 좋습니다.\n```text [Reference,Alt]"
+  },
+  {
+    "objectID": "manual/aspcr.html#overview",
+    "href": "manual/aspcr.html#overview",
+    "title": "AS-PCR Manual",
+    "section": "",
+    "text": "AS-PCR(Allele-Specific PCR)은 특정 allele에 선택적으로 결합하는 primer를 이용하여\nreference allele과 alternate allele을 구분하는 PCR 방법입니다.\n주로 다음과 같은 목적에 사용됩니다.\n\npoint mutation 검출\nhotspot mutation 분석\ngenotype discrimination\nvariant-specific amplification"
+  },
+  {
+    "objectID": "manual/aspcr.html#principle",
+    "href": "manual/aspcr.html#principle",
+    "title": "AS-PCR Manual",
+    "section": "",
+    "text": "AS-PCR의 핵심은 primer의 3’ 말단 특이성입니다.\nDNA polymerase는 primer의 3’ 말단이 template와 정확히 결합할 때 효율적으로 연장됩니다.\n따라서 변이 위치를 primer의 3’ 말단에 배치하면, 특정 allele에 대해서만 선택적으로 증폭되도록 설계할 수 있습니다.\n\n\n\nReference primer: reference allele에 맞게 설계\nAlt primer: alternate allele에 맞게 설계\nCommon primer: 반대편 strand에 공통으로 결합"
+  },
+  {
+    "objectID": "manual/aspcr.html#assay-structure",
+    "href": "manual/aspcr.html#assay-structure",
+    "title": "AS-PCR Manual",
+    "section": "",
+    "text": "AS-PCR은 일반적으로 다음과 같은 구조를 가집니다.\n\n\nreference 염기를 3’ 말단에 가지는 primer\n\n\n\nalternate 염기를 3’ 말단에 가지는 primer\n\n\n\n반대편 strand에 결합하는 공통 primer"
+  },
+  {
+    "objectID": "manual/aspcr.html#why-3-end-matters",
+    "href": "manual/aspcr.html#why-3-end-matters",
+    "title": "AS-PCR Manual",
+    "section": "",
+    "text": "3’ 말단 mismatch는 polymerase extension 효율에 큰 영향을 줍니다.\n\n3’ 말단이 정확히 일치하면 증폭 가능\n3’ 말단이 불일치하면 증폭 효율 저하 또는 증폭 실패\n\n필요 시 특이성을 더 높이기 위해 3’ 인근에 의도적인 mismatch를 추가할 수도 있습니다."
+  },
+  {
+    "objectID": "manual/aspcr.html#input-format",
+    "href": "manual/aspcr.html#input-format",
+    "title": "AS-PCR Manual",
+    "section": "",
+    "text": "AS-PCR 디자인 도구에서는 변이 위치를 다음 형식으로 표시하는 것이 좋습니다.\n```text [Reference,Alt]"
+  },
+  {
+    "objectID": "manual/main.html",
+    "href": "manual/main.html",
+    "title": "PCR Assay Manual",
+    "section": "",
+    "text": "이 문서는 primer/probe design tool 사용자를 위한 manual hub입니다.\n아래 문서에서 각 assay의 개념, 입력 형식, 설계 원리, 결과 해석 방법을 확인할 수 있습니다.\n\n\n\n\n정량 PCR(qPCR)의 기본 원리, primer/probe 구조, Ct/Cq 개념, 설계 시 고려사항을 설명합니다.\n\n\n\nAllele-Specific PCR의 원리, 3’ 말단 특이성, reference/alt primer 설계 개념, 입력 형식을 설명합니다.\n\n\n\nMethylation-Specific PCR의 원리, bisulfite conversion 개념, methylated/unmethylated primer 설계 방법을 설명합니다.\n\n\n\nprimer 후보가 나오지 않거나, 특이성이 낮거나, 입력 형식 오류가 있는 경우 확인할 수 있는 가이드입니다.\n\n\n\n\n\n\nassay type을 선택합니다.\n해당 manual에서 입력 형식과 설계 원리를 확인합니다.\ndesign app에서 sequence를 입력하고 분석을 수행합니다.\n결과가 예상과 다를 경우 troubleshooting 문서를 참고합니다.\n\n\n\n\n\n\nqPCR\nAS-PCR\nMS-PCR\nTroubleshooting"
+  },
+  {
+    "objectID": "manual/main.html#available-manuals",
+    "href": "manual/main.html#available-manuals",
+    "title": "PCR Assay Manual",
+    "section": "",
+    "text": "정량 PCR(qPCR)의 기본 원리, primer/probe 구조, Ct/Cq 개념, 설계 시 고려사항을 설명합니다.\n\n\n\nAllele-Specific PCR의 원리, 3’ 말단 특이성, reference/alt primer 설계 개념, 입력 형식을 설명합니다.\n\n\n\nMethylation-Specific PCR의 원리, bisulfite conversion 개념, methylated/unmethylated primer 설계 방법을 설명합니다.\n\n\n\nprimer 후보가 나오지 않거나, 특이성이 낮거나, 입력 형식 오류가 있는 경우 확인할 수 있는 가이드입니다."
+  },
+  {
+    "objectID": "manual/main.html#how-to-use",
+    "href": "manual/main.html#how-to-use",
+    "title": "PCR Assay Manual",
+    "section": "",
+    "text": "assay type을 선택합니다.\n해당 manual에서 입력 형식과 설계 원리를 확인합니다.\ndesign app에서 sequence를 입력하고 분석을 수행합니다.\n결과가 예상과 다를 경우 troubleshooting 문서를 참고합니다."
+  },
+  {
+    "objectID": "manual/main.html#quick-navigation",
+    "href": "manual/main.html#quick-navigation",
+    "title": "PCR Assay Manual",
+    "section": "",
+    "text": "qPCR\nAS-PCR\nMS-PCR\nTroubleshooting"
+  },
+  {
+    "objectID": "manual/qpcr.html",
+    "href": "manual/qpcr.html",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "qPCR(quantitative PCR)은 PCR 증폭 과정을 실시간으로 모니터링하여 target nucleic acid의 양을 정량적으로 분석하는 방법입니다.\n형광 신호를 이용하여 cycle별 증폭 정도를 추적하며, Ct 또는 Cq 값을 통해 상대적 또는 절대적 정량이 가능합니다.\n\n\n\n\nqPCR은 다음 요소를 기반으로 동작합니다.\n\nForward primer\nReverse primer\nTemplate DNA or cDNA\nDNA polymerase\nFluorescent chemistry\n\n대표적인 검출 방식은 다음과 같습니다.\n\n\n이중가닥 DNA에 결합하는 형광 dye를 사용합니다.\n장점 - 구조가 단순함 - 비용이 비교적 낮음\n주의점 - 비특이 산물도 함께 검출될 수 있음 - melt curve 확인이 중요함\n\n\n\n특정 타겟 서열에 결합하는 probe를 사용합니다.\n장점 - 특이성이 높음 - multiplex 적용에 유리함\n주의점 - probe 설계가 추가로 필요함 - 비용이 증가할 수 있음\n\n\n\n\n\n\n\n\nForward primer\nReverse primer\n\n\n\n\n\ntarget 내부에 위치\n일반적으로 primer 사이에 위치\nreporter / quencher 구조를 가짐\n\n\n\n\n\n\n\n\n\n일반적으로 18–25 nt 권장\n\n\n\n\n\n일반적으로 40–60% 권장\n\n\n\n\n\nprimer 간 Tm 차이는 크지 않게 유지\n보통 58–62°C 범위에서 설계\n\n\n\n\n\nqPCR은 일반적으로 짧은 amplicon이 유리\n보통 70–200 bp 권장\n\n\n\n\n\n반복서열 회피\nnon-target 결합 최소화\nprimer-dimer / hairpin 형성 최소화\n\n\n\n\n\n\n입력 서열은 보통 다음 조건을 만족하는 것이 좋습니다.\n\n5’ → 3’ 방향 기준\ntarget 부위를 충분히 포함\n너무 짧은 flank는 피함\n공백, 숫자, header 제거 권장\n\n\n\n\n\nqPCR 결과는 일반적으로 다음 정보를 포함합니다.\n\nprimer sequence\nTm\nGC%\namplicon size\nprobe sequence (if applicable)\n\n실험 결과에서는 Ct/Cq 값이 중요합니다.\n\n\n형광 신호가 threshold를 넘는 cycle number입니다.\n\nCt가 낮을수록 initial template 양이 많을 가능성이 큼\nCt가 높을수록 target abundance가 낮을 가능성이 있음\n\n\n\n\n\n\n\n설계 결과가 in-silico 기준으로 적합해도 wet validation은 반드시 필요합니다.\nhigh GC region, repeat-rich region, pseudogene 영역은 추가 검토가 필요합니다.\nprobe-based assay에서는 probe 위치와 SNP 유무도 함께 확인해야 합니다.\n\n\n\n\n\n\nPCR Assay Manual Home\nTroubleshooting\nAS-PCR Manual\nMS-PCR Manual"
+  },
+  {
+    "objectID": "manual/qpcr.html#overview",
+    "href": "manual/qpcr.html#overview",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "qPCR(quantitative PCR)은 PCR 증폭 과정을 실시간으로 모니터링하여 target nucleic acid의 양을 정량적으로 분석하는 방법입니다.\n형광 신호를 이용하여 cycle별 증폭 정도를 추적하며, Ct 또는 Cq 값을 통해 상대적 또는 절대적 정량이 가능합니다."
+  },
+  {
+    "objectID": "manual/qpcr.html#principle",
+    "href": "manual/qpcr.html#principle",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "qPCR은 다음 요소를 기반으로 동작합니다.\n\nForward primer\nReverse primer\nTemplate DNA or cDNA\nDNA polymerase\nFluorescent chemistry\n\n대표적인 검출 방식은 다음과 같습니다.\n\n\n이중가닥 DNA에 결합하는 형광 dye를 사용합니다.\n장점 - 구조가 단순함 - 비용이 비교적 낮음\n주의점 - 비특이 산물도 함께 검출될 수 있음 - melt curve 확인이 중요함\n\n\n\n특정 타겟 서열에 결합하는 probe를 사용합니다.\n장점 - 특이성이 높음 - multiplex 적용에 유리함\n주의점 - probe 설계가 추가로 필요함 - 비용이 증가할 수 있음"
+  },
+  {
+    "objectID": "manual/qpcr.html#assay-structure",
+    "href": "manual/qpcr.html#assay-structure",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "Forward primer\nReverse primer\n\n\n\n\n\ntarget 내부에 위치\n일반적으로 primer 사이에 위치\nreporter / quencher 구조를 가짐"
+  },
+  {
+    "objectID": "manual/qpcr.html#design-rules",
+    "href": "manual/qpcr.html#design-rules",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "일반적으로 18–25 nt 권장\n\n\n\n\n\n일반적으로 40–60% 권장\n\n\n\n\n\nprimer 간 Tm 차이는 크지 않게 유지\n보통 58–62°C 범위에서 설계\n\n\n\n\n\nqPCR은 일반적으로 짧은 amplicon이 유리\n보통 70–200 bp 권장\n\n\n\n\n\n반복서열 회피\nnon-target 결합 최소화\nprimer-dimer / hairpin 형성 최소화"
+  },
+  {
+    "objectID": "manual/qpcr.html#input-guidance",
+    "href": "manual/qpcr.html#input-guidance",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "입력 서열은 보통 다음 조건을 만족하는 것이 좋습니다.\n\n5’ → 3’ 방향 기준\ntarget 부위를 충분히 포함\n너무 짧은 flank는 피함\n공백, 숫자, header 제거 권장"
+  },
+  {
+    "objectID": "manual/qpcr.html#result-interpretation",
+    "href": "manual/qpcr.html#result-interpretation",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "qPCR 결과는 일반적으로 다음 정보를 포함합니다.\n\nprimer sequence\nTm\nGC%\namplicon size\nprobe sequence (if applicable)\n\n실험 결과에서는 Ct/Cq 값이 중요합니다.\n\n\n형광 신호가 threshold를 넘는 cycle number입니다.\n\nCt가 낮을수록 initial template 양이 많을 가능성이 큼\nCt가 높을수록 target abundance가 낮을 가능성이 있음"
+  },
+  {
+    "objectID": "manual/qpcr.html#notes",
+    "href": "manual/qpcr.html#notes",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "설계 결과가 in-silico 기준으로 적합해도 wet validation은 반드시 필요합니다.\nhigh GC region, repeat-rich region, pseudogene 영역은 추가 검토가 필요합니다.\nprobe-based assay에서는 probe 위치와 SNP 유무도 함께 확인해야 합니다."
+  },
+  {
+    "objectID": "manual/qpcr.html#related",
+    "href": "manual/qpcr.html#related",
+    "title": "qPCR Manual",
+    "section": "",
+    "text": "PCR Assay Manual Home\nTroubleshooting\nAS-PCR Manual\nMS-PCR Manual"
+  },
+  {
+    "objectID": "qc/main.html",
+    "href": "qc/main.html",
+    "title": "",
+    "section": "",
+    "text": "💡 Quick Guiparde & Tutorial\n\n\n\n검증할 프라이머와 프로브 서열을 좌측 폼에 입력한 후 검증(QC)을 실행하세요.  Tip! 엑셀에서 서열 한 행(Fwd, Rev, Probe 순서)을 복사하여 좌측 ‘Quick Paste’ 칸에 붙여넣으면 자동으로 분류됩니다. \n\n\n\n🧪 Tutorial Data (예제 서열)\n\n\n아래의 서열은 PIK3CA 유전자의 내부 엑손 영역입니다. PIK3CA는 chr3에 위치한 유전자로, chr22에도 높은 서열 일치율을 보이는 유사 유전자(Pseudogene) 영역이 존재합니다. 박스 내부를 드래그하여 복사한 뒤, 좌측 Quick Paste 칸에 붙여넣고 실행해보세요.\n\n\n\n\n\n\n\n✅ 단일 타겟 (Specific)\n\n\n목표 유전자에만 1번 결합하는 이상적인 프라이머입니다.\n\n\nGAAAATGACAAAGAACAGCTC TAGCACTTACCTGTGACTC CTCTGAAATCACTAAGCAGGAGAAA\n\n\n\n\n\n⚠️ 다중 결합 (Off-target)\n\n\n타겟 외에 다른 위치에도 비특이적으로 증폭되는 불량 예시입니다.\n\n\nAAATGACAAAGAACAGCTC TAGCACTTACCTGTGA ATCACTGCGCAGGAGAA GAAAATGACAAAGAACAGCTCAAAGCAATTTCTACACGAGATCCTCTCTCTGAAATCACT[G,A]AGCAGGAGAAAGATTTTCTATGGAGTCACAGGTAAGTGCTA\n\n\n\n\n\n\n\n\n\n\n\n⚠️ PIPELINE STATUS & LOGS\n\n\n\n\n\n\n\n\n📊 QC ANALYSIS SUMMARY\n\n\nSTATUS READY\n\n\n\n\n\nPROJECT NAME\n\n\n-\n\n\n\n\nDATE\n\n\n-\n\n\n\n\nREFERENCE GENOME\n\n\n-\n\n\n\n\nPASS / TOTAL\n\n\n\n/ -\n\n\n\n\n\n\n\n\n📍 Input Sequences\n\n\n\n\nForward\n\n\n-\n\n\n\n\nReverse\n\n\n-\n\n\n\n\nProbe\n\n\n-\n\n\n\n\n\n\n\n⚙️ Applied QC Parameters\n\n\n\n\n\nThermodynamics\n\n\nHairpin: -\n\n\nHomodimer: -\n\n\nHeterodimer: -\n\n\nMax ΔTm: -\n\n\n\n\n\nSpecificity & Size\n\n\nMin Identity: -\n\n\nMin Hit Len: -\n\n\nMax Align: -\n\n\nAmp Size: -\n\n\n\n\n\nProbe QC\n\n\n5’ G: -\n\n\nPoly-G: -\n\n\nTm Diff: -\n\n\n\n\n\n\n\n\n\n🔍 SEQUENCE ALIGNMENT & BINDING REPORT\n\nEnter sequences and run QC to view alignment...\n\n\n\n\n🧬 QC & SPECIFICITY RESULTS\n\n\n\n\n\n\n\nBasic Information\n\n\nForward Primer Details\n\n\nReverse Primer Details\n\n\nProbe Details (TaqMan)\n\n\nHeterodimer (dG)\n\n\nAmplicon & QC\n\n\n\n\n\n#\n\n\nForward (5’-3’)\n\n\nReverse (5’-3’)\n\n\nProbe (5’-3’)\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nTm\n\n\nGC%\n\n\nCpG\n\n\nHP\n\n\nHD\n\n\n\nF-R\n\n\nF-P\n\n\nR-P\n\n\n\nSize\n\n\nAmp Tm\n\n\nPosition\n\n\nQC Result & Reason\n\n\n\n\n\n\n\nWaiting for QC execution…\n\n\n\n\n* HP : Hairpin (dG)   |   * HD : Homodimer / Heterodimer (dG)"
+  }
+]

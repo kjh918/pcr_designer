@@ -1,218 +1,265 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Literal
-
+from dataclasses import dataclass, field
 import primer3
-from Bio.Seq import reverse_complement
-from Bio.SeqUtils import gc_fraction
 
-from pcr.utils import get_start_end_index
-from pcr.components.variant import Variant
+## ##
+from .region import GenomicRegion
 
-Allele = Literal["ref", "alt"]
 
+ROLE_MAP = {"LEFT": "forward", "RIGHT": "reverse", "INTERNAL": "probe"}
+# ==============================================================================
+# 1. Primer
+# ==============================================================================
 class Primer:
-	# ... (기존 필드들 동일)
+    def __init__(
+        self,
+        sequence: str, 
+        role: str,
+        length: int,
+        penalty: float,
+        
+        tm: float,
+        gc_percent: float,
+        hairpin_tm: float,
+        hairpin_dg: float,
+        homodimer_tm: float,
+        homodimer_dg: float,
 
-	def __init__(
-		self,
-		template_sequence: str,
-		sequence: str,
-		strand: str,
-		primer_type: str,
-		target_start_index: int,
-		target_end_index: int,
-		reference_template_sequence: Optional[str] = None,
-		chrom: Optional[str] = None,
-		start: Optional[int] = None,
-		end: Optional[int] = None,
-		# ✅ 추가: mismatch primer는 템플릿에서 검색이 안되므로 바인딩 좌표를 직접 주입
-		binding_start_index: Optional[int] = None,
-		binding_end_index: Optional[int] = None,
-		penalty: int = None,
-		salt_monovalent_conc: float = 50.0,
-		salt_divalent_conc: float = 1.5,
-		dntp_conc: float = 0.6,
-		dna_conc: float = 50.0,
-	) -> None:
-		self.template_sequence = template_sequence
-		self.reference_template_sequence = reference_template_sequence
-		self.sequence = sequence
-		self.strand = strand
-		self.primer_type = primer_type
-		self.target_start_index = target_start_index
-		self.target_end_index = target_end_index
+        cpg_count: int,            
+        start_index: int,    # 0-based template start
+        end_index: int,    # 0-based template end (exclusive)
+        region: Optional[GenomicRegion] = None,
+        calc_args: Dict[str, float] = {'mv_conc': 50, 'dv_conc': 1.5, 'dntp_conc': 0.6, 'dna_conc': 50}
+    ) -> None:
+        self.sequence = sequence
+        self.role = role
+        self.length = length
+        self.tm = tm
+        self.hairpin_tm = hairpin_tm
+        self.hairpin_dg = hairpin_dg
+        self.homodimer_tm = homodimer_tm
+        self.homodimer_dg = homodimer_dg
+        self.gc_percent = gc_percent
+        self.penalty = penalty
+        self.cpg_count = cpg_count 
+        self.start_index = start_index
+        self.end_index = end_index
+        self.region = region
+        self.calc_args = calc_args
 
-		self.length = len(sequence)
-		# ✅ mismatch primer 대응
-		if binding_start_index is not None and binding_end_index is not None:
-			self.binding_start_index = binding_start_index
-			self.binding_end_index = binding_end_index
-		else:
-			self.binding_start_index, self.binding_end_index = get_start_end_index(self.template_sequence, self.sequence)
-		
-		self.chrom = chrom
-		self.start = start
-		self.end = end
+    
+    @classmethod
+    def make_primer(
+        cls,
+        sequence: str,
+        role: str,
+        start_index: int = 0,
+        end_index: int = 0,
+        opt_tm: float = 60.0,
+        region: Optional[GenomicRegion] = None,
+        calc_args: Optional[Dict[str, float]] = None
+    ) -> 'Primer':
+        """
+        Primer3 엔진의 제약(탈락 조건)을 무시하고, 
+        주어진 서열의 물리량(Tm, GC, 2차구조)을 순수하게 계산하여 객체로 반환합니다.
+        """
+        if calc_args is None:
+            calc_args = {'mv_conc': 50, 'dv_conc': 1.5, 'dntp_conc': 0.6, 'dna_conc': 50}
+            
+        seq_upper = sequence.upper()
+        length = len(seq_upper)
+        
+        if end_index == 0:
+            end_index = start_index + length
 
-		self.salt_monovalent_conc = salt_monovalent_conc
-		self.salt_divalent_conc = salt_divalent_conc
-		self.dntp_conc = dntp_conc
-		self.dna_conc = dna_conc
-		self.penalty = penalty
+        def _calc_gc(seq: str) -> float:
+            if not seq: return 0.0
+            return (seq.count('G') + seq.count('C')) / len(seq) * 100.0
+        
+        # 1. 기본 물리량 계산
+        tm = primer3.calc_tm(seq_upper, **calc_args)
+        gc = _calc_gc(seq_upper)
+        cpg_count = seq_upper.count("CG")
+        
+        # 2. 2차 구조 (Hairpin & Homodimer) 계산
+        hp = primer3.calc_hairpin(seq_upper, **calc_args)
+        hp_tm = hp.tm
+        hp_dg = hp.dg / 1000.0 if hp.structure_found else 0.0
 
-		self._calc_basic_properties()
-		self._calc_hairpin()
-		self._calc_homodimer()
+        hd = primer3.calc_homodimer(seq_upper, **calc_args)
+        hd_tm = hd.tm
+        hd_dg = hd.dg / 1000.0 if hd.structure_found else 0.0
 
-	# -------------------------
-	# thermo
-	# -------------------------
-	def _calc_basic_properties(self) -> None:
-		self.tm = primer3.calc_tm(
-			self.sequence,
-			mv_conc=self.salt_monovalent_conc,
-			dv_conc=self.salt_divalent_conc,
-			dntp_conc=self.dntp_conc,
-			dna_conc=self.dna_conc,
-		)
-		self.gc_percent = gc_fraction(self.sequence, ambiguous="ignore") * 100.0
+        # 3. 간단한 개별 페널티 추산 (Target Tm과의 차이)
+        penalty = abs(tm - opt_tm)
 
-	def _calc_hairpin(self) -> None:
-		result = primer3.calc_hairpin(
-			self.sequence,
-			mv_conc=self.salt_monovalent_conc,
-			dv_conc=self.salt_divalent_conc,
-			dntp_conc=self.dntp_conc,
-			dna_conc=self.dna_conc,
-		)
-		self.hairpin = result.structure_found
-		self.hairpin_tm = result.tm
-		self.hairpin_dg = result.dg / 1000.0
-		self.hairpin_dh = result.dh / 1000.0
-		self.hairpin_ds = result.ds / 1000.0
+        return cls(
+            sequence=seq_upper,
+            role=role,
+            length=length,
+            penalty=penalty,
+            tm=tm,
+            gc_percent=gc,
+            hairpin_tm=hp_tm,
+            hairpin_dg=hp_dg,
+            homodimer_tm=hd_tm,
+            homodimer_dg=hd_dg,
+            cpg_count=cpg_count,
+            start_index=start_index,
+            end_index=end_index,
+            region=region,
+            calc_args=calc_args
+        )
 
-	def _calc_homodimer(self) -> None:
-		result = primer3.calc_homodimer(
-			self.sequence,
-			mv_conc=self.salt_monovalent_conc,
-			dv_conc=self.salt_divalent_conc,
-			dntp_conc=self.dntp_conc,
-			dna_conc=self.dna_conc,
-		)
-		self.homodimer = result.structure_found
-		self.homodimer_tm = result.tm
-		self.homodimer_dg = result.dg / 1000.0
-		self.homodimer_dh = result.dh / 1000.0
-		self.homodimer_ds = result.ds / 1000.0
+    @classmethod
+    def from_primer3(
+        cls, 
+        result: Dict[str, Any], 
+        rank: int, 
+        role_key: Literal["LEFT", "RIGHT", "INTERNAL"],
+        template_region: Optional[GenomicRegion] = None
+    ) -> Optional['Primer']:
+        
+        prefix = f"PRIMER_{role_key}_{rank}"
+        seq = result.get(f"{prefix}_SEQUENCE")
+        if not seq: return None
 
-	# -------------------------
-	# checks (reference/template 선택)
-	# -------------------------
-	def check_three_prime_is(self, sequence: str, *, use_reference: bool = True) -> bool:
-		ref = self.reference_template_sequence if use_reference else self.template_sequence
-		seq_len = len(sequence)
+        # 1. 기본 정보 추출
+        role_name = ROLE_MAP.get(role_key, "unknown")
+        length = len(seq)
+        tm = float(result.get(f"{prefix}_TM", 0.0))
+        gc = float(result.get(f"{prefix}_GC_PERCENT", 0.0))
+        penalty = float(result.get(f"{prefix}_PENALTY", 0.0))
+        cpg_count = seq.count("CG")
 
-		if self.strand == "forward":
-			end = self.end_index + 1
-			start = max(end - seq_len, 0)
-			three_prime_seq = ref[start:end]
-		elif self.strand == "reverse":
-			start = self.binding_start_index
-			end = min(self.binding_start_index + seq_len, len(ref))
-			three_prime_seq = reverse_complement(ref[start:end])
-		else:
-			raise ValueError(f"Unknown strand type: {self.strand}")
+        # 2. 2차 구조 정밀 계산 (Hairpin & Homodimer)
+        calc_args = {'mv_conc': 50, 'dv_conc': 1.5, 'dntp_conc': 0.6, 'dna_conc': 50}
+        # Hairpin Calculation
+        hp = primer3.calc_hairpin(seq, **calc_args)
+        hp_tm = hp.tm
+        hp_dg = hp.dg / 1000.0 if hp.structure_found else 0.0
 
-		return three_prime_seq == sequence
+        # Homodimer Calculation
+        hd = primer3.calc_homodimer(seq, **calc_args)
+        hd_tm = hd.tm
+        hd_dg = hd.dg / 1000.0 if hd.structure_found else 0.0
 
-	def check_gc_clamp(self, *, use_reference: bool = True) -> int:
-		ref = self.reference_template_sequence if use_reference else self.template_sequence
-		n = len(ref)
+        # 3. 좌표 계산
+        info = result.get(prefix)
+        p3_index = info[0] if info else 0
 
-		if self.strand == "forward":
-			start = max(self.binding_start_index, 0)
-			end = min(self.end_index + 2, n)
-			return ref[start:end].count("CG")
+        if role_key == "RIGHT":
+            start_index = p3_index - length + 1
+        else:
+            start_index = p3_index
+        end_index = start_index + length
 
-		if self.strand == "reverse":
-			start = max(self.binding_start_index - 1, 0)
-			end = min(self.end_index + 1, n)
-			window = reverse_complement(ref[start:end])
-			return window.count("CG")
+        # 4. Genomic Region 매핑
+        region = None
+        if template_region:
+            if template_region.strand != "-":
+                g_start = template_region.start + start_index
+                g_end = template_region.start + end_index
+            else:
+                g_start = template_region.end - end_index
+                g_end = template_region.end - start_index
+            
+            region = GenomicRegion(template_region.chrom, g_start, g_end, template_region.strand)
+        return cls(
+            sequence=seq, role=role_name, length=length, tm=tm, gc_percent=gc, penalty=penalty, cpg_count=cpg_count,
+            hairpin_tm=hp_tm, hairpin_dg=hp_dg,
+            homodimer_tm=hd_tm, homodimer_dg=hd_dg,
+            start_index=start_index, end_index=end_index, region=region
+        )
 
-		raise ValueError(f"Unknown strand type: {self.strand}")
+    def to_dict(self) -> Dict[str, Any]:
+        prefix = self.role
+        data = {}
+        data[f"{prefix}_sequence"] = self.sequence
+        data[f"{prefix}_length"] = self.length
+        data[f"{prefix}_tm"] = self.tm
+        data[f"{prefix}_gc"] = self.gc_percent
+        data[f"{prefix}_cpg_count"] = self.cpg_count
+        data[f"{prefix}_penalty"] = self.penalty
+        
+        # ✅ 2차 구조 정보 출력
+        data[f"{prefix}_hairpin_tm"] = self.hairpin_tm
+        data[f"{prefix}_hairpin_dg"] = self.hairpin_dg
+        data[f"{prefix}_homodimer_tm"] = self.homodimer_tm
+        data[f"{prefix}_homodimer_dg"] = self.homodimer_dg
+        
+        if self.region:
+            data.update(self.region.to_dict(prefix=prefix))
+        return data
 
-	def count_cpg(self, *, use_reference: bool = True) -> int:
-		ref = self.reference_template_sequence if use_reference else self.template_sequence
-		n = len(ref)
+@dataclass
+class TargetAnnotation:
+    id: str
+    type: str
+    status: str
+    region: Optional[GenomicRegion] = None
+    metadata: Dict[str, Any] = field(default_factory=dict) 
 
-		if self.strand == "forward":
-			start = max(self.binding_start_index, 0)
-			end = min(self.end_index + 2, n)
-			return ref[start:end].count("CG")
+    def to_dict(self, prefix: str = "probe_target") -> Dict[str, Any]:
+        data = {}
+        data[f"{prefix}_id"] = self.id
+        data[f"{prefix}_type"] = self.type
+        data[f"{prefix}_status"] = self.status
+        
+        if self.region:
+            data.update(self.region.to_dict(prefix=prefix))
 
-		if self.strand == "reverse":
-			start = max(self.binding_start_index - 1, 0)
-			end = min(self.end_index + 1, n)
-			window = reverse_complement(ref[start:end])
-			return window.count("CG")
+        for k, v in self.metadata.items():
+            data[f"{prefix}_{k}"] = v
+        return data
 
-		raise ValueError(f"Unknown strand type: {self.strand}")
-
-	def count_non_cpg_cytosine(self, *, use_reference: bool = True) -> int:
-		ref = self.reference_template_sequence if use_reference else self.template_sequence
-
-		if self.strand == "forward":
-			window = ref[self.binding_start_index : self.end_index + 1]
-		elif self.strand == "reverse":
-			window = reverse_complement(ref[self.binding_start_index : self.end_index + 1])
-		else:
-			raise ValueError(f"Unknown strand type: {self.strand}")
-
-		total_c = window.count("C")
-		return total_c - self.count_cpg(use_reference=use_reference)
-
-	def to_dict(self, ignore_attributes: Optional[List[str]] = None) -> Dict[str, Any]:
-		if ignore_attributes is None:
-			ignore_attributes = [
-				"template_sequence",
-				"reference_template_sequence",
-				"primer_type",
-				"chrom",
-				"start",
-				"end",
-				"target_start_index",
-				"target_end_index",
-			]
-		d: Dict[str, Any] = {}
-		for k, v in self.__dict__.items():
-			if k in ignore_attributes:
-				continue
-			d[f"{self.primer_type}_{k}"] = v
-		return d
-
-
+# ==============================================================================
+# 2. Probe
+# ==============================================================================
 class Probe(Primer):
-	"""
-	Single-variant targeting probe.
-	reference_template_sequence는 ref allele 기준(좌표 고정),
-	template_sequence는 ref/alt + conversion 반영(allele-specific 검증은 template 기준).
-	"""
-	def __init__(self, *args, variant: Variant, **kwargs) -> None:
-		super().__init__(*args, primer_type="probe", **kwargs)
-		self.variant = variant
+    def __init__(self, target: Optional[TargetAnnotation] = None, **kwargs):
+        super().__init__(**kwargs)
+        self.target = target
 
-	def covers_variant(self) -> bool:
-		return self.binding_start_index <= self.variant.index <= self.end_index
+    @classmethod
+    def from_primer3(
+        cls, 
+        result: Dict[str, Any], 
+        rank: int, 
+        template_region: Optional[GenomicRegion] = None,
+        target_id: str = "Unknown",
+        target_type: str = "Generic",
+        target_status: str = "NA",
+        target_region: Optional[GenomicRegion] = None,
+        **target_metadata
+    ) -> Optional['Probe']:
+        
+        # 1. 부모 메서드를 통해 객체 생성 (cls가 Probe이므로 Probe 인스턴스가 반환됨)
+        p = super().from_primer3(result, rank, "INTERNAL", template_region)
+        
+        if p:
+            # 2. TargetAnnotation 생성
+            annotation = TargetAnnotation(
+                id=target_id, 
+                type=target_type, 
+                status=target_status,
+                region=target_region, 
+                metadata=target_metadata
+            )
+            
+            # 3. [수정됨] 객체를 새로 만들지 않고, 생성된 객체의 target 속성만 설정
+            p.target = annotation
+            return p
+            
+        return None
 
-	def allele_base_at_variant(self, *, use_reference: bool = False) -> str:
-		seq = self.reference_template_sequence if use_reference else self.template_sequence
-		return seq[self.variant.index]
-
-	def validate_variant_specific(self) -> bool:
-		if not self.covers_variant():
-			return False
-		expected = self.variant.ref.upper() if self.allele == "ref" else self.variant.alt.upper()
-		actual = self.allele_base_at_variant(use_reference=False).upper()
-		return actual == expected
+    def to_dict(self) -> Dict[str, Any]:
+        data = super().to_dict()
+        if self.target:
+            data.update(self.target.to_dict())
+        else:
+            data["probe_target_id"] = None
+            data["probe_target_type"] = None
+        return data

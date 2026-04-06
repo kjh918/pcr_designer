@@ -1,8 +1,0 @@
-{# app/templates/partials/form_single.html #}
-{% if current_assay == 'as-pcr' %}
-  {% include "partials/form_aspcr.html" %}
-{% elif current_assay == 'methyl' %}
-  {% include "partials/form_methyl.html" %}
-{% else %}
-  {% include "partials/form_qpcr.html" %}
-{% endif %}
